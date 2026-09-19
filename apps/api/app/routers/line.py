@@ -13,6 +13,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from typing import Any
 
@@ -51,18 +52,17 @@ async def webhook(
     if not signature.verify(body, x_line_signature, s.line_channel_secret):
         raise HTTPException(401, "簽章驗證失敗")
 
-    events = (await _json(request, body)).get("events") or []
+    events = _parse(body).get("events") or []
     for event in events:
         background.add_task(dispatch, event)
     return {"ok": True, "received": len(events)}
 
 
-async def _json(request: Request, body: bytes) -> dict[str, Any]:
+def _parse(body: bytes) -> dict[str, Any]:
+    """驗簽過的 body 才會走到這裡，所以壞掉的 JSON 是 LINE 端的問題，回 400。"""
     try:
-        import json
-
         return dict(json.loads(body or b"{}"))
-    except ValueError:
+    except (TypeError, ValueError):
         raise HTTPException(400, "內容不是合法的 JSON")
 
 
