@@ -15,7 +15,7 @@ export type StepKey = (typeof STEP_KEYS)[number]
 export const STEPS = [
   { key: 'tool', label: '工具' },
   { key: 'identity', label: '身分' },
-  { key: 'channel', label: '繳費' },
+  { key: 'channel', label: '購買明細' },
   { key: 'guide', label: '準備' },
   { key: 'docs', label: '上傳' },
   { key: 'confirm', label: '確認' },
@@ -24,7 +24,7 @@ export const STEPS = [
 export const STEP_TITLE: Record<StepKey, string> = {
   tool: '確認申請工具',
   identity: '填寫申請人資料',
-  channel: '你怎麼付這筆錢？',
+  channel: '購買明細',
   guide: '要準備哪些文件',
   docs: '上傳文件',
   confirm: '確認並送出',
@@ -70,7 +70,16 @@ export interface ChannelInfo {
   payment_channel_code: string
   paid_by_proxy: boolean
   purchase_date: string
+  /** 換算後的臺幣金額；這是唯一會送去比對帳單的數字。 */
   purchase_amount: string
+  /** 月費或年費。 */
+  billing_cycle: 'MONTHLY' | 'ANNUAL'
+  /** 申請補助的期數（月費才問，年費固定一期）。 */
+  billing_periods: number
+  /** 原始幣別代碼，例如 `USD`；`TWD` 時就沒有換算問題。 */
+  original_currency: string
+  /** 原始幣別的金額，供承辦核對換算是否合理。 */
+  original_amount: string
 }
 
 export interface ToolChoice {
@@ -99,7 +108,16 @@ export function initialState(schemeCode: string): ApplyState {
     stepIndex: 0,
     tool: { name: '', tool_id: null },
     identity: { applicant_name: '', phone: '', id_number: '', email: '', tier_code: '' },
-    channel: { payment_channel_code: '', paid_by_proxy: false, purchase_date: '', purchase_amount: '' },
+    channel: {
+      payment_channel_code: '',
+      paid_by_proxy: false,
+      purchase_date: '',
+      purchase_amount: '',
+      billing_cycle: 'MONTHLY',
+      billing_periods: 1,
+      original_currency: 'USD',
+      original_amount: '',
+    },
     docs: {},
     manualAssist: false,
     precheck: null,
@@ -244,9 +262,17 @@ export function channelErrors(channel: ChannelInfo): FieldErrors {
   const errors: FieldErrors = {}
   if (!channel.payment_channel_code) errors.payment_channel_code = '請選擇你實際付款的方式。'
   if (!channel.purchase_date) errors.purchase_date = '請填寫帳單上的購買（扣款）日期。'
+
   const amount = Number(channel.purchase_amount)
   if (!channel.purchase_amount.trim()) errors.purchase_amount = '請填寫帳單上實際扣款的臺幣金額。'
   else if (!Number.isFinite(amount) || amount <= 0) errors.purchase_amount = '金額請只填數字，例如 6000。'
+
+  // 原始幣別就是臺幣時不必再問一次原始金額——它與換算後的金額是同一個數字。
+  if (channel.original_currency !== 'TWD') {
+    const original = Number(channel.original_amount)
+    if (!channel.original_amount.trim()) errors.original_amount = '請填寫帳單上的原始幣別金額。'
+    else if (!Number.isFinite(original) || original <= 0) errors.original_amount = '金額請只填數字，例如 20。'
+  }
   return errors
 }
 

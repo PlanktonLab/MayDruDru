@@ -48,6 +48,10 @@ function filled(): ApplyState {
       paid_by_proxy: false,
       purchase_date: '2026-08-01',
       purchase_amount: '6000',
+      billing_cycle: 'MONTHLY',
+      billing_periods: 1,
+      original_currency: 'USD',
+      original_amount: '20',
     },
   }
 }
@@ -156,19 +160,34 @@ describe('第 2 步 身分', () => {
   })
 })
 
-describe('第 3 步 繳費與購買資訊', () => {
-  it('三個欄位都必填', () => {
+describe('第 3 步 購買明細', () => {
+  it('管道、日期、兩個金額都必填', () => {
     const errors = channelErrors({
       payment_channel_code: '',
       paid_by_proxy: false,
       purchase_date: '',
       purchase_amount: '',
+      billing_cycle: 'MONTHLY',
+      billing_periods: 1,
+      original_currency: 'USD',
+      original_amount: '',
     })
-    expect(Object.keys(errors).sort()).toEqual(['payment_channel_code', 'purchase_amount', 'purchase_date'])
+    expect(Object.keys(errors).sort()).toEqual([
+      'original_amount',
+      'payment_channel_code',
+      'purchase_amount',
+      'purchase_date',
+    ])
+  })
+
+  it('原始幣別是臺幣時不必再填一次原始金額', () => {
+    const errors = channelErrors({ ...filled().channel, original_currency: 'TWD', original_amount: '' })
+    expect(errors.original_amount).toBeFalsy()
   })
 
   it('金額不是正數會被擋', () => {
     expect(channelErrors({ ...filled().channel, purchase_amount: '0' }).purchase_amount).toBeTruthy()
+    expect(channelErrors({ ...filled().channel, original_amount: '0' }).original_amount).toBeTruthy()
   })
 })
 

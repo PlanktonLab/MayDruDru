@@ -38,7 +38,13 @@ export function Stepper({
           return (
             <li
               key={step.key}
-              className="flex min-w-0 flex-1 flex-col items-center gap-1.5 lg:flex-row lg:gap-2"
+              // 手機：每步等寬（`flex-1`），序號與標籤上下排。
+              // 桌面：寬度由內容決定，只有最後一格不長連接線——等寬會把長標籤壓扁。
+              className={cx(
+                'flex min-w-0 flex-1 flex-col items-center gap-1.5',
+                'lg:w-auto lg:flex-row lg:gap-2',
+                index < steps.length - 1 ? 'lg:flex-1' : 'lg:flex-none',
+              )}
             >
               <span
                 aria-hidden
@@ -55,7 +61,9 @@ export function Stepper({
               <span
                 aria-current={active ? 'step' : undefined}
                 className={cx(
-                  'truncate text-[11px] lg:text-[13px]',
+                  // 桌面不截字：步驟名是「我現在在哪」，截成「購…」等於沒說。
+                  // 連接線用 flex-1 吸收剩下的寬度，所以標籤本身不必縮。
+                  'text-[11px] whitespace-nowrap lg:text-[13px]',
                   active ? 'font-semibold text-accent' : 'text-muted',
                 )}
               >

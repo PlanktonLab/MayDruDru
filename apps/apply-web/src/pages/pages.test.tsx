@@ -24,6 +24,10 @@ function state(overrides: Partial<ApplyState> = {}): ApplyState {
       paid_by_proxy: false,
       purchase_date: '2026-08-01',
       purchase_amount: '6000',
+      billing_cycle: 'MONTHLY',
+      billing_periods: 1,
+      original_currency: 'USD',
+      original_amount: '20',
     },
     ...overrides,
   }

@@ -41,8 +41,9 @@ function fillIdentity() {
 
 function fillChannel() {
   fireEvent.click(screen.getByRole('radio', { name: /電信繳費/ }))
-  fireEvent.change(screen.getByLabelText(/購買（扣款）日期/), { target: { value: '2026-08-01' } })
-  fireEvent.change(screen.getByLabelText(/實際扣款臺幣金額/), { target: { value: '6000' } })
+  fireEvent.change(screen.getByLabelText(/購買日期/), { target: { value: '2026-08-01' } })
+  fireEvent.change(screen.getByLabelText(/原始費用/), { target: { value: '20' } })
+  fireEvent.change(screen.getByLabelText(/換算台幣費用/), { target: { value: '6000' } })
 }
 
 describe('ApplyPage', () => {
@@ -144,7 +145,7 @@ describe('ApplyPage', () => {
     await screen.findByLabelText(/聯絡電話/)
     fillIdentity()
     next()
-    await screen.findByRole('heading', { name: '你怎麼付這筆錢？' })
+    await screen.findByRole('heading', { name: '購買明細' })
     back()
     expect(((await screen.findByLabelText(/姓名/)) as HTMLInputElement).value).toBe('測試用小明')
   })
@@ -156,7 +157,7 @@ describe('ApplyPage', () => {
     await screen.findByLabelText(/聯絡電話/)
     fillIdentity()
     next()
-    await screen.findByRole('heading', { name: '你怎麼付這筆錢？' })
+    await screen.findByRole('heading', { name: '購買明細' })
     next()
     expect(screen.getByText(/請選擇你實際付款的方式/)).toBeTruthy()
   })
@@ -168,7 +169,7 @@ describe('ApplyPage', () => {
     await screen.findByLabelText(/聯絡電話/)
     fillIdentity()
     next()
-    await screen.findByRole('heading', { name: '你怎麼付這筆錢？' })
+    await screen.findByRole('heading', { name: '購買明細' })
     fillChannel()
     next()
     expect(await screen.findByRole('heading', { name: '要準備哪些文件' })).toBeTruthy()
@@ -183,7 +184,7 @@ describe('ApplyPage', () => {
     await screen.findByLabelText(/聯絡電話/)
     fillIdentity()
     next()
-    await screen.findByRole('heading', { name: '你怎麼付這筆錢？' })
+    await screen.findByRole('heading', { name: '購買明細' })
     fillChannel()
     next()
     await screen.findByRole('heading', { name: '要準備哪些文件' })
