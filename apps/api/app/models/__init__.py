@@ -48,6 +48,7 @@ from .content import (
     WebhookSubscription,
 )
 from .core import (
+    API_SCOPES,
     COMPONENT_KINDS,
     JOB_OWNED_STATUSES,
     ROLES,
@@ -89,7 +90,7 @@ __all__ = [
     "EMBED_DIM", "Base", "TsMixin", "VersionMixin", "new_id", "now",
     # core (§6.1)
     "ROLES", "COMPONENT_KINDS", "JOB_OWNED_STATUSES",
-    "ApiKey", "Edge", "EvalCase", "EvalRun", "EventLog", "Flow", "FlowVersion", "Goal",
+    "API_SCOPES", "ApiKey", "Edge", "EvalCase", "EvalRun", "EventLog", "Flow", "FlowVersion", "Goal",
     "LlmUsage", "Platform", "PlatformComponent", "Step", "StyleDoc", "StyleDocVersion",
     "Tenant", "User", "Variant",
     # scheme (§6.2)

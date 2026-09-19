@@ -144,6 +144,10 @@ class ApiCaller:
     tenant_id: str
     api_key_id: str
     name: str
+    scopes: frozenset[str]
+
+    def can(self, scope: str) -> bool:
+        return "admin" in self.scopes or scope in self.scopes
 
 
 async def _check_rate_limit(key: ApiKey) -> None:
@@ -170,12 +174,15 @@ def last_used_is_stale(last_used_at: datetime | None, now: datetime) -> bool:
 
 
 async def api_caller(
+    authorization: str | None = Header(default=None, alias="Authorization"),
     x_api_key: str | None = Header(default=None, alias="X-API-Key"),
     db: AsyncSession = Depends(get_db),
 ) -> ApiCaller:
-    if not x_api_key:
-        raise HTTPException(401, {"code": "unauthorized", "message": "缺少 X-API-Key"})
-    key = (await db.execute(select(ApiKey).where(ApiKey.key_hash == hash_api_key(x_api_key)))).scalar_one_or_none()
+    bearer = authorization[7:].strip() if authorization and authorization.lower().startswith("bearer ") else ""
+    raw_key = bearer or x_api_key or ""
+    if not raw_key:
+        raise HTTPException(401, {"code": "unauthorized", "message": "缺少 API key"})
+    key = (await db.execute(select(ApiKey).where(ApiKey.key_hash == hash_api_key(raw_key)))).scalar_one_or_none()
     if not key or key.status != "active":
         raise HTTPException(401, {"code": "unauthorized", "message": "API key 無效或已停用"})
     await _check_rate_limit(key)
@@ -183,4 +190,13 @@ async def api_caller(
     if last_used_is_stale(key.last_used_at, now):
         key.last_used_at = now
         await db.commit()
-    return ApiCaller(tenant_id=key.tenant_id, api_key_id=key.id, name=key.name)
+    return ApiCaller(tenant_id=key.tenant_id, api_key_id=key.id, name=key.name,
+                     scopes=frozenset(str(x) for x in (key.scopes or [])))
+
+
+def require_api_scope(scope: str):
+    async def dep(caller: ApiCaller = Depends(api_caller)) -> ApiCaller:
+        if not caller.can(scope):
+            raise HTTPException(403, {"code": "forbidden", "message": f"API key 缺少 {scope} scope"})
+        return caller
+    return dep

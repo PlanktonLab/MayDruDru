@@ -31,14 +31,14 @@ from ..ai.assistant import ChatEngine
 from ..ai.image_utils import ImageTooLarge, InvalidImage, read_image_upload
 from ..ai.session_graph import SessionEngine
 from ..db import get_db
-from ..deps import ApiCaller, api_caller
+from ..deps import ApiCaller, api_caller, require_api_scope
 from ..models import Tenant
 from ..security import hash_external_user
 from ..services import sop_public
 from ..services.content import card_preview_url, card_url, load_snapshot, tenant_catalog
 from ..services.guide import resolve_intent
 
-router = APIRouter(prefix="/v1", tags=["public"])
+router = APIRouter(prefix="/v1", tags=["public"], dependencies=[Depends(require_api_scope("sop"))])
 
 
 class SessionCreate(BaseModel):

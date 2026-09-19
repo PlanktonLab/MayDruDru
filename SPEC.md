@@ -608,6 +608,9 @@ Cloudflare proxied；origin cert 需涵蓋三個名稱（萬用或重簽）。DN
 | D29 | FAQ service 不直接 import `app.ai`；語意向量由呼叫端以 `Embedder` 注入，Postgres + pgvector 可用時走餘弦檢索，缺向量、SQLite 或查詢失敗時自動退回既有關鍵字評分 | `routers/apply.py` 經 FAQ service 的相依鏈仍符合「證明文件路徑不得碰 AI」的 import-linter 紅線；向量索引尚未補齊時服務也不會中斷 |
 | D30 | 內容助理的模型輸出拆成「句子 + 引用索引」，service 組成草稿時把無有效引用的句子標為「待查證」；FAQ 建議另存 `copilot_suggestions`，接受後才建立停用中的 FAQ | 模型不能把沒有根據的句子包裝成已核准內容；暫存建議讓承辦人可接受或忽略，且不會直接污染正式 FAQ |
 | D31 | 方案管理的六種子設定共用 CRUD／排序端點與前端 tab 骨架；規則編輯器先用 TS 引擎即時試算，再提供伺服器試算比對 | 新增方案與調整規則保持資料驅動；兩版規則引擎若走樣，承辦人在設定當下就看得出差異 |
+| D32 | `/v1` API key 正式使用 `Authorization: Bearer <key>`；`X-API-Key` 保留相容。每把 key 明列 scopes，`admin` 可通過所有 scope gate | 符合標準 Bearer 整合方式，同時不讓既有 SOP 呼叫立即中斷；路由宣告所需能力而不是自行判斷 key 名稱 |
+| D33 | outbound webhook 以 `webhook_deliveries` 作 transactional outbox；領域 service 只在同一交易建立 delivery，worker 每分鐘補排 pending，單筆工作以 arq 最多重試五次 | 案件成功但 Redis 短暫失效時事件不會消失；HTTP 失敗不回滾業務交易，重送與稽核都以同一 delivery id 為準 |
+| D34 | `packages/api-client/src/schema.d.ts` 是 OpenAPI 的可重現生成物並提交進 git；CI 重新生成後用 `git diff --exit-code` 驗證 | PR 可以直接審契約差異，前端不必在安裝時啟動 API；漏更新 schema 會在 CI 立即失敗 |
 
 ---
 

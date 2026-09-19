@@ -29,7 +29,7 @@ from ..db import sessionmaker
 from ..models import EvalCase, EvalRun, Goal, Platform, Variant
 from ..renderer_client import render_html
 from ..services import application as case_service
-from ..services import notify
+from ..services import notify, webhooks
 from ..services.card_context import load_card_context
 from ..services.line import conversation as line_conversation
 from ..services.numbered_card import LINE_PREVIEW_EDGE, html_key_for
@@ -402,6 +402,7 @@ async def purge_documents(ctx: dict) -> dict:
 # ----------------------------------------------------------------- LINE 推播
 
 NOTIFY_MAX_TRIES = 3
+WEBHOOK_MAX_TRIES = webhooks.MAX_TRIES
 
 
 async def send_notification(ctx: dict, notification_id: str) -> str:
@@ -412,6 +413,16 @@ async def send_notification(ctx: dict, notification_id: str) -> str:
     """
     async with sessionmaker()() as db:
         return await notify.deliver(db, notification_id)
+
+
+async def deliver_webhook(ctx: dict, delivery_id: str) -> str:
+    async with sessionmaker()() as db:
+        return await webhooks.deliver(db, delivery_id)
+
+
+async def sweep_webhooks(ctx: dict) -> int:
+    async with sessionmaker()() as db:
+        return await webhooks.queue_pending(db)
 
 
 async def sweep_conversations(ctx: dict) -> dict:

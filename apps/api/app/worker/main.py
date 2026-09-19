@@ -9,7 +9,9 @@ from ..jobs import redis_settings as _redis_settings
 from .tasks import (
     EVAL_JOB_TIMEOUT_SECONDS,
     NOTIFY_MAX_TRIES,
+    WEBHOOK_MAX_TRIES,
     cleanup_originals,
+    deliver_webhook,
     expire_supplements,
     process_variant,
     purge_documents,
@@ -19,6 +21,7 @@ from .tasks import (
     send_notification,
     sweep_conversations,
     sweep_stale_jobs,
+    sweep_webhooks,
 )
 
 
@@ -35,10 +38,12 @@ class WorkerSettings:
         func(run_eval, timeout=EVAL_JOB_TIMEOUT_SECONDS),
         # LINE 推播：重試三次（SPEC §8.7），退避交給 arq。
         func(send_notification, max_tries=NOTIFY_MAX_TRIES),
+        func(deliver_webhook, max_tries=WEBHOOK_MAX_TRIES),
     ]
     cron_jobs = [
         cron(sweep_stale_jobs, minute=set(range(0, 60, 10))),
         cron(sweep_conversations, minute=set(range(0, 60, 5))),  # LINE 對話 30 分鐘逾時（SPEC §8.4）
+        cron(sweep_webhooks, minute=set(range(0, 60))),
         cron(cleanup_originals, minute={5}),  # hourly: TTL, orphan originals, PII scrub
         cron(expire_supplements, minute={20}),  # hourly: T8 補件逾期（SPEC §7）
         cron(purge_documents, hour={3}, minute={0}),  # daily 03:00: 終態案件硬刪文件（SPEC §7 / §11）

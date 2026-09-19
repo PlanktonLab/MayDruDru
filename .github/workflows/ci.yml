@@ -55,6 +55,11 @@ jobs:
 
       - run: npm ci
 
+      - name: OpenAPI client 同步
+        run: |
+          npm run generate -w @maydru/api-client -- ../../apps/api/openapi.json
+          git diff --exit-code -- packages/api-client/src/schema.d.ts
+
       - name: typecheck
         run: npm run typecheck
 

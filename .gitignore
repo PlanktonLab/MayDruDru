@@ -28,7 +28,6 @@ data/
 .vscode/
 
 # generated API client types (產生自後端 OpenAPI，不進 git)
-packages/api-client/src/schema.d.ts
 
 # tool caches
 .tsbuildinfo

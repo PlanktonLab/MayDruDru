@@ -178,7 +178,7 @@ async def delete_member(member_id: str, user: CurrentUser = Depends(require_cap(
 
 
 def _key_out(k: ApiKey, plaintext: str | None = None) -> ApiKeyOut:
-    return ApiKeyOut(id=k.id, name=k.name, prefix=k.prefix, status=k.status, rate_limit_per_minute=k.rate_limit_per_minute,
+    return ApiKeyOut(id=k.id, name=k.name, prefix=k.prefix, status=k.status, scopes=list(k.scopes or []), rate_limit_per_minute=k.rate_limit_per_minute,
                      last_used_at=k.last_used_at, created_at=k.created_at, plaintext=plaintext)
 
 
@@ -191,7 +191,8 @@ async def list_keys(user: CurrentUser = Depends(require_cap("admin")), db: Async
 @router.post("/api-keys", response_model=ApiKeyOut)
 async def create_key(body: ApiKeyIn, user: CurrentUser = Depends(require_cap("admin")), db: AsyncSession = Depends(get_db)):
     raw, prefix, digest = generate_api_key()
-    k = ApiKey(tenant_id=user.tenant_id, name=body.name, prefix=prefix, key_hash=digest, rate_limit_per_minute=body.rate_limit_per_minute)
+    k = ApiKey(tenant_id=user.tenant_id, name=body.name, prefix=prefix, key_hash=digest,
+               scopes=body.scopes, rate_limit_per_minute=body.rate_limit_per_minute)
     db.add(k)
     await db.commit()
     return _key_out(k, raw)
@@ -200,7 +201,7 @@ async def create_key(body: ApiKeyIn, user: CurrentUser = Depends(require_cap("ad
 @router.patch("/api-keys/{key_id}", response_model=ApiKeyOut)
 async def patch_key(key_id: str, body: ApiKeyPatch, user: CurrentUser = Depends(require_cap("admin")), db: AsyncSession = Depends(get_db)):
     k = await get_owned(db, ApiKey, key_id, user, API_KEY_NOT_FOUND)
-    for f in ("name", "status", "rate_limit_per_minute"):
+    for f in ("name", "status", "scopes", "rate_limit_per_minute"):
         if getattr(body, f) is not None:
             setattr(k, f, getattr(body, f))
     await db.commit()

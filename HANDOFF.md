@@ -1,7 +1,7 @@
 # HANDOFF — MayDru 交接文件
 
 寫給接手的開發者（GPT Codex）。日期 2026-09-19。
-**先讀這份，再讀 [`CLAUDE.md`](CLAUDE.md)（工作規則）與 [`SPEC.md`](SPEC.md)（唯一規格來源，§16 是階段表、§18 是決策紀錄 D1–D31）。**
+**先讀這份，再讀 [`CLAUDE.md`](CLAUDE.md)（工作規則）與 [`SPEC.md`](SPEC.md)（唯一規格來源，§16 是階段表、§18 是決策紀錄 D1–D34）。**
 
 ---
 
@@ -15,11 +15,11 @@
 | P3 送件與審核 | ✅ 已完成並合併（前後端都有，含實機 smoke） |
 | **P4 SOP 串接** | ✅ 已完成並合併（含 apply-web 教學／遮罩定位、admin 對照、完整 E2E 與 CI） |
 | **P5 方案管理與內容助理** | ✅ 已完成並合併（merge `83a13b9`） |
-| P6 `/v1` 與 webhook | ⬜ 未開始 |
+| **P6 `/v1` 與 webhook** | ✅ 已完成（完整資源契約、scopes、outbox webhook、生成 client） |
 | P7 部署 | ⬜ 未開始 |
 | P8 打磨 | ⬜ 未開始 |
 
-目前測試數：後端 **1274 passed、5 skipped**，admin-web 120、apply-web 91、packages 131；OpenAPI 快照已重新產生。下一階段是 P6 `/v1` 完整契約與 outbound webhook。
+目前測試數：後端 **1280 passed、5 skipped**，admin-web 120、apply-web 91、packages 131；OpenAPI 與生成 client 已同步。下一階段是 P7 部署。
 
 ---
 
@@ -101,11 +101,11 @@ docker compose up -d postgres redis minio renderer
 
 **驗收**：方案 CRUD／規則試算／內容助理測試與「新增方案不改 code 即可送件」驗收均通過。
 
-### P6 `/v1` 與 outbound webhook（SPEC §10）
+### P6 `/v1` 與 outbound webhook（**已完成**，SPEC §10）
 
-- 補齊 SPEC §10.1 表列的所有 `/v1` 端點（Schemes / Applications / Review / SOP / Contents / FAQ / Intent / Notifications / Webhooks）；API key scopes `read, apply, review, sop, contents, webhooks, admin`；per-key 限流（`deps.py` 已有雛形）。
-- `webhook_subscriptions` / `webhook_deliveries` 資料表在 P1 就建好了，還沒有服務與端點。要做：事件 `application.status_changed`、`application.created`、`application.document_uploaded`、`review.findings_updated`、`sop.session_completed`、`content.published`；格式 `{id, event, occurred_at, tenant_id, data}`、標頭 `X-MayDru-Signature: sha256=HMAC(secret, body)` 與 `X-MayDru-Delivery`；指數退避重試 5 次，可查可重送（arq worker）。
-- `packages/api-client` 目前只有 fetch 包裝與產生腳本，要真的從 `apps/api/openapi.json` 產出型別並讓 CI 檢查同步。
+- Schemes / Applications / Review / SOP / Contents / FAQ / Intent / Notifications / Webhooks 全部掛在既有 domain service 上；Bearer API key 有 `read, apply, review, sop, contents, webhooks, admin` scopes 與 per-key rate limit。
+- 六種領域事件寫入 transactional outbox；delivery 使用精確 JSON body 做 HMAC-SHA256，帶兩個指定標頭，由 arq 指數退避重試五次，並提供查詢與手動重送。
+- `packages/api-client/src/schema.d.ts` 已由 OpenAPI 生成並進 git；CI 會重生後檢查 diff。
 
 ### P7 部署（SPEC §13）
 
@@ -156,7 +156,7 @@ Commit 用 Conventional Commits、中文摘要，scope 例如 `api`、`line`、`
 
 | 檔案 | 內容 |
 |---|---|
-| [`SPEC.md`](SPEC.md) | 唯一規格來源。§6 資料表、§7 狀態機、§8 功能規格、§9 Agent 規格與紅線、§10 API 契約、§11 安全隱私、§16 階段表、§18 決策 D1–D31 |
+| [`SPEC.md`](SPEC.md) | 唯一規格來源。§6 資料表、§7 狀態機、§8 功能規格、§9 Agent 規格與紅線、§10 API 契約、§11 安全隱私、§16 階段表、§18 決策 D1–D34 |
 | [`CLAUDE.md`](CLAUDE.md) | 工作規則、結構、開發指令、風格慣例 |
 | [`README.md`](README.md) | 專案概觀與快速上手 |
 | `docs/legacy/inventory-sop-tutor.md` | 舊專案 SOP_Tutor 的完整盤點（models、routers、services、ai 管線、docker）— 本專案的後端基底 |

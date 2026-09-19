@@ -61,6 +61,7 @@ class Tenant(TsMixin, Base):
 
 # 角色（SPEC §6.5 / 決策 D14），由低到高。`viewer` 只作為舊資料的唯讀層級保留。
 ROLES = ("viewer", "sop_editor", "sop_reviewer", "case_reviewer", "case_supervisor", "admin", "owner")
+API_SCOPES = ("read", "apply", "review", "sop", "contents", "webhooks", "admin")
 
 
 class User(TsMixin, Base):
@@ -85,6 +86,7 @@ class ApiKey(TsMixin, Base):
     prefix: Mapped[str] = mapped_column(String(12), index=True)
     key_hash: Mapped[str] = mapped_column(String(128), unique=True)
     status: Mapped[str] = mapped_column(String(20), default="active")  # active | disabled
+    scopes: Mapped[list] = mapped_column(JSON, default=lambda: list(API_SCOPES))
     rate_limit_per_minute: Mapped[int] = mapped_column(Integer, default=120)
     last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 

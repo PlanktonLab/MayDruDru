@@ -4,7 +4,7 @@
 
 完整規格在 [`SPEC.md`](SPEC.md)（v1.0，唯一規格來源）；工作規則在 [`CLAUDE.md`](CLAUDE.md)。
 
-目前階段：**P0–P5 已完成並合併**（SPEC §16）。資料層、內容與 LINE、送件與審核、SOP 串接、方案管理與內容助理均已就緒；下一階段是補齊 `/v1` 與 outbound webhook（P6）。
+目前階段：**P0–P6 已完成並合併**（SPEC §16）。資料層、內容與 LINE、送件與審核、SOP、方案管理、完整 `/v1` 與 outbound webhook 均已就緒；下一階段是正式部署（P7）。
 
 ## 版面
 
@@ -195,7 +195,7 @@ npm test                      # vitest
 npm run build                 # tsc -b && vite build
 ```
 
-目前的數量：後端 1274（另有 5 個環境條件 skip）、admin-web 120、apply-web 91、五個 package 合計 131。
+目前的數量：後端 1280（另有 5 個環境條件 skip）、admin-web 120、apply-web 91、五個 package 合計 131。
 
 CI（`.github/workflows/ci.yml`）跑同一組指令，另加 `docker buildx`（linux/arm64 + linux/amd64），只有 main 的 push 會推 GHCR。
 
@@ -206,7 +206,7 @@ npm run generate -w @maydru/api-client            # 需要後端在 localhost:80
 npm run generate -w @maydru/api-client -- ./openapi.json
 ```
 
-產出的 `packages/api-client/src/schema.d.ts` 不進 git；契約以後端的 OpenAPI 為準。
+產出的 `packages/api-client/src/schema.d.ts` 會進 git；CI 重新產生並拒絕不同步的契約。
 
 ## 已知取捨（P0 技術債）
 

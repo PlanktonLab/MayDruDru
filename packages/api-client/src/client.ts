@@ -1,7 +1,7 @@
 /** 最小 fetch 包裝：統一 base URL、JSON 編解碼與錯誤形狀。
  *
- * P0 尚未產生 `schema.d.ts`（見 `scripts/generate.mjs`），所以回傳型別由呼叫端以
- * 泛型指定；P6 產生型別後會改成由路徑推導（SPEC §16）。
+ * OpenAPI 路徑與 schema 型別由套件根匯出；這個底層函式仍保留泛型，方便兩個
+ * 前端逐頁遷移而不需要一次重寫所有呼叫。
  */
 
 export interface ApiClientOptions {

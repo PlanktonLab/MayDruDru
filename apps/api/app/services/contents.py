@@ -478,6 +478,11 @@ async def publish(
             {"content": {"from": before, "to": after}}, tenant_id=tenant_id,
         )
     await db.flush()
+    from . import webhooks
+
+    await webhooks.create_deliveries(db, tenant_id, "content.published", {
+        "key": key, "version": row.version,
+    })
     invalidate(tenant_id)
     return _view(row)
 

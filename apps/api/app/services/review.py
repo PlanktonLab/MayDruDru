@@ -918,6 +918,12 @@ async def persist_findings(
         db.add(row)
         rows.append(row)
     await db.flush()
+    from . import webhooks
+
+    await webhooks.create_deliveries(db, application.tenant_id, "review.findings_updated", {
+        "application_id": application.id, "case_no": application.case_no,
+        "rule_codes": [row.rule_code for row in rows], "source": source,
+    })
     return rows
 
 

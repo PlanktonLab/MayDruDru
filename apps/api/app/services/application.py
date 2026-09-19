@@ -32,7 +32,7 @@ from ..pii import encrypt_phone, hash_last4
 from ..redis_client import redis as _redis
 from ..security import create_case_token
 from . import documents as documents_service
-from . import notify, review
+from . import notify, review, webhooks
 from .actors import Actor
 
 log = logging.getLogger("maydru.application")
@@ -207,6 +207,14 @@ async def create_application(
                        payload={"intake_channel": intake_channel}, now=stamp)
     if auto_start_review:
         await transition(db, app, "T1", actor=system, now=stamp)
+    await webhooks.create_deliveries(db, tenant_id, "application.created", {
+        "application_id": app.id, "case_no": app.case_no, "status": app.status,
+    })
+    if documents:
+        await webhooks.create_deliveries(db, tenant_id, "application.document_uploaded", {
+            "application_id": app.id, "case_no": app.case_no,
+            "document_types": [str(item["document_type_code"]) for item in documents],
+        })
     return app
 
 
@@ -265,6 +273,12 @@ async def add_documents(
         db.add(row)
         rows.append(row)
     await db.flush()
+    if rows:
+        await webhooks.create_deliveries(db, app.tenant_id, "application.document_uploaded", {
+            "application_id": app.id, "case_no": app.case_no,
+            "document_ids": [row.id for row in rows],
+            "document_types": [row.document_type_code for row in rows],
+        })
     return rows
 
 
@@ -405,6 +419,11 @@ async def transition(
         reason=reason, rejection_codes=codes, payload=extra, now=stamp,
     )
     await notify.enqueue_status_notification(db, application, event)
+    await webhooks.create_deliveries(db, application.tenant_id, "application.status_changed", {
+        "application_id": application.id, "case_no": application.case_no,
+        "event_id": event.id, "transition_code": code,
+        "from_status": from_status, "to_status": t.to_status,
+    })
     await db.flush()
     return event
 

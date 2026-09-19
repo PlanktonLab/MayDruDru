@@ -72,6 +72,7 @@ class MemberPatch(BaseModel):
 
 class ApiKeyIn(BaseModel):
     name: str
+    scopes: list[Literal["read", "apply", "review", "sop", "contents", "webhooks", "admin"]] = ["read"]
     rate_limit_per_minute: int = 120
 
 
@@ -80,6 +81,7 @@ class ApiKeyOut(BaseModel):
     name: str
     prefix: str
     status: str
+    scopes: list[str]
     rate_limit_per_minute: int
     last_used_at: datetime | None
     created_at: datetime
@@ -89,6 +91,7 @@ class ApiKeyOut(BaseModel):
 class ApiKeyPatch(BaseModel):
     name: str | None = None
     status: Literal["active", "disabled"] | None = None
+    scopes: list[Literal["read", "apply", "review", "sop", "contents", "webhooks", "admin"]] | None = None
     rate_limit_per_minute: int | None = None
 
 

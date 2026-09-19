@@ -6,8 +6,7 @@
  *   npm run generate -w @maydru/api-client -- ./openapi.json # 讀本機檔案
  *   OPENAPI_URL=http://localhost:8200/openapi.json npm run generate -w @maydru/api-client
  *
- * 產出的 schema.d.ts 不進 git（見 .gitignore）：契約以後端的 OpenAPI 為準，
- * CI 會重新產生並比對是否有未同步的差異（SPEC §14）。
+ * 產出的 schema.d.ts 進 git；CI 會重新產生並比對是否有未同步的差異（SPEC §14）。
  */
 import { readFile, writeFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'

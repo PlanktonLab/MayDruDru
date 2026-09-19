@@ -33,7 +33,7 @@ from ..db import release_connection
 from ..events import log_event
 from ..models import Flow, Goal, Step, Tenant, Variant
 from ..redis_client import redis
-from ..services import guide
+from ..services import guide, webhooks
 from ..services.content import (
     card_preview_url,
     card_url,
@@ -282,6 +282,9 @@ async def _completed_response(state: SessionState, snapshot: dict) -> dict:
     state["goal_id"] = None
     state["path"] = []
     await log_event(ctx.db, state["tenant_id"], state["session_id"], "completed", flow_id=snapshot["flow"]["id"], source=state.get("source", "api"))
+    await webhooks.create_deliveries(ctx.db, state["tenant_id"], "sop.session_completed", {
+        "session_id": state["session_id"], "flow_id": snapshot["flow"]["id"], "goal_id": done_goal,
+    })
     return {"type": "completed", "session_id": state["session_id"],
             "flow": {"id": snapshot["flow"]["id"], "name": snapshot["flow"]["name"], "goal_name": label},
             "message": _policy().text("completed", goal=label), "suggestions": suggestions}
