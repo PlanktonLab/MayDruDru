@@ -1,6 +1,26 @@
 /** API types — mirror backend/app/schemas.py. */
 
-export type Role = 'owner' | 'admin' | 'editor' | 'reviewer' | 'viewer'
+/**
+ * 角色與 capability（SPEC §6.5、決策 D14）。
+ *
+ * 授權以 capability 為準，不以角色排名為準——SOP 製作與案件審核是兩條互不隸屬的線，
+ * 用排名授權會讓案件覆核者順手拿到 SOP 編輯權。這份對照表逐字對齊
+ * `apps/api/app/deps.py` 的 `ROLE_CAPS`。
+ */
+export type Role = 'owner' | 'admin' | 'case_supervisor' | 'case_reviewer' | 'sop_reviewer' | 'sop_editor' | 'viewer'
+export type Capability = 'sop_edit' | 'sop_review' | 'case_review' | 'case_supervise' | 'admin' | 'owner'
+
+const ADMIN_CAPS: Capability[] = ['sop_edit', 'sop_review', 'case_review', 'case_supervise', 'admin']
+
+export const ROLE_CAPS: Record<Role, Capability[]> = {
+  viewer: [],
+  sop_editor: ['sop_edit'],
+  sop_reviewer: ['sop_review'],
+  case_reviewer: ['case_review'],
+  case_supervisor: ['case_review', 'case_supervise'],
+  admin: ADMIN_CAPS,
+  owner: [...ADMIN_CAPS, 'owner'],
+}
 export interface User { id: string; tenant_id: string; email: string; name: string; role: Role; is_active: boolean; created_at?: string | null }
 export interface Tenant { id: string; name: string; slug: string; settings: Record<string, unknown> }
 export interface ApiKey { id: string; name: string; prefix: string; status: 'active' | 'disabled'; rate_limit_per_minute: number; last_used_at: string | null; created_at: string; plaintext?: string | null }
@@ -138,7 +158,15 @@ export interface DashboardSummary {
 }
 
 /** Status words live in canvas/status.ts (`STATUS[status].label`) so the whole product uses one vocabulary. */
-export const ROLE_LABEL: Record<Role, string> = { owner: 'Owner', admin: 'Admin', editor: 'Editor', reviewer: 'Reviewer', viewer: 'Viewer' }
+export const ROLE_LABEL: Record<Role, string> = {
+  owner: '擁有者',
+  admin: '管理者',
+  case_supervisor: '案件覆核人',
+  case_reviewer: '案件審核人',
+  sop_reviewer: 'SOP 審核者',
+  sop_editor: 'SOP 編輯者',
+  viewer: '唯讀',
+}
 export const CHANNEL_LABEL: Record<Channel, string> = { mobile_app: '手機 App', web: '網頁', desktop: '電腦' }
 export const ANNOTATION_LABEL: Record<AnnotationType, string> = { tap: '點按', capture: '截圖需包含', input: '輸入', gesture: '手勢', note: '說明' }
 export const ANNOTATION_COLOR: Record<AnnotationType, string> = { tap: 'var(--ann-tap)', capture: 'var(--ann-capture)', input: 'var(--ann-input)', gesture: 'var(--ann-gesture)', note: 'var(--ann-note)' }
