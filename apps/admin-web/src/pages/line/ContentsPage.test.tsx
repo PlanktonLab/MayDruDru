@@ -77,7 +77,17 @@ function renderPage() {
   )
 }
 
-const editorBox = async () => (await screen.findByLabelText('訊息內容')) as HTMLTextAreaElement
+/**
+ * 編輯框，而且是「已經載到資料」的編輯框。
+ *
+ * 只等元素出現不夠：textarea 先渲染成空的，資料到齊才灌進去。不等那一刻就
+ * 「清空 → 打字」，初始化會在打到一半時把原本的字塞回來，測試於是時好時壞。
+ */
+const editorBox = async () => {
+  const box = (await screen.findByLabelText('訊息內容')) as HTMLTextAreaElement
+  await waitFor(() => expect(box.value.length).toBeGreaterThan(0))
+  return box
+}
 
 beforeEach(() => {
   can.mockReturnValue(true)
