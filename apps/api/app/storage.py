@@ -34,8 +34,9 @@ def presign_client() -> Minio:
     """
     s = get_settings()
     endpoint = s.s3_public_endpoint or s.s3_endpoint
+    secure = s.s3_secure if s.s3_public_secure is None else s.s3_public_secure
     return Minio(endpoint, access_key=s.s3_access_key, secret_key=s.s3_secret_key,
-                 secure=s.s3_secure, region=s.s3_region)
+                 secure=secure, region=s.s3_region)
 
 
 @lru_cache

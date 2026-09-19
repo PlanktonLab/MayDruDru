@@ -27,6 +27,9 @@ class Settings(BaseSettings):
     # Docker services talk to `minio:9000`, but a clerk's browser cannot resolve
     # that internal hostname.
     s3_public_endpoint: str = ""
+    # The browser-facing endpoint may use TLS even when the internal Docker
+    # endpoint (`minio:9000`) does not.
+    s3_public_secure: bool | None = None
     # MinIO's default bucket region. Supplying it lets a client sign URLs for
     # the browser-facing endpoint without attempting to connect to that host.
     s3_region: str = "us-east-1"
