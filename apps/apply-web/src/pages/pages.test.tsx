@@ -146,20 +146,19 @@ describe('HelpPage', () => {
       </Providers>,
     )
     expect(await screen.findByText('什麼是「出帳帳單」？我要去哪裡拿？')).toBeTruthy()
-    fireEvent.change(screen.getByLabelText('搜尋問題'), { target: { value: '保留多久' } })
+    fireEvent.change(screen.getByLabelText('搜尋問題'), { target: { value: '整份帳單' } })
     await waitFor(() => expect(screen.queryByText('什麼是「出帳帳單」？我要去哪裡拿？')).toBeNull())
-    expect(await screen.findByText('我的證件照片會被保留多久？')).toBeTruthy()
+    expect(await screen.findByText('為什麼要我上傳整份帳單？我不想給你們看我所有的消費')).toBeTruthy()
   })
 
-  it('支援熱門標籤點擊與清除搜尋', async () => {
+  it('支援輸入搜尋與清除按鈕', async () => {
     render(
       <Providers>
         <HelpPage />
       </Providers>,
     )
     expect(await screen.findByText('什麼是「出帳帳單」？我要去哪裡拿？')).toBeTruthy()
-    // 點擊熱門搜尋「身分證遮罩」
-    fireEvent.click(screen.getByRole('button', { name: '身分證遮罩' }))
+    fireEvent.change(screen.getByLabelText('搜尋問題'), { target: { value: '整份帳單' } })
     await waitFor(() => expect(screen.queryByText('什麼是「出帳帳單」？我要去哪裡拿？')).toBeNull())
     // 點擊清除搜尋按鈕
     fireEvent.click(screen.getByRole('button', { name: '清除搜尋內容' }))
@@ -176,7 +175,7 @@ describe('HelpPage', () => {
     // 切換至「隱私安全」分類
     fireEvent.click(screen.getByRole('button', { name: /^隱私安全/ }))
     await waitFor(() => expect(screen.queryByText('什麼是「出帳帳單」？我要去哪裡拿？')).toBeNull())
-    expect(await screen.findByText('我的證件照片會被保留多久？')).toBeTruthy()
+    expect(await screen.findByText('為什麼要我上傳整份帳單？我不想給你們看我所有的消費')).toBeTruthy()
 
     // 點擊滿意度「這則回答有幫助」
     const voteBtn = screen.getAllByRole('button', { name: '這則回答有幫助' })[0]
@@ -184,16 +183,29 @@ describe('HelpPage', () => {
     expect(await screen.findByText('感謝你的回饋！')).toBeTruthy()
   })
 
-  it('提供自助捷徑連結與專人客服資訊', async () => {
+  it('提供專人客服與聯繫管道', async () => {
     render(
       <Providers>
         <HelpPage />
       </Providers>,
     )
-    expect(screen.getByRole('link', { name: /查詢案件進度/ }).getAttribute('href')).toBe('/status')
-    expect(screen.getByRole('link', { name: /扣款證明圖文教學/ }).getAttribute('href')).toBe('/sop')
     expect(screen.getByText(/LINE 官方線上客服/)).toBeTruthy()
     expect(screen.getByText(/\(03\) 533-3115/)).toBeTruthy()
+    expect(screen.getByText(/support@youth.hccg.gov.tw/)).toBeTruthy()
+  })
+
+  it('包含最新規章條款之常見問答（API排除、年齡資格、法定代理人代付等）', async () => {
+    render(
+      <Providers>
+        <HelpPage />
+      </Providers>,
+    )
+    // 驗證包含規章新增之問答
+    fireEvent.change(screen.getByLabelText('搜尋問題'), { target: { value: 'API' } })
+    expect(await screen.findByText(/購買 API 額度、Token 代幣或預付儲值點數可以申請補助嗎？/)).toBeTruthy()
+
+    fireEvent.change(screen.getByLabelText('搜尋問題'), { target: { value: '年齡與身分限制' } })
+    expect(await screen.findByText(/誰可以申請？年齡與身分限制為何？/)).toBeTruthy()
   })
 })
 

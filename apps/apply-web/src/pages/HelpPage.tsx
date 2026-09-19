@@ -9,19 +9,12 @@
  */
 
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
 import {
-  BookOpen,
   Check,
   ChevronDown,
   Copy,
   HelpCircle,
-  ListChecks,
-  Mail,
-  MessageSquare,
-  Phone,
   Search,
-  ShieldCheck,
   ThumbsDown,
   ThumbsUp,
   X,
@@ -30,7 +23,7 @@ import { Button, Card, EmptyState, Field, Input, Spinner, cx } from '@maydru/ui'
 import { useFaqs } from '../lib/queries'
 import type { Faq } from '../lib/types'
 
-export const CATEGORY_LABELS: Record<string, string> = {
+const CATEGORY_LABELS: Record<string, string> = {
   ALL: '全部問題',
   DOCUMENTS: '證明文件',
   PRIVACY: '隱私安全',
@@ -39,15 +32,6 @@ export const CATEGORY_LABELS: Record<string, string> = {
   ELIGIBILITY: '資格金額',
   REGULATION: '簡章規定',
 }
-
-export const POPULAR_SEARCHES = [
-  '出帳帳單',
-  '身分證遮罩',
-  '退件補件',
-  '補助上限',
-  'AI工具認列',
-  'iPhone 照片',
-]
 
 export function matchesFaq(faq: Faq, query: string): boolean {
   const needle = query.trim().toLowerCase()
@@ -66,11 +50,11 @@ export default function HelpPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null)
 
   const faqsQuery = useFaqs(query)
-  const rawFaqs = faqsQuery.data ?? []
+  const rawFaqs = faqsQuery.data
 
   // 前端即時搜尋過濾（伺服器回傳前亦能在記憶體中先縮小範圍）
   const searchFilteredFaqs = useMemo(
-    () => rawFaqs.filter((faq) => matchesFaq(faq, query)),
+    () => (rawFaqs ?? []).filter((faq) => matchesFaq(faq, query)),
     [rawFaqs, query],
   )
 
@@ -92,7 +76,7 @@ export default function HelpPage() {
   // 現有題目涵蓋的所有有效分類
   const availableCategories = useMemo(() => {
     const catSet = new Set<string>()
-    for (const faq of rawFaqs) {
+    for (const faq of rawFaqs ?? []) {
       if (faq.category) catSet.add(faq.category)
     }
     const list = ['ALL', ...Array.from(catSet)]
@@ -123,24 +107,20 @@ export default function HelpPage() {
   }
 
   return (
-    <section className="md-risein space-y-8">
+    <section className="md-risein space-y-6">
       {/* 1. Hero 自助客服頂部 */}
-      <header className="space-y-3">
-        <div className="inline-flex items-center gap-1.5 rounded-full bg-accent-bg px-3 py-1 text-xs font-semibold text-accent">
-          <HelpCircle size={14} aria-hidden />
-          自助服務與幫助中心
-        </div>
+      <header className="space-y-2">
         <h1 className="text-2xl font-bold tracking-tight text-primary sm:text-3xl">
           我們能為你提供什麼協助？
         </h1>
         <p className="text-[15px] leading-relaxed text-muted">
-          快速搜尋申辦疑問、文件準備與審核規則；或使用下方的快捷工具自助排查。
+          快速搜尋申辦疑問、文件準備與審核規則；若找不到答案也可洽詢專人客服。
         </p>
       </header>
 
-      {/* 2. 智慧搜尋框與熱門關鍵字標籤 */}
-      <div className="space-y-3">
-        <Field label="搜尋問題" hint="用你自己的話問就可以，例如「帳單」「要多久」「身分證遮罩」。">
+      {/* 2. 智慧搜尋框 */}
+      <div>
+        <Field label="搜尋問題">
           {(props) => (
             <div className="relative">
               <Search
@@ -153,7 +133,7 @@ export default function HelpPage() {
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 className="pr-10 pl-10 h-12 text-[15px]"
-                placeholder="例如：出帳帳單、身分證遮罩、補助上限…"
+                placeholder="輸入關鍵字搜尋，例如：出帳帳單、身分證、退件補正、補助成數…"
                 autoComplete="off"
               />
               {query && (
@@ -169,97 +149,6 @@ export default function HelpPage() {
             </div>
           )}
         </Field>
-
-        {/* 熱門快搜標籤 */}
-        <div className="flex flex-wrap items-center gap-2 pt-1">
-          <span className="text-xs font-medium text-muted">熱門搜尋：</span>
-          {POPULAR_SEARCHES.map((term) => {
-            const isSelected = query.trim() === term
-            return (
-              <button
-                key={term}
-                type="button"
-                onClick={() => setQuery(isSelected ? '' : term)}
-                className={cx(
-                  'rounded-full px-2.5 py-1 text-xs transition-colors',
-                  isSelected
-                    ? 'bg-accent text-on-accent font-medium'
-                    : 'bg-background-lite text-primary hover:bg-border/60',
-                )}
-              >
-                {term}
-              </button>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* 3. 三大核心自助服務捷徑卡片 */}
-      <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-3">
-        <Link
-          to="/status"
-          className="group relative flex flex-col justify-between rounded-2xl border border-border bg-canvas p-4.5 transition-all hover:border-accent/40 hover:shadow-sm"
-        >
-          <div className="space-y-2">
-            <div className="flex size-10 items-center justify-center rounded-xl bg-accent-bg text-accent">
-              <ListChecks size={20} aria-hidden />
-            </div>
-            <h2 className="text-[15px] font-semibold text-primary group-hover:text-accent">
-              查詢案件進度
-            </h2>
-            <p className="text-xs leading-relaxed text-muted">
-              輸入案號與手機末四碼，隨時查看審核狀態與補件要求。
-            </p>
-          </div>
-          <span className="mt-3 inline-flex items-center text-xs font-medium text-accent">
-            立即查詢 →
-          </span>
-        </Link>
-
-        <Link
-          to="/sop"
-          className="group relative flex flex-col justify-between rounded-2xl border border-border bg-canvas p-4.5 transition-all hover:border-accent/40 hover:shadow-sm"
-        >
-          <div className="space-y-2">
-            <div className="flex size-10 items-center justify-center rounded-xl bg-accent-bg text-accent">
-              <BookOpen size={20} aria-hidden />
-            </div>
-            <h2 className="text-[15px] font-semibold text-primary group-hover:text-accent">
-              扣款證明圖文教學
-            </h2>
-            <p className="text-xs leading-relaxed text-muted">
-              各大銀行 App、信用卡、Apple 與 Google 帳單截圖示範。
-            </p>
-          </div>
-          <span className="mt-3 inline-flex items-center text-xs font-medium text-accent">
-            查看教學 SOP →
-          </span>
-        </Link>
-
-        <button
-          type="button"
-          onClick={() => {
-            setActiveCategory('PRIVACY')
-            const el = document.getElementById('faq-list')
-            el?.scrollIntoView({ behavior: 'smooth' })
-          }}
-          className="group relative flex flex-col justify-between rounded-2xl border border-border bg-canvas p-4.5 text-left transition-all hover:border-accent/40 hover:shadow-sm"
-        >
-          <div className="space-y-2">
-            <div className="flex size-10 items-center justify-center rounded-xl bg-accent-bg text-accent">
-              <ShieldCheck size={20} aria-hidden />
-            </div>
-            <h2 className="text-[15px] font-semibold text-primary group-hover:text-accent">
-              隱私離線自動遮罩
-            </h2>
-            <p className="text-xs leading-relaxed text-muted">
-              手機端離線自動遮蔽非必要個資，保護隱私不外流。
-            </p>
-          </div>
-          <span className="mt-3 inline-flex items-center text-xs font-medium text-accent">
-            了解安全機制 →
-          </span>
-        </button>
       </div>
 
       {/* 4. 主題分類切換標籤列 */}
@@ -314,9 +203,8 @@ export default function HelpPage() {
               ? `找不到與「${query}」相符的解答，請嘗試更簡短的關鍵字或切換分類。`
               : '此分類目前尚無問答項目。'
           }
-        >
-          {(query || activeCategory !== 'ALL') && (
-            <div className="mt-3">
+          action={
+            query || activeCategory !== 'ALL' ? (
               <Button
                 type="button"
                 variant="secondary"
@@ -328,11 +216,11 @@ export default function HelpPage() {
               >
                 重設搜尋與分類
               </Button>
-            </div>
-          )}
-        </EmptyState>
+            ) : undefined
+          }
+        />
       ) : (
-        <ul className="space-y-3" aria-label="常見問題列表">
+        <ul className="space-y-2" aria-label="常見問題列表">
           {displayedFaqs.map((faq) => {
             const categoryName = CATEGORY_LABELS[faq.category] ?? faq.category
             const vote = feedback[faq.id]
@@ -340,9 +228,9 @@ export default function HelpPage() {
 
             return (
               <li key={faq.id}>
-                <Card className="p-0 transition-all hover:border-secondary/60">
+                <Card padded={false} className="transition-all hover:border-secondary/60">
                   <details className="group">
-                    <summary className="flex min-h-13 cursor-pointer list-none items-center justify-between gap-3 px-4.5 py-3.5 text-[15px] font-medium leading-6 text-primary select-none marker:hidden">
+                    <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-3.5 py-2.5 text-[14.5px] font-medium leading-5 text-primary select-none marker:hidden sm:px-4">
                       <div className="flex flex-1 flex-wrap items-center gap-2">
                         {faq.category && (
                           <span className="rounded-md bg-background-lite px-2 py-0.5 text-[11px] font-medium text-muted">
@@ -352,20 +240,20 @@ export default function HelpPage() {
                         <span>{faq.question}</span>
                       </div>
                       <ChevronDown
-                        size={18}
+                        size={16}
                         aria-hidden
                         className="shrink-0 text-secondary transition-transform duration-200 group-open:rotate-180"
                       />
                     </summary>
 
-                    <div className="border-t border-border/60 px-4.5 pt-3 pb-4">
+                    <div className="border-t border-border/60 px-3.5 pt-2.5 pb-3 sm:px-4">
                       {/* 解答正文 */}
-                      <p className="whitespace-pre-line text-[14px] leading-relaxed text-muted">
+                      <p className="whitespace-pre-line text-[13.5px] leading-relaxed text-muted">
                         {faq.answer}
                       </p>
 
                       {/* 卡片底端工具列：滿意度反饋與複製問題 */}
-                      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border/40 pt-3 text-xs text-muted">
+                      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-border/40 pt-2 text-xs text-muted">
                         {/* 解答滿意度評分 */}
                         <div className="flex items-center gap-2">
                           {vote ? (
@@ -438,53 +326,38 @@ export default function HelpPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 pt-1 sm:grid-cols-3 sm:gap-6">
           {/* LINE 智慧客服 */}
-          <div className="flex items-start gap-3 rounded-xl border border-border bg-canvas p-3.5">
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400">
-              <MessageSquare size={18} aria-hidden />
-            </div>
-            <div className="space-y-0.5 text-xs">
-              <span className="font-semibold text-primary">LINE 官方線上客服</span>
-              <p className="text-muted">提供 24 小時智慧問答與申辦最新通知。</p>
-              <a
-                href="https://line.me"
-                target="_blank"
-                rel="noreferrer"
-                className="mt-1 inline-block font-medium text-accent underline"
-              >
-                加入 LINE 好友
-              </a>
-            </div>
+          <div className="space-y-1 text-xs">
+            <span className="block font-semibold text-primary">LINE 官方線上客服</span>
+            <p className="leading-relaxed text-muted">提供 24 小時智慧問答與申辦最新通知。</p>
+            <a
+              href="https://line.me/R/ti/p/@811lqyrt"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-block font-medium text-accent underline"
+            >
+              加入 LINE 好友
+            </a>
           </div>
 
           {/* 電話諮詢 */}
-          <div className="flex items-start gap-3 rounded-xl border border-border bg-canvas p-3.5">
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent-bg text-accent">
-              <Phone size={18} aria-hidden />
-            </div>
-            <div className="space-y-0.5 text-xs">
-              <span className="font-semibold text-primary">專線 (03) 533-3115</span>
-              <p className="text-muted">青年事務發展窗口（週一至週五 08:30–17:30）。</p>
-              <span className="text-[11px] text-secondary">市民服務專線亦可直撥 1999</span>
-            </div>
+          <div className="space-y-1 text-xs">
+            <span className="block font-semibold text-primary">專線 (03) 533-3115</span>
+            <p className="leading-relaxed text-muted">青年事務發展窗口（週一至週五 08:30–17:30）。</p>
+            <span className="block text-[11px] text-secondary">市民服務專線亦可直撥 1999</span>
           </div>
 
           {/* 信箱諮詢 */}
-          <div className="flex items-start gap-3 rounded-xl border border-border bg-canvas p-3.5">
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-400">
-              <Mail size={18} aria-hidden />
-            </div>
-            <div className="space-y-0.5 text-xs">
-              <span className="font-semibold text-primary">客服諮詢信箱</span>
-              <p className="text-muted">來信請附上案件編號以利快速排查。</p>
-              <a
-                href="mailto:support@youth.hccg.gov.tw"
-                className="mt-1 inline-block font-medium text-accent underline"
-              >
-                support@youth.hccg.gov.tw
-              </a>
-            </div>
+          <div className="space-y-1 text-xs">
+            <span className="block font-semibold text-primary">客服諮詢信箱</span>
+            <p className="leading-relaxed text-muted">來信請附上案件編號以利快速排查。</p>
+            <a
+              href="mailto:support@youth.hccg.gov.tw"
+              className="inline-block font-medium text-accent underline"
+            >
+              support@youth.hccg.gov.tw
+            </a>
           </div>
         </div>
       </footer>
