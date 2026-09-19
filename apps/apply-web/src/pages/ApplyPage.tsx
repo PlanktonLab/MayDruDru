@@ -292,10 +292,8 @@ export default function ApplyPage() {
               state={state}
               requiredCodes={requiredCodes}
               view={view}
-              submitting={submitting}
               error={submitError}
               onManualAssist={(value) => dispatch({ type: 'manualAssist', value })}
-              onSubmit={() => void submit()}
             />
           )}
 
@@ -311,6 +309,20 @@ export default function ApplyPage() {
             {state.stepIndex > 0 && (
               <Button size="lg" aria-label="上一步" onClick={goBack} className="w-[52px] shrink-0 px-0">
                 <ArrowLeft size={16} aria-hidden />
+              </Button>
+            )}
+            {/* 確認步驟的主要動作是送出，與其他步驟的「下一步」同一個位置。 */}
+            {stepKey === 'confirm' && (
+              <Button
+                variant="primary"
+                size="lg"
+                className="min-w-0 flex-1"
+                loading={submitting}
+                // precheck FAIL 且沒勾人工協助時擋住；勾了就放行（SPEC §8.1 的逃生門）。
+                disabled={view?.verdict === 'FAIL' && !state.manualAssist}
+                onClick={() => void submit()}
+              >
+                送出申請
               </Button>
             )}
             {stepKey !== 'confirm' && (

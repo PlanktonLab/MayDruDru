@@ -4,8 +4,8 @@
  * 文件保存多久、證明文件不會送 AI。說在事後就只是免責聲明，不是設計。
  */
 
-import { AlertTriangle, Check, Info, LifeBuoy, ShieldCheck } from 'lucide-react'
-import { Badge, Button, Card } from '@maydru/ui'
+import { AlertTriangle, Check, LifeBuoy } from 'lucide-react'
+import { Badge, Card } from '@maydru/ui'
 import { money, date } from '../lib/format'
 import { documentTypesFor } from './GuideStep'
 import { toProblem } from './precheck'
@@ -19,8 +19,6 @@ export interface ConfirmStepProps {
   requiredCodes: string[]
   view: PrecheckView | null
   onManualAssist: (value: boolean) => void
-  onSubmit: () => void
-  submitting: boolean
   error?: string
 }
 
@@ -39,8 +37,6 @@ export function ConfirmStep({
   requiredCodes,
   view,
   onManualAssist,
-  onSubmit,
-  submitting,
   error,
 }: ConfirmStepProps) {
   const tier = scheme.tiers.find((item) => item.code === state.identity.tier_code)
@@ -50,7 +46,6 @@ export function ConfirmStep({
   const estimate = tier ? Math.min(Math.round(amount * tier.subsidy_rate), tier.cap_amount) : null
 
   const blocked = view?.verdict === 'FAIL' && !state.manualAssist
-  const warnings = view?.warnings ?? []
 
   return (
     <div className="space-y-4">
@@ -87,30 +82,8 @@ export function ConfirmStep({
         </div>
       )}
 
-      {view?.verdict === 'INDETERMINATE' && (
-        <div className="rounded-xl border border-border bg-background-lite p-4">
-          <div className="flex items-start gap-2.5">
-            <AlertTriangle size={17} aria-hidden className="mt-0.5 shrink-0 text-primary" />
-            <div className="min-w-0">
-              <p className="text-[15px] font-semibold text-primary">有一部分系統看不太懂</p>
-              <p className="mt-1 text-[13px] font-medium leading-relaxed text-primary">
-                這不影響你送出，也不用重做——承辦人員會親自看一眼。
-              </p>
-              <ul className="mt-2.5 space-y-2">
-                {warnings.map((finding) => {
-                  const problem = toProblem(scheme, finding)
-                  return (
-                    <li key={finding.rule_code} className="rounded-xl bg-canvas px-3 py-2.5 text-[13px] leading-5">
-                      <p className="font-medium text-primary">{problem.what_wrong}</p>
-                      <p className="mt-1 text-muted">{problem.how_to_fix}</p>
-                    </li>
-                  )
-                })}
-              </ul>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* INDETERMINATE 不出聲：它不擋送出，而且市民也做不了什麼——
+          承辦人員會親自看一眼，講出來只是讓人在送出前多一次不安。 */}
 
       {view?.verdict === 'FAIL' && (
         <>
@@ -175,27 +148,6 @@ export function ConfirmStep({
         </div>
       )}
 
-      <Card title="送出前請先知道" subtitle="這三件事會在你按下送出之後立刻發生。">
-        <ul className="space-y-2.5 text-[14px] leading-6">
-          <li className="flex gap-2">
-            <ShieldCheck size={16} aria-hidden className="mt-1 shrink-0 text-good" />
-            <span>
-              需要遮罩的文件已經在這支手機上遮好，上傳的是<strong>遮罩後</strong>的影像；原圖從未離開瀏覽器。
-            </span>
-          </li>
-          <li className="flex gap-2">
-            <Info size={16} aria-hidden className="mt-1 shrink-0 text-accent" />
-            <span>
-              證明文件<strong>不會</strong>送給任何 AI 服務。文字辨識也是在你的手機上跑完的。
-            </span>
-          </li>
-          <li className="flex gap-2">
-            <AlertTriangle size={16} aria-hidden className="mt-1 shrink-0 text-warn" />
-            <span>案件結案後，上傳的證明文件會依規定期限自動刪除，並保留案件編號與狀態供稽核。</span>
-          </li>
-        </ul>
-      </Card>
-
       {error && (
         <p role="alert" className="text-[14px] leading-6 text-danger">
           {error}
@@ -209,9 +161,8 @@ export function ConfirmStep({
         </p>
       )}
 
-      <Button variant="primary" size="lg" block loading={submitting} disabled={blocked} onClick={onSubmit}>
-        送出申請
-      </Button>
+      {/* 「送出申請」畫在 `ApplyPage` 的導覽列，與「上一步」同一排——
+          跟其他步驟的主要動作位置一致。 */}
     </div>
   )
 }
