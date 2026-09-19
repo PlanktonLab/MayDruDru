@@ -1,21 +1,22 @@
-import { Timeline, type TimelineEvent } from '@maydru/ui'
-import { Page, Placeholder } from './parts'
+/** `/status` — 輸入案件編號 + 末四碼（SPEC §8.1）。 */
 
-/** P0 只示範時間軸的樣子；真正的事件在 P3 從 `/api/apply/cases/:case_no` 取得。 */
-const SHAPE: TimelineEvent[] = [
-  { key: 'SUBMITTED', title: '已收件', description: '承辦人員會依送件順序開始審核。', tone: 'accent' },
-  { key: 'UNDER_REVIEW', title: '審核中' },
-  { key: 'APPROVED', title: '已核定' },
-]
+import { useNavigate } from 'react-router-dom'
+import { VerifyForm } from '../status/VerifyForm'
 
 export default function StatusPage() {
+  const navigate = useNavigate()
   return (
-    <Page
-      title="查詢進度"
-      lead="輸入案件編號與當初填寫的手機號碼，就能看到目前的審核狀態；需要補件時也從這裡上傳。"
-    >
-      <Timeline events={SHAPE} currentKey="SUBMITTED" />
-      <Placeholder phase="P3 案件狀態" items={['案件時間軸與目前狀態', '退件原因與應補文件', '線上補件']} />
-    </Page>
+    <section className="md-risein space-y-5">
+      <header>
+        <h1 className="text-2xl font-semibold tracking-tight">查詢進度</h1>
+        <p className="mt-2 text-[15px] leading-relaxed text-muted">
+          不需要登入。需要補件或想撤回申請時，也從這裡進去。
+        </p>
+      </header>
+      <VerifyForm onVerified={(caseNo) => navigate(`/status/${encodeURIComponent(caseNo)}`)} />
+      <p className="text-[13px] leading-5 text-muted">
+        忘記案件編號了嗎？如果你已經在 LINE 綁定過這件案子，在官方帳號輸入「我的案件」就能查到。
+      </p>
+    </section>
   )
 }

@@ -4,6 +4,7 @@ import SchemesPage from './pages/SchemesPage'
 import ApplyPage from './pages/ApplyPage'
 import SubmittedPage from './pages/SubmittedPage'
 import StatusPage from './pages/StatusPage'
+import CasePage from './pages/CasePage'
 import SopPage from './pages/SopPage'
 import HelpPage from './pages/HelpPage'
 
@@ -23,6 +24,7 @@ export default function App() {
           <Route path="/apply/:scheme" element={<ApplyPage />} />
           <Route path="/apply/:scheme/done" element={<SubmittedPage />} />
           <Route path="/status" element={<StatusPage />} />
+          <Route path="/status/:case_no" element={<CasePage />} />
           <Route path="/sop" element={<SopPage />} />
           <Route path="/sop/:flow" element={<SopPage />} />
           <Route path="/help" element={<HelpPage />} />
