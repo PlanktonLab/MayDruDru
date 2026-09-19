@@ -34,6 +34,8 @@ async function pickTool(name = 'Claude') {
 function fillIdentity() {
   fireEvent.change(screen.getByLabelText(/姓名/), { target: { value: '測試用小明' } })
   fireEvent.change(screen.getByLabelText(/聯絡電話/), { target: { value: '0912345678' } })
+  fireEvent.change(screen.getByLabelText(/身分證字號/), { target: { value: 'A123456789' } })
+  fireEvent.change(screen.getByLabelText(/電子郵件/), { target: { value: 'test@example.com' } })
   fireEvent.click(screen.getByRole('radio', { name: /一般青年/ }))
 }
 

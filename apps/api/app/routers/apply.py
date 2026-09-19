@@ -268,7 +268,7 @@ async def create_application(
         scheme=scheme,
         applicant_name=payload.applicant_name,
         phone=payload.phone,
-        id_number=payload.id_last4,
+        id_number=payload.id_number or payload.id_last4,
         email=payload.email,
         tier_code=payload.tier_code,
         payment_channel_code=payload.payment_channel_code,

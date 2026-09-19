@@ -32,7 +32,7 @@ export const STEP_TITLE: Record<StepKey, string> = {
 
 export const STEP_LEAD: Record<StepKey, string> = {
   tool: '先確認工具是否符合補助資格，免得文件都準備好了才發現不能申請。',
-  identity: '這些資料只用於本次申請與通知。手機與身分證只保留末四碼，不存完整號碼。',
+  identity: '這些資料只用於本次申請與通知。身分證字號加密保存，畫面上只會顯示末四碼。',
   channel: '付款方式決定你要準備哪幾份憑證，選錯會被退件。',
   guide: '下面這幾份是這次要準備的文件。不確定去哪裡找的，點「教我怎麼取得」。',
   docs: '照片會在你的手機上處理完才上傳，原圖不會離開這支手機。',
@@ -60,7 +60,8 @@ export interface UploadedDoc {
 export interface Identity {
   applicant_name: string
   phone: string
-  id_last4: string
+  /** 完整身分證字號（D36）。送到伺服器後加密保存，畫面上一律只顯示末四碼。 */
+  id_number: string
   email: string
   tier_code: string
 }
@@ -97,7 +98,7 @@ export function initialState(schemeCode: string): ApplyState {
     scheme_code: schemeCode,
     stepIndex: 0,
     tool: { name: '', tool_id: null },
-    identity: { applicant_name: '', phone: '', id_last4: '', email: '', tier_code: '' },
+    identity: { applicant_name: '', phone: '', id_number: '', email: '', tier_code: '' },
     channel: { payment_channel_code: '', paid_by_proxy: false, purchase_date: '', purchase_amount: '' },
     docs: {},
     manualAssist: false,
@@ -218,20 +219,23 @@ export function clearDraft(schemeCode: string): void {
 /* ───────────────────────── 每一步的過關條件 ───────────────────────── */
 
 const PHONE_RE = /^09\d{8}$/
-const LAST4_RE = /^\d{4}$/
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 /** 一句「怎麼修」；通過則是 null（SPEC §15.5）。 */
 export type FieldErrors = Record<string, string>
 
+/** 身分證字號：一個英文字母 + 九個數字。這裡只驗格式，不驗檢查碼——
+ *  檢查碼由伺服器與承辦核對證件時把關，前端擋太嚴只會誤擋到新式居留證。 */
+const ID_NUMBER_RE = /^[A-Z][0-9]{9}$/
+
 export function identityErrors(identity: Identity): FieldErrors {
   const errors: FieldErrors = {}
   if (!identity.applicant_name.trim()) errors.applicant_name = '請填寫與身分證相同的姓名。'
   if (!PHONE_RE.test(identity.phone.trim())) errors.phone = '請填寫 10 碼聯絡電話，例如 0912345678。'
-  if (identity.id_last4 && !LAST4_RE.test(identity.id_last4.trim()))
-    errors.id_last4 = '請填身分證字號的最後 4 位數字，或留空。'
-  if (identity.email && !EMAIL_RE.test(identity.email.trim()))
-    errors.email = '請填寫完整的電子信箱，例如 name@example.com，或留空。'
+  if (!ID_NUMBER_RE.test(identity.id_number.trim().toUpperCase()))
+    errors.id_number = '請填寫完整身分證字號，1 個英文字母加 9 個數字。'
+  if (!EMAIL_RE.test(identity.email.trim()))
+    errors.email = '請填寫完整的電子郵件，例如 name@example.com。'
   if (!identity.tier_code) errors.tier_code = '請選擇一個申請身分。'
   return errors
 }

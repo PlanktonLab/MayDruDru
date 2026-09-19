@@ -39,8 +39,8 @@ function filled(): ApplyState {
     identity: {
       applicant_name: '測試用小明',
       phone: '0912345678',
-      id_last4: '1234',
-      email: '',
+      id_number: 'A123456789',
+      email: 'test@example.com',
       tier_code: 'GENERAL',
     },
     channel: {
@@ -136,12 +136,19 @@ describe('第 2 步 身分', () => {
     expect(errors.phone).toContain('0912345678')
   })
 
-  it('末四碼與 email 留空是允許的', () => {
-    expect(identityErrors({ ...filled().identity, id_last4: '', email: '' })).toEqual({})
+  it('基本資料五個欄位都填齊才過得去', () => {
+    expect(identityErrors(filled().identity)).toEqual({})
+    // 每一欄留空都要各自擋下來（D36 之後身分證與 email 也是必填）。
+    expect(identityErrors({ ...filled().identity, applicant_name: '' }).applicant_name).toBeTruthy()
+    expect(identityErrors({ ...filled().identity, id_number: '' }).id_number).toBeTruthy()
+    expect(identityErrors({ ...filled().identity, email: '' }).email).toBeTruthy()
   })
 
-  it('末四碼填了但不是 4 碼會被擋', () => {
-    expect(identityErrors({ ...filled().identity, id_last4: '12' }).id_last4).toBeTruthy()
+  it('身分證字號要 1 個英文字母加 9 個數字', () => {
+    expect(identityErrors({ ...filled().identity, id_number: 'A12345' }).id_number).toBeTruthy()
+    expect(identityErrors({ ...filled().identity, id_number: '1234567890' }).id_number).toBeTruthy()
+    // 小寫照樣收——送出前會轉大寫，不該因為大小寫擋人。
+    expect(identityErrors({ ...filled().identity, id_number: 'a123456789' }).id_number).toBeFalsy()
   })
 
   it('沒選身分別不能過', () => {

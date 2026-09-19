@@ -2,7 +2,8 @@
 
 三條硬規則：
 1. 完整手機號只以 Fernet 密文落地（推播綁定要打回去，所以不能只存 hash）。
-2. 身分證字號**永不**完整落地——只留末四碼的加鹽 hash。
+2. 完整身分證字號同樣只以 Fernet 密文落地（D36：核銷造冊要用，但不放明文）；
+   末四碼的加鹽 hash 另存，供查詢驗證用。
 3. 任何寫進日誌、稽核或承辦人清單的姓名與電話都先遮蔽。
 
 金鑰：`PII_ENCRYPTION_KEY`（與承辦人原圖的 `ORIGINAL_ENCRYPTION_KEY` 分開輪替）。
@@ -25,7 +26,9 @@ from .config import get_settings
 __all__ = [
     "LAST4_LENGTH",
     "decrypt_phone",
+    "decrypt_pii",
     "encrypt_phone",
+    "encrypt_pii",
     "fernet",
     "hash_last4",
     "hash_user_id",
@@ -56,21 +59,26 @@ def _salt() -> bytes:
     return hashlib.sha256(("pii-last4:" + get_settings().secret_key).encode()).digest()
 
 
-def encrypt_phone(phone: str) -> str:
-    """回傳密文；空字串進、空字串出（紙本案件可能沒有電話）。"""
-    if not phone:
+def encrypt_pii(value: str) -> str:
+    """回傳密文；空字串進、空字串出（紙本案件可能沒填）。"""
+    if not value:
         return ""
-    return fernet().encrypt(phone.encode()).decode()
+    return fernet().encrypt(value.encode()).decode()
 
 
-def decrypt_phone(token: str) -> str:
-    """解不開就回空字串——輪替金鑰後的舊資料不該讓整支推播炸掉。"""
+def decrypt_pii(token: str) -> str:
+    """解不開就回空字串——輪替金鑰後的舊資料不該讓整支流程炸掉。"""
     if not token:
         return ""
     try:
         return fernet().decrypt(token.encode()).decode()
     except (InvalidToken, ValueError):
         return ""
+
+
+# 手機沿用原本的名字，實作與身分證字號共用同一把金鑰與同一組函式。
+encrypt_phone = encrypt_pii
+decrypt_phone = decrypt_pii
 
 
 def last4(value: str) -> str:

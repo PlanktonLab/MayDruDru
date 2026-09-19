@@ -47,17 +47,21 @@ export function IdentityStep({ scheme, value, onChange, errors }: IdentityStepPr
               />
             )}
           </Field>
-          <Field label="身分證字號末四碼" error={errors.id_last4}>
+          <Field label="身分證字號" required error={errors.id_number}>
             {(props) => (
               <Input
                 {...props}
-                value={value.id_last4}
-                onChange={(event) => onChange({ id_last4: event.target.value.replace(/\D/g, '').slice(0, 4) })}
-                inputMode="numeric"
+                value={value.id_number}
+                // 一個英文字母加九個數字；字母一律轉大寫，省得因為打小寫被擋。
+                onChange={(event) =>
+                  onChange({ id_number: event.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10) })
+                }
+                autoComplete="off"
+                maxLength={10}
               />
             )}
           </Field>
-          <Field label="電子郵件" error={errors.email}>
+          <Field label="電子郵件" required error={errors.email}>
             {(props) => (
               <Input
                 {...props}

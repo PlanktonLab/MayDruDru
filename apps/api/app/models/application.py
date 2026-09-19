@@ -84,6 +84,8 @@ class Application(TsMixin, VersionMixin, Base):
     phone_encrypted: Mapped[str] = mapped_column(Text, default="")      # Fernet(PII_ENCRYPTION_KEY)
     phone_last4_hash: Mapped[str] = mapped_column(String(64), default="", index=True)
     id_last4_hash: Mapped[str] = mapped_column(String(64), default="")
+    # 完整身分證字號：Fernet 密文（D36）。解密受 `application.read_pii` 控管並寫稽核。
+    id_number_encrypted: Mapped[str] = mapped_column(Text, default="")
     email: Mapped[str] = mapped_column(String(320), default="")
 
     tool_name: Mapped[str] = mapped_column(String(200), default="")

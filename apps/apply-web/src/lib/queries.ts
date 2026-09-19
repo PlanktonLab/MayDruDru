@@ -179,7 +179,8 @@ export interface ApplicationPayload {
   payment_channel_code: string
   applicant_name: string
   phone: string
-  id_last4?: string
+  /** 完整身分證字號（D36）；伺服器加密保存並自行算出末四碼 hash。 */
+  id_number?: string
   email?: string
   tool_name: string
   tool_id?: string | null

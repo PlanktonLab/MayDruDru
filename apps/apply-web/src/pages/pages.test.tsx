@@ -18,7 +18,7 @@ function state(overrides: Partial<ApplyState> = {}): ApplyState {
   return {
     ...initialState('HCAI115'),
     tool: { name: 'Claude Pro', tool_id: 'tool-claude' },
-    identity: { applicant_name: '測試用小明', phone: '0912345678', id_last4: '1234', email: '', tier_code: 'GENERAL' },
+    identity: { applicant_name: '測試用小明', phone: '0912345678', id_number: 'A123456789', email: 'test@example.com', tier_code: 'GENERAL' },
     channel: {
       payment_channel_code: 'CREDIT_CARD',
       paid_by_proxy: false,

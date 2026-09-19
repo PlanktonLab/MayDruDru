@@ -110,6 +110,9 @@ class ApplicationIn(BaseModel):
     payment_channel_code: str = ""
     applicant_name: str = Field(min_length=1, max_length=120)
     phone: str = Field(default="", max_length=40)
+    # 完整身分證字號（D36）。`id_last4` 保留相容：舊客戶端只送末四碼時仍然收得下，
+    # 末四碼 hash 由 service 自己從這兩個欄位中有值的那個算出來。
+    id_number: str = Field(default="", max_length=20)
     id_last4: str = Field(default="", max_length=20)
     email: str = Field(default="", max_length=320)
     tool_name: str = Field(default="", max_length=200)
