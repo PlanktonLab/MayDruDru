@@ -100,12 +100,13 @@ def test_endpoint_enabled() -> bool:
     return not s.is_production and s.line_sender != "line"
 
 
-@router.post("/__test__/line/inbound")
+@router.post("/__test__/line/inbound", include_in_schema=False)
 async def test_inbound(request: Request, db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
     """同步跑一個 LINE 事件並回傳 bot 會送出的訊息（SPEC §14 的 E2E 用）。
 
     只在非 production 且 sender 為 noop 時可用；其餘情況一律 404，
-    連「這個端點存在但你不能用」都不透露。
+    連「這個端點存在但你不能用」都不透露——它也刻意不出現在 OpenAPI 上，
+    測試鷹架不是對外契約。
     """
     if not test_endpoint_enabled():
         raise HTTPException(404, "Not Found")
