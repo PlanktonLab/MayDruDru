@@ -46,7 +46,7 @@ export interface MaskEditorProps {
   ocrWorker?: Worker
 }
 
-type OcrState = 'idle' | 'scanning' | 'ready' | 'manual' | 'verifying' | 'rejected'
+type OcrState = 'idle' | 'scanning' | 'ready' | 'manual' | 'verifying'
 
 export function MaskEditor({
   source,
@@ -75,7 +75,6 @@ export function MaskEditor({
   const changeMasks = useCallback((next: (current: MaskRect[]) => MaskRect[]) => {
     setMasks(next)
     setConfirmed(false)
-    setOcrState((state) => (state === 'rejected' ? 'manual' : state))
   }, [])
 
   useEffect(() => {
@@ -170,26 +169,24 @@ export function MaskEditor({
       return
     }
 
-    // 自動偵測成功過的卡片，遮完再讀一次確認沒有漏掉的數字。
+    /*
+     * 自動偵測成功過的卡片，遮完再讀一次看有沒有漏掉的數字。
+     *
+     * 複檢的結果只是**提醒**，不擋送出：辨識本來就會失敗（反光、燙金字、
+     * 卡面花紋），擋下去的人手上已經有一張自己檢查過、也勾了確認的圖，
+     * 卻只能對著同一個錯誤重按——最後還是打電話。真的有漏，承辦人員看得到。
+     */
     if (ocrResult && workerRef.current) {
       setOcrState('verifying')
       try {
         const verification = await verifyCardMask(workerRef.current, masked, ocrResult)
         if (!verification.safe) {
-          disposeCanvas(masked)
-          setOcrState('rejected')
           setOcrDetail(
             `仍讀得到 ${verification.extraDigits.length} 個其他數字；末四碼${verification.last4Visible ? '可辨識' : '未完整辨識'}`,
           )
-          setConfirmed(false)
-          return
         }
-        setOcrState('ready')
       } catch {
-        disposeCanvas(masked)
-        setOcrState('manual')
-        setConfirmed(false)
-        return
+        // 複檢自己壞掉更不該擋人——照原本的遮罩結果走。
       }
     }
 
@@ -204,8 +201,18 @@ export function MaskEditor({
   const preview = drawing ? rectFromDrag(drawing) : null
 
   return (
-    <div className="fixed inset-0 z-50 flex bg-scrim p-0 sm:p-5" role="dialog" aria-modal="true" aria-label="編輯個資遮罩">
-      <div className="mx-auto flex h-full w-full max-w-5xl flex-col overflow-hidden bg-background sm:rounded-2xl">
+    // 桌面從右邊滑出一個抽屜，手機仍然是整頁蓋上來：桌面有空間讓人一邊看抽屜、
+    // 一邊對照後面的上傳清單；手機沒有，遮罩本來就是要專心做完的一件事。
+    <div
+      className="fixed inset-0 z-50 flex justify-end bg-scrim"
+      role="dialog"
+      aria-modal="true"
+      aria-label="編輯個資遮罩"
+    >
+      <div
+        className="md-drawer flex h-full w-full flex-col overflow-hidden bg-background lg:max-w-4xl"
+        style={{ boxShadow: 'var(--shadow-sheet)' }}
+      >
         <header className="flex shrink-0 items-center justify-between gap-3 border-b border-border bg-canvas px-4 py-3">
           <div className="flex min-w-0 items-center gap-2.5">
             <span aria-hidden className="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent-bg text-accent">
@@ -256,6 +263,8 @@ export function MaskEditor({
               </div>
             </div>
 
+            {/* `[&>*]:max-h-full` 讓照片的高度不超過這一格，`max-w-full` 管寬度；
+                兩個都是上限、不是指定值，所以 `aspect-ratio` 仍然說了算，比例不會跑掉。 */}
             <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-xl bg-background-lite p-2 sm:p-4">
               <div
                 ref={wrapRef}
@@ -264,7 +273,11 @@ export function MaskEditor({
                 onPointerMove={onPointerMove}
                 onPointerUp={onPointerUp}
                 className={cx(
-                  'relative max-h-full w-full touch-none overflow-hidden rounded-lg bg-canvas select-none',
+                  // 比例交給 `aspect-ratio`，尺寸交給 `max-w`／`max-h`——
+                  // 原本是 `w-full` + `max-h-full`：容器一矮，高度被切掉但寬度還是
+                  // 100%，圖就被壓扁了。改成兩邊都只設上限，瀏覽器會在維持比例的
+                  // 前提下取較小的那一邊。
+                  'relative max-h-full max-w-full touch-none overflow-hidden rounded-lg bg-canvas select-none',
                   mode === 'add' ? 'cursor-crosshair' : 'cursor-pointer',
                 )}
                 style={{ aspectRatio: `${source.width} / ${source.height}` }}
@@ -331,15 +344,6 @@ export function MaskEditor({
                       <span>
                         這張照片沒辦法自動判讀。請自己把安全碼、有效期限，以及末四碼以外的數字框起來蓋掉。
                         {ocrDetail && <small className="mt-1 block opacity-80">辨識摘要：{ocrDetail}</small>}
-                      </span>
-                    </p>
-                  )}
-                  {ocrState === 'rejected' && (
-                    <p className="flex items-start gap-2 rounded-xl bg-danger-bg p-3 text-[13px] leading-relaxed text-danger">
-                      <AlertTriangle aria-hidden size={15} className="mt-0.5 shrink-0" />
-                      <span>
-                        還讀得到其他數字。請把它們也框起來蓋掉，再按一次完成。
-                        {ocrDetail && <small className="mt-1 block opacity-80">{ocrDetail}</small>}
                       </span>
                     </p>
                   )}
