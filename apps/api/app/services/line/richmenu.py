@@ -507,12 +507,17 @@ async def publish(
             "deleted": previous if delete_others else []}
 
 
-async def _fail(db: AsyncSession, sync_log: LineSyncLog, error: str, check: ImageCheck) -> dict[str, Any]:
+async def _fail(
+    db: AsyncSession, sync_log: LineSyncLog, error: str, check: ImageCheck | None = None
+) -> dict[str, Any]:
     sync_log.status = "failed"
     sync_log.error = error[:2000]
     sync_log.completed_at = datetime.now(UTC)
     await db.flush()
-    return {"state": "failed", "error": error, "image": check.dict()}
+    result: dict[str, Any] = {"state": "failed", "error": error}
+    if check is not None:
+        result["image"] = check.dict()
+    return result
 
 
 async def remove(db: AsyncSession, tenant_id: str, *, actor: Actor | None = None) -> dict[str, Any]:
@@ -534,7 +539,7 @@ async def remove(db: AsyncSession, tenant_id: str, *, actor: Actor | None = None
     try:
         await get_client().delete(menu_id)
     except Exception as e:
-        return await _fail(db, sync_log, _describe(e), inspect_image(b""))
+        return await _fail(db, sync_log, _describe(e))
     if row is not None:
         row.line_rich_menu_id = None
         row.is_default = False
