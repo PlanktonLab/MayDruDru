@@ -8,6 +8,10 @@ SPEC §6.2–§6.4 那一批新表。所以這裡不需要轉換腳本——整�
 published snapshot 存的是物件 key 而不是絕對網址（migration 0010 已經改過），
 所以換了網域也不用改資料。
 
+> 若舊 stack 的 bucket 名稱是 `sop-private`／`sop-public`，新 stack 的 `.env` 必須
+> 設 `S3_BUCKET_PRIVATE=sop-private` 與 `S3_BUCKET_PUBLIC=sop-public`；否則 API 會用
+> 新裝預設的 `maydru-*` 名稱查詢，導致既有 SOP 圖片顯示為不存在。
+
 ## 先決條件
 
 - 新舊 stack 同時活著。舊的照常服務，新的只是把資料接過去，隨時可以退回去（D9）。
