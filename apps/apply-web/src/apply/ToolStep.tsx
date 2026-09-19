@@ -110,7 +110,7 @@ export function ToolStep({ scheme, value, onChange, error }: ToolStepProps) {
 
   return (
     <div className="space-y-4">
-      <Field label="AI 工具名稱" required error={error} hint="選你實際購買的那一個；找不到就選最後一項自己填。">
+      <Field label="AI 工具名稱" required error={error}>
         {(props) => (
           <FlatSelect
             id={props.id}

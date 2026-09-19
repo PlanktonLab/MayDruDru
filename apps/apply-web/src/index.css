@@ -104,15 +104,20 @@
   .apply-aside { position: sticky; top: 24px; }
 }
 
-/* 桌面版的表單面板：留白比手機大一圈。框線刻意用白色而不是灰色——
-   卡片本來就是白的，白框線等於沒有框線，卡片只靠「比底色亮」浮出來，
-   畫面上少一整圈線，讀起來更安靜（對齊 meichuhackathon 的 .apply-form）。 */
+/* 表單面板：手機與桌面都是一張白卡，差別只在留白與圓角的大小。
+   框線刻意用白色而不是灰色——卡片本來就是白的，白框線等於沒有框線，
+   卡片只靠「比底色亮」浮出來，畫面上少一整圈線（對齊 meichuhackathon 的 .apply-form）。 */
+.apply-panel {
+  padding: 20px 16px;
+  border: 1px solid var(--canvas);
+  border-radius: 16px;
+  background: var(--canvas);
+}
+
 @media (min-width: 1024px) {
   .apply-panel {
     padding: 28px;
-    border: 1px solid var(--canvas);
     border-radius: 20px;
-    background: var(--canvas);
   }
 }
 

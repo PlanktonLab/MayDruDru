@@ -20,7 +20,6 @@ import { runPrecheck, type PrecheckView } from '../apply/precheck'
 import {
   STEPS,
   STEP_KEYS,
-  STEP_LEAD,
   STEP_TITLE,
   canLeave,
   channelErrors,
@@ -131,7 +130,7 @@ export default function ApplyPage() {
           payment_channel_code: state.channel.payment_channel_code,
           applicant_name: state.identity.applicant_name.trim(),
           phone: state.identity.phone.trim(),
-          id_last4: state.identity.id_last4.trim() || undefined,
+          id_number: state.identity.id_number.trim().toUpperCase() || undefined,
           email: state.identity.email.trim() || undefined,
           tool_name: state.tool.name.trim(),
           tool_id: state.tool.tool_id,
@@ -203,11 +202,15 @@ export default function ApplyPage() {
     <section className="md-risein">
       {/* 桌面：標題在左、步驟列在右的同一橫列；手機：步驟列在標題上面一行。 */}
       <div className="apply-flow-header mb-5 flex flex-col gap-4 lg:mb-7">
-        {/* 標題是整件事的名字（方案名），不是目前這一步——步驟名在面板裡。
-            一路上標題不變，人才知道自己還在同一件事情裡面。 */}
+        {/* 標題是整件事的名字，不是目前這一步——步驟名在面板裡。
+            一路上標題與副標都不變，人才知道自己還在同一件事情裡面。 */}
         <header>
-          <h1 className="text-xl font-semibold tracking-tight lg:text-[20px]">{scheme.name}</h1>
-          <p className="mt-1.5 text-[13px] leading-relaxed text-muted">{STEP_LEAD[stepKey]}</p>
+          <h1 className="text-xl font-semibold tracking-tight lg:text-[20px]">
+            AI領航青年數位工具補助計畫申請
+          </h1>
+          <p className="mt-1.5 text-[13px] leading-relaxed text-muted">
+            選擇申請工具，依序完成資料與文件上傳。
+          </p>
         </header>
         <Stepper steps={STEPS} current={state.stepIndex} />
       </div>
@@ -282,9 +285,9 @@ export default function ApplyPage() {
 
           {/* 一個畫面一個主要動作：「下一步」佔滿剩下的寬度，「上一步」縮成一顆
               只有箭頭的方鈕——回得去，但不跟主要動作搶注意力。 */}
-          <div className="flex gap-3 pt-2">
+          <div className="flex min-w-0 gap-3 pt-2">
             {state.stepIndex > 0 && (
-              <Button size="lg" aria-label="上一步" onClick={goBack} className="w-13 px-0">
+              <Button size="lg" aria-label="上一步" onClick={goBack} className="w-[52px] shrink-0 px-0">
                 <ArrowLeft size={16} aria-hidden />
               </Button>
             )}
