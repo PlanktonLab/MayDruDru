@@ -9778,7 +9778,7 @@
     },
     "/api/auth/bootstrap": {
       "post": {
-        "description": "Creates the first tenant + owner. Only allowed while no tenant exists.",
+        "description": "建立第一個 owner。閘門是「沒有任何還在用的 owner」，不是「沒有 tenant」。\n\n`scripts/seed.py` 會先建好機關，所以灌過種子、但一個使用者都沒有的機器，用\ntenant 數量判斷會永遠進不去（決策 D26）。tenant 已經在了就把 owner 掛上去，\n不再開第二個機關——一台機器一個機關是這套系統的部署形態。",
         "operationId": "bootstrap_api_auth_bootstrap_post",
         "requestBody": {
           "content": {
@@ -9820,6 +9820,7 @@
     },
     "/api/auth/bootstrap-status": {
       "get": {
+        "description": "還沒有任何人能登入時，前端才顯示「建立第一個管理者」（決策 D26）。",
         "operationId": "bootstrap_status_api_auth_bootstrap_status_get",
         "responses": {
           "200": {

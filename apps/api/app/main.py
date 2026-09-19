@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import func, select
+from sqlalchemy import select
 from starlette.formparsers import MultiPartParser
 
 from . import storage
@@ -35,6 +35,7 @@ from .routers.admin import media as admin_media
 from .routers.admin import reviewers as admin_reviewers
 from .routers.admin import schemes as admin_schemes
 from .security import hash_password
+from .services import tenancy
 
 log = logging.getLogger("sop")
 
@@ -45,16 +46,23 @@ MultiPartParser.spool_max_size = get_settings().max_upload_bytes + 1024 * 1024
 
 
 async def _bootstrap_from_env() -> None:
+    """環境變數版的第一個 owner。閘門與 `/api/auth/bootstrap` 同一個（決策 D26）。
+
+    看的是「有沒有還在用的 owner」而不是「有沒有 tenant」：seed 過的機器 tenant
+    早就在了，用 tenant 數量判斷會讓這支函式什麼都不做，開放的 bootstrap 端點
+    也一直開著。tenant 已經在就把 owner 掛上去，不再開第二個機關。
+    """
     s = get_settings()
     if not (s.bootstrap_tenant_name and s.bootstrap_owner_email and s.bootstrap_owner_password):
         return
     async with sessionmaker()() as db:
-        n = (await db.execute(select(func.count(Tenant.id)))).scalar_one()
-        if n:
+        if not await tenancy.needs_bootstrap(db):
             return
-        t = Tenant(name=s.bootstrap_tenant_name, slug="default")
-        db.add(t)
-        await db.flush()
+        t = await tenancy.default_tenant(db)
+        if t is None:
+            t = Tenant(name=s.bootstrap_tenant_name, slug="default")
+            db.add(t)
+            await db.flush()
         db.add(User(tenant_id=t.id, email=s.bootstrap_owner_email.lower(), name="Owner", role="owner", password_hash=hash_password(s.bootstrap_owner_password)))
         await db.commit()
 
