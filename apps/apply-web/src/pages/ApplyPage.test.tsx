@@ -164,7 +164,7 @@ describe('ApplyPage', () => {
     expect(screen.getByText(/請選擇你實際付款的方式/)).toBeTruthy()
   })
 
-  it('準備指引列出伺服器算出來的必備文件，每份都有 SOP 連結', async () => {
+  it('準備申請文件只講取得方式，逐份清單留給上傳步驟', async () => {
     open()
     await pickTool()
     next()
@@ -175,8 +175,9 @@ describe('ApplyPage', () => {
     fillChannel()
     next()
     expect(await screen.findByRole('heading', { name: '準備申請文件' })).toBeTruthy()
-    await waitFor(() => expect(screen.getAllByRole('link', { name: '教我怎麼取得' }).length).toBe(6))
-    expect(screen.getByText('電信帳單')).toBeTruthy()
+    await screen.findByText('電信繳費：要準備電信帳單')
+    // 文件清單與 SOP 連結都移到下一步，這裡不重複列一次。
+    expect(screen.queryByRole('link', { name: '教我怎麼取得' })).toBeNull()
   })
 
   it('準備指引的教學依繳費方式分流，不是同一套說明', async () => {
@@ -191,7 +192,7 @@ describe('ApplyPage', () => {
     next()
     await screen.findByRole('heading', { name: '準備申請文件' })
     // 電信的教學講電信帳單，不會出現信用卡那一套。
-    expect(await screen.findByText('電信繳費：怎麼拿到電信帳單')).toBeTruthy()
+    expect(await screen.findByText('電信繳費：要準備電信帳單')).toBeTruthy()
     // 步驟裡講一次、「送出前確認」再列一次，所以會有兩處。
     expect(screen.getAllByText(/電話末三碼/).length).toBeGreaterThan(0)
     expect(screen.queryByText('信用卡繳費：要準備兩份憑證')).toBeNull()
@@ -208,7 +209,8 @@ describe('ApplyPage', () => {
     fillChannel()
     next()
     await screen.findByRole('heading', { name: '準備申請文件' })
-    await waitFor(() => expect(screen.getAllByRole('link', { name: '教我怎麼取得' }).length).toBe(6))
+    // 等教學出現＝必備文件已經算好了，接著才進得了上傳步驟。
+    await screen.findByText('電信繳費：要準備電信帳單')
     next()
     await screen.findByRole('heading', { name: '上傳文件' })
 

@@ -1,13 +1,12 @@
-/** 第 4 步 準備指引（SPEC §8.1）。
+/** 第 4 步 準備申請文件（SPEC §8.1）。
  *
- * 在開相機之前先把「要哪幾份、每份要看得到什麼、去哪裡找」講完。
- * 每一份都掛一個「教我怎麼取得」連到 SOP（P4 接上真正的步驟卡）。
+ * 在開相機之前先把「去哪裡找、找到之後要看得到什麼」講完——這一步只講取得方式，
+ * 逐份文件的清單留給下一步的上傳畫面，那裡本來就一份一張卡。
  */
 
 import { useState } from 'react'
-import { ChevronDown, ExternalLink, Eye, ShieldCheck } from 'lucide-react'
-import { Card, Spinner, cx } from '@maydru/ui'
-import { sopHref } from './precheck'
+import { ChevronDown, Eye } from 'lucide-react'
+import { Spinner, cx } from '@maydru/ui'
 import { guideFor, type ChannelGuide } from './channelGuides'
 import type { SchemeDocumentType, SchemePublic } from '../lib/types'
 
@@ -109,8 +108,7 @@ export function documentTypesFor(scheme: SchemePublic, codes: string[]): SchemeD
     .filter((type): type is SchemeDocumentType => Boolean(type))
 }
 
-export function GuideStep({ scheme, requiredCodes, channelCode = '', loading }: GuideStepProps) {
-  const types = documentTypesFor(scheme, requiredCodes)
+export function GuideStep({ channelCode = '', loading }: GuideStepProps) {
   const guide = guideFor(channelCode)
 
   if (loading) return <Spinner label="正在確認你要準備哪幾份文件…" />
@@ -123,49 +121,9 @@ export function GuideStep({ scheme, requiredCodes, channelCode = '', loading }: 
           講「一般性的準備方式」等於每個人都得自己翻譯一次。 */}
       {guide && <ChannelGuideCard guide={guide} />}
 
-      <p className="text-[15px] text-primary">
-        這次要準備 <strong className="tabular-nums">{types.length}</strong> 份文件。
-      </p>
-
-      <ol className="space-y-3">
-        {types.map((type, index) => (
-          <li key={type.code}>
-            <Card
-              title={
-                <span className="flex items-baseline gap-2">
-                  <span className="tabular-nums text-muted">{String(index + 1).padStart(2, '0')}</span>
-                  {type.label}
-                </span>
-              }
-              subtitle={type.hint}
-            >
-              {type.must_mask && (
-                <p className="mb-2 flex items-start gap-2 text-[13px] leading-5 text-accent">
-                  <ShieldCheck size={15} aria-hidden className="mt-0.5 shrink-0" />
-                  上傳前會先在你的手機上遮罩，遮好才會送出。
-                </p>
-              )}
-              <a
-                href={sopHref(type.code)}
-                className="inline-flex min-h-11 items-center gap-1.5 text-[15px] text-accent underline"
-              >
-                教我怎麼取得
-                <ExternalLink size={14} aria-hidden />
-              </a>
-            </Card>
-          </li>
-        ))}
-      </ol>
-
-      {scheme.official_url && (
-        <p className="text-[13px] leading-5 text-muted">
-          完整簡章與規定請見{' '}
-          <a href={scheme.official_url} target="_blank" rel="noreferrer" className="text-accent underline">
-            計畫公告頁面
-          </a>
-          。有問題可洽 {scheme.contact}。
-        </p>
-      )}
+      {/* 逐份文件的清單不列在這裡：下一步的上傳畫面本來就一份一張卡，
+          在這裡先列一次只是同一份資訊讀兩遍。這一步專心講「怎麼取得」。
+          簡章連結與聯絡方式也不放——「說明」分頁就是為這件事存在的。 */}
     </div>
   )
 }
