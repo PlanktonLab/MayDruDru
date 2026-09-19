@@ -181,6 +181,30 @@ export default function CaseReviewPage() {
   const documentTypes: DocumentTypeOption[] = settings.document_types.filter((type) =>
     caseData.required_document_types.includes(type.code),
   )
+  const currentDocumentTypes = new Set(
+    caseData.documents.filter((document) => document.is_current).map((document) => document.document_type_code),
+  )
+  const missingDocuments = caseData.required_document_types
+    .filter((code) => !currentDocumentTypes.has(code))
+    .map((code) => settings.document_types.find((type) => type.code === code)?.label || code)
+  const findingsPanel = (
+    <FindingsPanel
+      findings={caseData.findings.map((finding) => ({
+        ...finding,
+        note: finding.note_text || renderNote(finding.note),
+      }))}
+      rules={caseData.rules}
+      missingDocuments={missingDocuments}
+      focusedRuleCode={focus?.ruleCode ?? null}
+      onLocate={onLocate}
+      canReview={can('case_review')}
+      onOverride={async (ruleCode, body) => {
+        await overrideFinding(caseNo, ruleCode, body)
+        await refresh()
+        toast('已寫入人工判定')
+      }}
+    />
+  )
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -227,7 +251,9 @@ export default function CaseReviewPage() {
         </section>
 
         <aside aria-label="審核面板" className="min-h-0 space-y-4 overflow-auto">
-          <Card title="申請資料">
+          {findingsPanel}
+
+          <Card title="申請概況">
             <dl className="divide-y divide-border">
               <Row label="申請人" value={caseData.applicant_name} />
               <Row label="手機" value={caseData.phone_masked} />
@@ -283,22 +309,6 @@ export default function CaseReviewPage() {
               </p>
             )}
           </Card>
-
-          <FindingsPanel
-            findings={caseData.findings.map((finding) => ({
-              ...finding,
-              note: finding.note_text || renderNote(finding.note),
-            }))}
-            rules={caseData.rules}
-            focusedRuleCode={focus?.ruleCode ?? null}
-            onLocate={onLocate}
-            canReview={can('case_review')}
-            onOverride={async (ruleCode, body) => {
-              await overrideFinding(caseNo, ruleCode, body)
-              await refresh()
-              toast('已寫入人工判定')
-            }}
-          />
 
           <ComparePanel
             claimed={caseData.purchase_amount}

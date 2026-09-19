@@ -8,14 +8,14 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { History, Highlighter, Maximize2, RotateCw, ZoomIn, ZoomOut } from 'lucide-react'
+import { History, Highlighter, Maximize2, RotateCw, ScanLine, ZoomIn, ZoomOut } from 'lucide-react'
 import { Badge, Button, Spinner, cx } from '@maydru/ui'
 import { disposeCanvas, pdfToPageCanvases, toBlob } from '@maydru/ocr'
 import type { BoundingBox } from '@maydru/review-rules'
 import { dateTime } from './labels'
 import type { CaseDocument, CaseFinding } from './types'
 
-export const MIN_ZOOM = 0.5
+export const MIN_ZOOM = 0.2
 export const MAX_ZOOM = 3
 
 export function clampZoom(value: number): number {
@@ -92,6 +92,7 @@ export function DocumentViewer({
   const [showHighlights, setShowHighlights] = useState(true)
   const [natural, setNatural] = useState({ width: 0, height: 0 })
   const dragRef = useRef<{ x: number; y: number } | null>(null)
+  const stageRef = useRef<HTMLDivElement | null>(null)
 
   const selected = documents.find((doc) => doc.id === selectedId) ?? current[0] ?? null
   const isPdf = selected?.mime === 'application/pdf'
@@ -179,16 +180,45 @@ export function DocumentViewer({
   const highlights = useMemo<HighlightBox[]>(() => {
     if (!selected) return []
     const boxes: HighlightBox[] = []
+    let focusIsEvidence = false
     if (showHighlights) {
+      const evidenceByBox = new Map<string, HighlightBox>()
       findings
         .filter((finding) => !finding.superseded && finding.document_id === selected.id && finding.bbox)
         .forEach((finding) => {
           const box = toPercentBox(finding.bbox, natural.width, natural.height)
-          if (box) boxes.push({ ...box, key: finding.id, emphasis: false, label: finding.rule_code })
+          const emphasis = Boolean(
+            focusBbox
+              && finding.bbox
+              && finding.bbox.x0 === focusBbox.x0
+              && finding.bbox.y0 === focusBbox.y0
+              && finding.bbox.x1 === focusBbox.x1
+              && finding.bbox.y1 === focusBbox.y1,
+          )
+          if (emphasis) focusIsEvidence = true
+          if (!box || !finding.bbox) return
+          const coordinateKey = `${finding.bbox.x0}:${finding.bbox.y0}:${finding.bbox.x1}:${finding.bbox.y1}`
+          const existing = evidenceByBox.get(coordinateKey)
+          if (existing) {
+            existing.emphasis ||= emphasis
+            existing.label = `${existing.label}、${finding.rule_code}`
+          } else {
+            evidenceByBox.set(coordinateKey, {
+              ...box,
+              key: coordinateKey,
+              emphasis,
+              label: finding.rule_code,
+            })
+          }
         })
+      boxes.push(...evidenceByBox.values())
     }
-    const focus = toPercentBox(focusBbox, natural.width, natural.height)
-    if (focus) boxes.push({ ...focus, key: 'focus', emphasis: true, label: '目前定位的重點' })
+    // focus 通常已經是上面某個 evidence；只有舊資料沒有 finding id 時才補畫，避免兩層
+    // 半透明色疊在一起把文字蓋住。
+    if (!focusIsEvidence) {
+      const focus = toPercentBox(focusBbox, natural.width, natural.height)
+      if (focus) boxes.push({ ...focus, key: 'focus', emphasis: true, label: '目前定位的重點' })
+    }
     return boxes
   }, [findings, focusBbox, natural.height, natural.width, selected, showHighlights])
 
@@ -196,6 +226,13 @@ export function DocumentViewer({
     (finding) => !finding.superseded && finding.document_id === selected?.id && finding.bbox,
   ).length
   const displayUrl = isPdf ? renderedPdfUrl : url
+
+  const fitToWidth = useCallback((width = natural.width) => {
+    const available = (stageRef.current?.clientWidth ?? 0) - 32
+    if (!width || available <= 0) return
+    setZoom(clampZoom(Math.min(1, available / width)))
+    setPan({ x: 0, y: 0 })
+  }, [natural.width])
 
   const onWheel = useCallback((event: React.WheelEvent) => {
     event.preventDefault()
@@ -287,16 +324,18 @@ export function DocumentViewer({
             <Button size="sm" icon={<RotateCw size={14} />} onClick={() => setRotation((r) => (r + 90) % 360)}>
               旋轉
             </Button>
+            <Button size="sm" icon={<ScanLine size={14} />} onClick={() => fitToWidth()}>
+              適合寬度
+            </Button>
             <Button
               size="sm"
               icon={<Maximize2 size={14} />}
               onClick={() => {
-                setZoom(1)
-                setPan({ x: 0, y: 0 })
                 setRotation(0)
+                fitToWidth()
               }}
             >
-              重設
+              回到開頭
             </Button>
             <Button
               size="sm"
@@ -348,6 +387,7 @@ export function DocumentViewer({
       )}
 
       <div
+        ref={stageRef}
         className="relative min-h-0 flex-1 overflow-hidden bg-background"
         onWheel={onWheel}
         onPointerDown={onPointerDown}
@@ -369,9 +409,9 @@ export function DocumentViewer({
         {displayUrl && (
           <div
             data-testid="document-stage"
-            className="absolute left-1/2 top-1/2 origin-center"
+            className="absolute left-1/2 top-4 origin-top"
             style={{
-              transform: `translate(-50%, -50%) translate(${pan.x}px, ${pan.y}px) scale(${zoom}) rotate(${rotation}deg)`,
+              transform: `translateX(-50%) translate(${pan.x}px, ${pan.y}px) scale(${zoom}) rotate(${rotation}deg)`,
             }}
           >
             <img
@@ -379,12 +419,14 @@ export function DocumentViewer({
               alt={selected ? `${selected.document_type_label}（第 ${selected.revision} 版）` : '文件'}
               draggable={false}
               onLoad={(event) =>
-                setNatural({
-                  width: event.currentTarget.naturalWidth,
-                  height: event.currentTarget.naturalHeight,
-                })
+                {
+                  const width = event.currentTarget.naturalWidth
+                  const height = event.currentTarget.naturalHeight
+                  setNatural({ width, height })
+                  fitToWidth(width)
+                }
               }
-              className="max-h-[70vh] max-w-full select-none"
+              className="max-w-none select-none"
             />
             {highlights.map((box) => (
               <span
@@ -401,7 +443,7 @@ export function DocumentViewer({
                   top: `${box.top}%`,
                   width: `${box.width}%`,
                   height: `${box.height}%`,
-                  background: box.emphasis ? 'rgba(255, 235, 0, 0.82)' : 'rgba(255, 232, 75, 0.52)',
+                  background: box.emphasis ? 'rgba(255, 224, 0, 0.48)' : 'rgba(255, 232, 75, 0.26)',
                 }}
               />
             ))}

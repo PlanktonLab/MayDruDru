@@ -126,13 +126,22 @@ describe('CaseReviewPage', () => {
     expect(screen.getByText('09**-***-678')).toBeTruthy()
   })
 
-  it('規則判定卡列出抽到的值與狀態，不出現任何「建議」', async () => {
+  it('審核重點把已掃描資訊集中顯示，不出現任何「建議」', async () => {
     openCase('HC-2026-900002')
     await screen.findByText('帳單上有換算後的臺幣金額')
-    const panel = screen.getByText('規則判定').closest('section')!
+    const panel = screen.getByText('審核重點').closest('section')!
+    expect(within(panel).getByText('已掃描到的資訊')).toBeTruthy()
     expect(within(panel).getAllByText('符合').length).toBeGreaterThan(0)
     expect(panel.textContent).not.toContain('建議')
     expect(panel.textContent).not.toContain('AI')
+  })
+
+  it('核定必備但未符合的項目會優先列出', async () => {
+    openCase('HC-2026-900003')
+    const heading = await screen.findByText(/優先處理：缺少或無法確認/)
+    const panel = screen.getByText('審核重點').closest('section')!
+    expect(panel.contains(heading)).toBe(true)
+    expect(within(panel).getByText('缺少文件')).toBeTruthy()
   })
 
   it('note 以文案 key 回來時渲染成句子，不露出 key', async () => {
@@ -141,11 +150,11 @@ describe('CaseReviewPage', () => {
     expect(screen.queryByText('review.note.amount_mismatch')).toBeNull()
   })
 
-  it('沒有 bbox 的 finding 不能按「定位」', async () => {
+  it('沒有 bbox 的 finding 不能按「看文件」', async () => {
     openCase('HC-2026-900002')
     await screen.findByText('必要文件齊備')
     const card = screen.getByText('必要文件齊備').closest('li')!
-    expect((within(card).getByRole('button', { name: '定位' }) as HTMLButtonElement).disabled).toBe(true)
+    expect((within(card).getByRole('button', { name: '看文件' }) as HTMLButtonElement).disabled).toBe(true)
   })
 
   it('覆寫會 PUT 到 findings 端點，並寫上人工判定', async () => {
@@ -154,10 +163,10 @@ describe('CaseReviewPage', () => {
       if (request.method === 'PUT') calls.push({ url: request.url, body: await request.clone().json() })
     })
     openCase('HC-2026-900003')
-    await screen.findByText('規則判定')
-    const panel = screen.getByText('規則判定').closest('section')!
+    await screen.findByText('審核重點')
+    const panel = screen.getByText('審核重點').closest('section')!
     const card = within(panel).getByText('帳單上有換算後的臺幣金額').closest('li')!
-    fireEvent.click(within(card).getByRole('button', { name: '覆寫' }))
+    fireEvent.click(within(card).getByRole('button', { name: '人工確認' }))
     await screen.findByText(/覆寫判定/)
     fireEvent.change(screen.getByLabelText('判定'), { target: { value: 'MATCH' } })
     fireEvent.change(screen.getByLabelText('更正後的值'), { target: { value: '3600' } })
@@ -432,8 +441,8 @@ describe('金額比對', () => {
 })
 
 describe('文件檢視器的數學', () => {
-  it('縮放夾在 0.5 – 3 之間', () => {
-    expect(clampZoom(0.1)).toBe(0.5)
+  it('縮放夾在 0.2 – 3 之間', () => {
+    expect(clampZoom(0.1)).toBe(0.2)
     expect(clampZoom(10)).toBe(3)
     expect(clampZoom(1.5)).toBe(1.5)
   })
