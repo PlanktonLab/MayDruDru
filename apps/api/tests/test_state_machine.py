@@ -348,7 +348,9 @@ async def test_notified_transitions_queue_a_notification(db, tenant, scheme, cod
         await case_service.expire_overdue(db, datetime.now(UTC))
     else:
         await drive(db, app, *paths[code])
-    rows = list((await db.execute(select(notify.Notification).where(notify.Notification.status == "queued"))).scalars())
+    # 沒有人綁定這件案子，所以那一列一建立就是 skipped（P2：`no_linked_line_user`）。
+    # 重點是「這條轉移有留下一筆通知」，不是它最後送不送得出去。
+    rows = list((await db.execute(select(notify.Notification))).scalars())
     assert any(r.payload.get("transition_code") == code for r in rows)
 
 
@@ -364,7 +366,10 @@ async def test_notification_carries_only_a_content_key_not_a_sentence(db, tenant
     await drive(db, app, "T3")
     row = (await db.execute(select(notify.Notification))).scalars().first()
     assert row.content_key == "status.APPROVED.notify_headline"
-    assert row.status == "queued"
+    # 沒有綁定 LINE 的案件留一列 skipped，承辦人才看得出「這個人沒收到」；
+    # 有綁定時才會是 queued 並排進 worker（見 tests/test_line_notify.py）。
+    assert row.status == "skipped"
+    assert row.error == "no_linked_line_user"
 
 
 # ------------------------------------------------------------- 承辦人指派
