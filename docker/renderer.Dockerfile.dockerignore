@@ -1,0 +1,19 @@
+# Keep secrets, local environments and build output out of the build context.
+# Nothing app-specific is excluded: every image needs the workspace manifests
+# (uv.lock resolves both Python members; npm ci needs every package.json).
+.git
+.github
+**/.env
+**/.env.*
+!**/.env.example
+.venv
+**/node_modules
+**/dist
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+**/.DS_Store
+.claude
+deploy

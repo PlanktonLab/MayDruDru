@@ -1,0 +1,61 @@
+# VM 覆寫（SPEC §13.3）：
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# 與開發檔的差別：
+#   - 不在 VM 上 build，改拉 GHCR 的多架構映像（linux/arm64 + linux/amd64）
+#   - ENV=production：啟動時拒絕不安全的預設值（見 app/config.py::insecure_defaults）
+#   - `!override` 取代（而非合併）ports，讓資料面服務完全不對外開；只留下主機 nginx
+#     會反向代理的 api / admin-web / apply-web 三個 127.0.0.1 連接埠
+#   - restart: unless-stopped
+#
+# GHCR_OWNER 由 .env 提供（例如 GHCR_OWNER=xamjiang）。
+
+x-prod: &prod
+  restart: unless-stopped
+
+services:
+  postgres:
+    <<: *prod
+    ports: !override []
+
+  redis:
+    <<: *prod
+    ports: !override []
+
+  minio:
+    <<: *prod
+    ports: !override []
+
+  renderer:
+    <<: *prod
+    image: ghcr.io/${GHCR_OWNER:-xamjiang}/maydru-renderer:${IMAGE_TAG:-latest}
+    environment:
+      ENV: production
+      RENDERER_TOKEN: ${RENDERER_TOKEN:?RENDERER_TOKEN 必填}
+    ports: !override []
+
+  otel-collector:
+    <<: *prod
+
+  api:
+    <<: *prod
+    image: ghcr.io/${GHCR_OWNER:-xamjiang}/maydru-api:${IMAGE_TAG:-latest}
+    environment:
+      ENV: production
+    ports: !override ["127.0.0.1:8200:8000"]
+
+  worker:
+    <<: *prod
+    image: ghcr.io/${GHCR_OWNER:-xamjiang}/maydru-worker:${IMAGE_TAG:-latest}
+    environment:
+      ENV: production
+
+  admin-web:
+    <<: *prod
+    image: ghcr.io/${GHCR_OWNER:-xamjiang}/maydru-admin-web:${IMAGE_TAG:-latest}
+    ports: !override ["127.0.0.1:8201:80"]
+
+  apply-web:
+    <<: *prod
+    image: ghcr.io/${GHCR_OWNER:-xamjiang}/maydru-apply-web:${IMAGE_TAG:-latest}
+    ports: !override ["127.0.0.1:8202:80"]

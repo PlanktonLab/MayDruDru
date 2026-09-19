@@ -1,0 +1,79 @@
+@import "tailwindcss";
+@import "@maydru/ui/tokens.css";
+
+/* Base rules live in the base layer so utilities (text-white on a blue
+   button, for one) can still win — an unlayered rule beats every layer. */
+@layer base {
+  html, body, #root { height: 100%; }
+  body { margin: 0; background: var(--background); color: var(--primary); font-family: var(--font-sans); font-size: 14px; -webkit-font-smoothing: antialiased; }
+  * { box-sizing: border-box; }
+  button, input, select, textarea { font: inherit; color: inherit; }
+
+  /* Tailwind v4 preflight resets buttons to cursor: default. Restore the
+     platform cues, and set them explicitly so a parent's cursor (grab on a
+     step card, pointer on a list row) is never inherited by a control. */
+  button, [role="button"], [role="menuitem"], [role="tab"], [role="switch"], [role="radio"], [role="checkbox"], [role="option"],
+  select, summary, label:has(> input[type="checkbox"], > input[type="radio"]),
+  input:is([type="checkbox"], [type="radio"], [type="file"], [type="color"], [type="range"], [type="button"], [type="submit"], [type="reset"]),
+  input::file-selector-button { cursor: pointer; }
+  input:not([type="checkbox"], [type="radio"], [type="file"], [type="color"], [type="range"], [type="button"], [type="submit"], [type="reset"], [type="hidden"]),
+  textarea, [contenteditable]:not([contenteditable="false"]) { cursor: text; }
+  :is(button, input, select, textarea, [role="button"], [role="menuitem"], [role="switch"], [role="radio"]):is(:disabled, [aria-disabled="true"]),
+  label:has(> input:disabled) { cursor: not-allowed; }
+  input:read-only:not(:disabled, [type="checkbox"], [type="radio"], [type="file"], [type="color"], [type="range"], [type="button"], [type="submit"], [type="reset"]),
+  textarea:read-only:not(:disabled) { cursor: default; }
+}
+
+@keyframes pg-nodepop { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
+.pg-nodepop { animation: pg-nodepop 0.36s var(--ease-out); }
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { animation: spin 0.9s linear infinite; }
+@keyframes pg-menupop { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+.pg-menupop { animation: pg-menupop 0.12s var(--ease-out); transform-origin: top left; }
+@keyframes pg-sheetin { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: translateX(0); } }
+.pg-sheetin { animation: pg-sheetin 0.32s var(--ease-pop); }
+@keyframes pg-fadein { from { opacity: 0; } to { opacity: 1; } }
+.pg-fadein { animation: pg-fadein 0.2s var(--ease-out); }
+
+/* ---- redesign: motion & AI states ------------------------------------- */
+
+/* Shimmer for "thinking" text: a light band sweeps through the label. */
+@keyframes pg-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+.pg-shimmer {
+  background: linear-gradient(90deg, var(--muted) 0%, var(--muted) 35%, var(--primary) 50%, var(--muted) 65%, var(--muted) 100%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: pg-shimmer 1.8s linear infinite;
+}
+
+/* Skeleton block: a soft pulsing surface in place of content that is loading. */
+@keyframes pg-skeleton { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+.pg-skeleton { background: var(--background-lite); border-radius: 8px; animation: pg-skeleton 1.4s ease-in-out infinite; }
+
+/* A picture the AI is still working on: blurred, breathing; sharpens when the real one lands. */
+@keyframes pg-breathe { 0%, 100% { filter: blur(8px) saturate(0.7); opacity: 0.75; } 50% { filter: blur(6px) saturate(0.85); opacity: 0.9; } }
+.pg-working-img { animation: pg-breathe 2.4s ease-in-out infinite; transform: scale(1.04); }
+.pg-reveal { animation: pg-reveal 0.6s var(--ease-out); }
+@keyframes pg-reveal { from { filter: blur(8px); opacity: 0.6; } to { filter: blur(0); opacity: 1; } }
+
+/* Progress ring (indeterminate): a short arc chasing around. */
+@keyframes pg-ring { to { transform: rotate(360deg); } }
+.pg-ring { animation: pg-ring 1s linear infinite; }
+
+/* Floating panels: slide in from their edge. */
+@keyframes pg-panelin { from { opacity: 0; transform: translateX(12px); } to { opacity: 1; transform: translateX(0); } }
+.pg-panelin { animation: pg-panelin 0.24s var(--ease-pop); }
+@keyframes pg-risein { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.pg-risein { animation: pg-risein 0.22s var(--ease-pop); }
+@keyframes pg-dropin { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+.pg-dropin { animation: pg-dropin 0.18s var(--ease-out); }
+@keyframes pg-scalein { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: scale(1); } }
+.pg-scalein { animation: pg-scalein 0.2s var(--ease-pop); }
+
+/* Reduced motion: keep state changes, drop the choreography. */
+@media (prefers-reduced-motion: reduce) {
+  .pg-shimmer, .pg-skeleton, .pg-working-img, .pg-reveal, .pg-nodepop, .pg-panelin, .pg-risein, .pg-dropin, .pg-scalein { animation: none; }
+  .pg-working-img { filter: blur(6px); opacity: 0.8; }
+}

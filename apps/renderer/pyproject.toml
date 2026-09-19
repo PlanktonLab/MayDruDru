@@ -1,0 +1,18 @@
+[project]
+name = "maydru-renderer"
+version = "0.1.0"
+description = "MayDru HTML→PNG 渲染服務（Playwright）"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi[standard]==0.141.1",
+  # must match the browsers shipped in the base image (docker/renderer.Dockerfile)
+  "playwright==1.63.0",
+]
+
+[tool.hatch.build.targets.wheel]
+# flat module layout: main.py + extract_js.py sit at the package root
+include = ["main.py", "extract_js.py"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

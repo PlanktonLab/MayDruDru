@@ -1,0 +1,33 @@
+{
+  "name": "maydru",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "MayDru — 政府申辦流程協助平台（npm workspaces root）",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present",
+    "dev:admin": "npm run dev -w @maydru/admin-web",
+    "dev:apply": "npm run dev -w @maydru/apply-web"
+  },
+  "devDependencies": {
+    "oxlint": "^1.81.0",
+    "typescript": "~6.0.2",
+    "vitest": "^3.2.4"
+  },
+  "comment:overrides": "openapi-typescript 7 still pins its typescript peer to ^5.x; it runs fine on 6 and only ever runs in the codegen script.",
+  "overrides": {
+    "openapi-typescript": {
+      "typescript": "$typescript"
+    }
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

@@ -1,0 +1,106 @@
+/* MayDru 設計 token（SPEC §15）——admin-web 與 apply-web 共用。
+   顏色、字級、間距、圓角一律從這裡取；兩個前端都必須支援深色模式。 */
+
+@variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-primary: var(--primary);
+  --color-muted: var(--muted);
+  --color-secondary: var(--secondary);
+  --color-tertiary: var(--tertiary);
+  --color-elevated: var(--elevated);
+  --color-border: var(--border);
+  --color-background: var(--background);
+  --color-background-lite: var(--background-lite);
+  --color-canvas: var(--canvas);
+  --color-accent: var(--accent);
+  --color-accent-bg: var(--accent-bg);
+  --color-danger: var(--danger);
+  --color-danger-bg: var(--danger-bg);
+  --color-good: var(--pg-good);
+  --color-good-bg: var(--pg-good-bg);
+  --color-warn: var(--pg-warn);
+  --color-warn-bg: var(--pg-warn-bg);
+  --color-on-accent: var(--on-accent);
+  --color-scrim: var(--scrim);
+  --shadow-control: var(--sh-control);
+  --font-mono: "Fira Code", ui-monospace, "SF Mono", Menlo, monospace;
+  --font-sans: -apple-system, "PingFang TC", "Noto Sans TC", sans-serif;
+}
+
+/* Design tokens (slate series) — carried over from the ChillJudge canvas. */
+:root {
+  --primary: oklch(37.2% 0.044 257.287);
+  --muted: oklch(55.4% 0.046 257.417);
+  --secondary: oklch(70.4% 0.04 256.788);
+  --tertiary: oklch(86.9% 0.022 252.894);
+  --elevated: oklch(98.4% 0.003 247.858);
+  --border: oklch(92.9% 0.013 255.508);
+  --background: oklch(96.8% 0.007 247.896);
+  --background-lite: oklch(98.4% 0.003 247.858);
+  --canvas: white;
+  --accent: #2f6fed;
+  --accent-bg: color-mix(in oklab, #2f6fed 12%, transparent);
+  --on-accent: #ffffff;            /* text / icons on an accent or danger fill */
+  --scrim: rgba(15, 23, 42, 0.12); /* behind sheets and modals */
+  --scrim-strong: rgba(15, 23, 42, 0.72); /* lightbox */
+  --sh-control: 0 1px 2px rgba(15, 23, 42, 0.08), 0 1px 1px rgba(15, 23, 42, 0.04);
+  --danger: oklch(58.6% 0.253 17.585);
+  --danger-bg: oklch(96.9% 0.015 12.422);
+
+  --shadow-float: 0 4px 20px 0 rgba(0, 0, 0, 0.05);
+  --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04), 0 2px 8px -2px rgba(15, 23, 42, 0.06);
+  --shadow-lift: 0 2px 4px rgba(15, 23, 42, 0.05), 0 12px 28px -8px rgba(15, 23, 42, 0.16);
+  --shadow-sheet: -8px 0 40px -12px rgba(15, 23, 42, 0.18);
+  --shadow-menu: 0 10px 30px -8px rgba(15, 23, 42, 0.12);
+  --shadow-popover: 0 1px 2px -1px rgba(15, 23, 42, 0.06), 0 6px 16px -4px rgba(15, 23, 42, 0.1), 0 18px 36px -12px rgba(15, 23, 42, 0.14);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-pop: cubic-bezier(0.16, 1, 0.3, 1);
+
+  --pg-good: #10a85e;
+  --pg-good-bg: color-mix(in oklab, #10c46b 13%, transparent);
+  --pg-warn: #b8870c;
+  --pg-warn-bg: color-mix(in oklab, #e9c04a 18%, transparent);
+  --pg-grid: var(--tertiary);
+
+  /* annotation colours — fixed per type, tenant-wide (SPEC §9) */
+  --ann-tap: #2f6fed;
+  --ann-capture: #f59e0b;
+  --ann-input: #10b981;
+  --ann-gesture: #8b5cf6;
+  --ann-note: #6b7280;
+  /* focus box colours */
+  --fb-keep: #2f6fed;
+  --fb-data: #f59e0b;
+  --fb-block: #6b7280;
+}
+
+.dark {
+  --primary: oklch(86.9% 0.022 252.894);
+  --muted: oklch(70.4% 0.04 256.788);
+  --secondary: oklch(70.4% 0.04 256.788);
+  --tertiary: oklch(44.6% 0.043 257.281);
+  --elevated: oklch(27.9% 0.041 260.031);
+  --border: oklch(27.9% 0.041 260.031);
+  --background: oklch(12.9% 0.042 264.695);
+  --background-lite: oklch(27.9% 0.041 260.031);
+  --canvas: oklch(20.8% 0.042 265.755);
+  --accent: #6b9cff;
+  --accent-bg: color-mix(in oklab, #6b9cff 18%, transparent);
+  --fb-block: #9aa3ad;
+  --on-accent: #0b1220;            /* the dark-mode accent is light, so text on it is dark */
+  --scrim: rgba(0, 0, 0, 0.45);
+  --scrim-strong: rgba(0, 0, 0, 0.8);
+  --sh-control: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --danger: oklch(64.5% 0.246 16.439);
+  --danger-bg: oklch(18.1% 0.105 12.094);
+  --shadow-float: 0 6px 22px 0 rgba(0, 0, 0, 0.45);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 2px 8px -2px rgba(0, 0, 0, 0.5);
+  --shadow-lift: 0 2px 4px rgba(0, 0, 0, 0.4), 0 12px 28px -8px rgba(0, 0, 0, 0.7);
+  --shadow-sheet: -8px 0 40px -12px rgba(0, 0, 0, 0.7);
+  --shadow-menu: 0 12px 34px -8px rgba(0, 0, 0, 0.6);
+  --shadow-popover: 0 1px 2px -1px rgba(0, 0, 0, 0.45), 0 6px 16px -4px rgba(0, 0, 0, 0.5), 0 18px 36px -12px rgba(0, 0, 0, 0.6);
+  --pg-good: #34d399;
+  --pg-good-bg: color-mix(in oklab, #34d399 16%, transparent);
+  --pg-warn: #e0b65f;
+}

@@ -1,0 +1,143 @@
+[project]
+name = "maydru"
+version = "0.1.0"
+description = "MayDru — 政府申辦流程協助平台（uv workspace root）"
+requires-python = ">=3.12"
+# The root is a virtual project: it owns no code, it just pulls both workspace
+# members in so a plain `uv sync` gives you one .venv that can run the API, the
+# renderer and every quality gate.
+dependencies = ["maydru-api", "maydru-renderer"]
+
+[dependency-groups]
+dev = [
+  "pytest==9.1.1",
+  "pytest-asyncio==1.4.0",
+  "aiosqlite==0.22.1",
+  "ruff>=0.14",
+  "mypy>=1.18",
+  "import-linter>=2.3",
+]
+
+[tool.uv.workspace]
+members = ["apps/api", "apps/renderer"]
+
+[tool.uv.sources]
+maydru-api = { workspace = true }
+maydru-renderer = { workspace = true }
+
+[tool.uv]
+package = false
+
+# ---------------------------------------------------------------------------
+# ruff / mypy / import-linter are configured once here and inherited by every
+# workspace member, so `uv run ruff check` behaves the same from any directory.
+# ---------------------------------------------------------------------------
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+extend-exclude = ["apps/api/alembic/versions", ".venv"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "W"]
+# Carried over from SOP_Tutor: cleaning these up would touch nearly every
+# module and is explicitly out of scope for P0 (see README §已知取捨).
+extend-ignore = [
+  "B007",  # unused loop control variable (a deliberate `for _round in range(n)` counter)
+  "B008",  # FastAPI Depends()/Query() defaults in signatures
+  "B904",  # raise ... from err inside except blocks
+  "B905",  # zip() without strict=
+  "E501",  # long lines in prompts / HTML templates
+  "E701",  # compact `if x: return` one-liners — SOP_Tutor's house style
+  "E702",  # compact `a = 1; b = 2` one-liners — SOP_Tutor's house style
+  "E731",  # lambda assignment in tests
+  "E741",  # ambiguous name `l` in one copied test
+  "UP031", # %-formatting inside generated JS/HTML snippets
+  "UP045", # Optional[X] instead of X | None
+  "UP047", # pre-PEP-695 TypeVar generics (structured_call / get_owned)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"apps/api/tests/*" = ["E402"]
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+follow_imports = "silent"
+mypy_path = "apps/api"
+files = ["apps/api/app"]
+exclude = '(^|/)(alembic|tests|scripts)/'
+
+# SPEC §14 requires strict typing on services/ and ai/. The code copied from
+# SOP_Tutor does not satisfy strict mode yet, so strict is switched on for the
+# two packages and switched back off for the individual modules that still fail.
+# Every new module lands strict by default; the list below only shrinks.
+[[tool.mypy.overrides]]
+module = ["app.services.*", "app.ai.*"]
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+disallow_untyped_calls = true
+disallow_any_generics = true
+warn_return_any = true
+no_implicit_optional = true
+strict_equality = true
+
+# --- P0 型別債：自 SOP_Tutor 原樣搬入、尚未通過 mypy 的模組 ----------------
+# These are silenced wholesale so `uv run mypy` is a real gate for everything
+# else. The list only ever shrinks: a module leaves it when its errors are
+# fixed, and no new module may be added without a SPEC §18 decision entry.
+[[tool.mypy.overrides]]
+module = [
+  "app.ai.assistant",
+  "app.ai.fake",
+  "app.ai.image_utils",
+  "app.ai.ingestion_graph",
+  "app.ai.llm",
+  "app.ai.session_graph",
+  "app.deps",
+  "app.routers.catalog_admin",
+  "app.routers.dashboard",
+  "app.routers.flows",
+  "app.routers.tenant",
+  "app.routers.variants",
+  "app.schemas",
+  "app.services.card_context",
+  "app.services.content",
+  "app.services.guide",
+  "app.services.publish",
+  "app.services.stepcard",
+  "app.worker.tasks",
+]
+ignore_errors = true
+
+# Second tier of the same debt: these pass mypy's default mode but not strict
+# (mostly bare `dict` annotations and untyped helpers). They stay checked —
+# only the strict flags are relaxed.
+[[tool.mypy.overrides]]
+module = [
+  "app.ai.agents",
+  "app.ai.checks",
+  "app.ai.prompts",
+  "app.ai.retrieval",
+  "app.ai.tracing",
+  "app.services.demo_data",
+  "app.services.numbered_card",
+  "app.services.policy",
+]
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+disallow_untyped_calls = false
+disallow_any_generics = false
+warn_return_any = false
+
+[tool.importlinter]
+root_packages = ["app"]
+include_external_packages = false
+
+# SPEC §17.3 / CLAUDE.md rule 3: the review engine and the citizen-facing
+# apply router must stay deterministic and must never reach into the LLM layer.
+[[tool.importlinter.contracts]]
+name = "review 與 apply 不得 import app.ai"
+type = "forbidden"
+source_modules = ["app.services.review", "app.routers.apply"]
+forbidden_modules = ["app.ai"]

@@ -1,0 +1,3 @@
+fastapi[standard]>=0.115
+# must match the browsers shipped in the base image (docker/renderer.Dockerfile)
+playwright==1.63.0

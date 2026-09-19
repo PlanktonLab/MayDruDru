@@ -1,0 +1,73 @@
+import { NavLink, Outlet } from 'react-router-dom'
+import { clsx } from 'clsx'
+import { BarChart3, ClipboardCheck, FlaskConical, KeyRound, LogOut, MessageSquare, Moon, PanelLeftClose, PanelLeftOpen, Sun, Users, Workflow } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { useAuth } from '../lib/auth'
+import { ROLE_LABEL } from '../lib/types'
+
+const LS_NAV_COLLAPSED = 'sop_nav_collapsed'
+
+const NAV = [
+  { to: '/canvas', label: '流程', icon: Workflow },
+  { to: '/review', label: '審核', icon: ClipboardCheck },
+  { to: '/playground', label: '測試對話', icon: MessageSquare },
+  { to: '/evals', label: '評測', icon: FlaskConical },
+  { to: '/dashboard', label: '儀表板', icon: BarChart3 },
+  // 平台 and Goal used to be pages of their own; both are edited inside Canvas now.
+  { to: '/members', label: '成員', icon: Users, admin: true },
+  { to: '/api-keys', label: 'API Key', icon: KeyRound, admin: true },
+]
+
+export default function AppShell() {
+  const { user, logout, atLeast } = useAuth()
+  const [dark, setDark] = useState(() => document.documentElement.classList.contains('dark'))
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', dark)
+    localStorage.setItem('theme', dark ? 'dark' : 'light')
+  }, [dark])
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem(LS_NAV_COLLAPSED) === '1')
+  useEffect(() => { localStorage.setItem(LS_NAV_COLLAPSED, collapsed ? '1' : '0') }, [collapsed])
+  const iconBtn = 'rounded-md border border-border p-1.5 text-muted hover:text-primary'
+  return (
+    <div className="flex h-full">
+      <aside className={clsx('flex shrink-0 flex-col overflow-hidden border-r border-border bg-canvas transition-[width] duration-200', collapsed ? 'w-14' : 'w-52')}>
+        <div className={clsx('flex items-center py-4', collapsed ? 'justify-center px-2' : 'justify-between pl-4 pr-2')}>
+          {!collapsed && (
+            <div className="min-w-0">
+              <div className="truncate text-base font-bold tracking-tight">SOP Tutor</div>
+              <div className="text-[11px] text-muted">後台管理</div>
+            </div>
+          )}
+          <button onClick={() => setCollapsed((c) => !c)} className="rounded-md p-1.5 text-muted hover:bg-background-lite hover:text-primary" title={collapsed ? '展開選單' : '收合選單'} aria-label={collapsed ? '展開選單' : '收合選單'} aria-expanded={!collapsed}>
+            {collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
+          </button>
+        </div>
+        <nav className="flex-1 space-y-0.5 px-2">
+          {NAV.filter((n) => !n.admin || atLeast('admin')).map((n) => (
+            <NavLink key={n.to} to={n.to} title={collapsed ? n.label : undefined} aria-label={n.label} className={({ isActive }) => clsx('flex items-center gap-2 rounded-lg py-1.5 text-sm', collapsed ? 'justify-center px-0' : 'px-2.5', isActive ? 'bg-accent-bg text-accent font-medium' : 'text-muted hover:bg-background-lite hover:text-primary')}>
+              <n.icon size={15} className="shrink-0" />{!collapsed && <span className="truncate">{n.label}</span>}
+            </NavLink>
+          ))}
+        </nav>
+        <div className="border-t border-border p-3 text-xs">
+          {collapsed ? (
+            <div className="flex flex-col items-center gap-1">
+              <button onClick={() => setDark((d) => !d)} className={iconBtn} title="切換主題">{dark ? <Sun size={13} /> : <Moon size={13} />}</button>
+              <button onClick={logout} className={iconBtn} title="登出" aria-label="登出"><LogOut size={13} /></button>
+            </div>
+          ) : (
+            <>
+              <div className="truncate font-medium">{user?.name || user?.email}</div>
+              <div className="mb-2 text-muted">{user && ROLE_LABEL[user.role]}</div>
+              <div className="flex gap-1">
+                <button onClick={() => setDark((d) => !d)} className={iconBtn} title="切換主題">{dark ? <Sun size={13} /> : <Moon size={13} />}</button>
+                <button onClick={logout} className="flex items-center gap-1 rounded-md border border-border px-2 py-1.5 text-muted hover:text-primary"><LogOut size={13} /> 登出</button>
+              </div>
+            </>
+          )}
+        </div>
+      </aside>
+      <main className="relative min-w-0 flex-1 overflow-auto"><Outlet /></main>
+    </div>
+  )
+}
