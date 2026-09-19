@@ -419,12 +419,12 @@ async def _handle_text(
     if state.flow == VERIFY_FLOW:
         return await _verify_step(ctx, state, text.strip())
 
-    if result.intent in ACTIONS and result.intent not in ("help", "greeting"):
+    # 意圖的名字就是 action 的名字，所以文字與按鈕走的是同一張表，不會兩邊行為不一致。
+    handler = ACTIONS.get(result.intent)
+    if handler is not None:
         if result.intent == "case_status" and result.entities.get("case_no"):
             return await _start_last4(ctx, result.entities["case_no"])
-        return await ACTIONS[result.intent](ctx)
-    if result.intent in ("help", "greeting"):
-        return await _act_help(ctx)
+        return await handler(ctx)
 
     answer = await faq_service.best(db, tenant_id, text)
     if answer is not None:
