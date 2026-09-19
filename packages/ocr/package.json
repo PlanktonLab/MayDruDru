@@ -6,14 +6,21 @@
   "description": "瀏覽器端 OCR（tesseract.js + pdf.js）包裝",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
-  "exports": { ".": "./src/index.ts" },
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "scripts": {
     "typecheck": "tsc -b",
     "lint": "oxlint src",
     "test": "vitest run"
   },
   "devDependencies": {
+    "jsdom": "^30.1.0",
     "typescript": "~6.0.2",
     "vitest": "^3.2.4"
+  },
+  "dependencies": {
+    "pdfjs-dist": "^6.3.289",
+    "tesseract.js": "^6.0.1"
   }
 }

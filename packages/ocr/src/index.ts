@@ -1,40 +1,46 @@
-/** `@maydru/ocr` — 瀏覽器端 OCR 包裝（tesseract.js 6，chi_tra + eng）。
+/** `@maydru/ocr` — 瀏覽器端 OCR 包裝（tesseract.js 6 + pdf.js）。
  *
- * P0 佔位：實作在 P3（SPEC §16）。伺服器端永遠不做 OCR，圖片也不離開瀏覽器記憶體
- * （SPEC §11）。這裡先把輸出格式定下來，讓 `review-rules` 與審核頁可以先對型別開發。
+ * SPEC §8.1 的上傳流程前三步都在這裡：
+ *   1. `loadImage()` 讀檔（HEIC 有明確的「怎麼修」訊息）→ 縮至長邊 2400 → 品質探測
+ *   2. `pdfToPageCanvases()` 把 PDF 前 5 頁轉成 canvas
+ *   3. `createOcrWorker()` + `recognize()` 產出標準 OCR 結果
+ *
+ * 伺服器端永遠不做 OCR，圖片也不離開瀏覽器記憶體（SPEC §11）。
  */
 
-/** 單字在原圖上的位置，單位為原圖像素。 */
-export interface BoundingBox {
-  x: number
-  y: number
-  width: number
-  height: number
-}
+export type {
+  BoundingBox,
+  LoadedImage,
+  OcrLine,
+  OcrResult,
+  OcrWord,
+  QualityProbe,
+} from './types'
+export { EMPTY_OCR_RESULT } from './types'
 
-export interface OcrWord {
-  text: string
-  confidence: number
-  bbox: BoundingBox
-}
+export {
+  HEIC_UNSUPPORTED_MESSAGE,
+  JPEG_QUALITY,
+  MAX_LONG_EDGE,
+  QUALITY_THRESHOLDS,
+  UNREADABLE_FILE_MESSAGE,
+  centredSample,
+  detectFormat,
+  disposeCanvas,
+  isHeic,
+  loadImage,
+  probeQuality,
+  qualityIssue,
+  resizeDimensions,
+  toBlob,
+  toJpegDataUrl,
+} from './image'
 
-export interface OcrLine {
-  text: string
-  confidence: number
-  bbox: BoundingBox
-  words: OcrWord[]
-}
+export type { RawBlock, RawLine, RawPage, RawParagraph, RawWord } from './normalize'
+export { toLines, toOcrResult } from './normalize'
 
-/** 沿用 proreview 的輸出格式（SPEC §2）。 */
-export interface OcrResult {
-  text: string
-  confidence: number
-  lines: OcrLine[]
-}
+export type { PdfPages, PdfToCanvasOptions } from './pdf'
+export { PDF_UNREADABLE_MESSAGE, pdfToPageCanvases, setPdfWorkerSrc } from './pdf'
 
-export const EMPTY_OCR_RESULT: OcrResult = { text: '', confidence: 0, lines: [] }
-
-/** P0 佔位：回傳空結果，不載入 tesseract.js。 */
-export async function recognize(_image: Blob): Promise<OcrResult> {
-  return EMPTY_OCR_RESULT
-}
+export type { CreateOcrWorkerOptions, OcrSource } from './worker'
+export { DEFAULT_LANGS, DEFAULT_LANG_PATH, createOcrWorker, recognize } from './worker'
