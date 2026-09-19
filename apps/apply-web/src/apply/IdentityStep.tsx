@@ -4,6 +4,7 @@
  * 是在替自己製造一份不必要的個資。
  */
 
+import { Check } from 'lucide-react'
 import { Card, Field, Input, cx } from '@maydru/ui'
 import type { SchemePublic } from '../lib/types'
 import type { FieldErrors, Identity } from './state'
@@ -90,10 +91,15 @@ export function IdentityStep({ scheme, value, onChange, errors }: IdentityStepPr
                 aria-pressed={selected}
                 onClick={() => onChange({ tier_code: tier.code })}
                 className={cx(
-                  'flex min-h-11 w-full flex-col items-start rounded-xl border p-3.5 text-left',
-                  selected ? 'border-accent bg-accent-bg' : 'border-border bg-canvas hover:bg-background-lite',
+                  'relative flex min-h-11 w-full flex-col items-start rounded-xl border p-3.5 pr-10 text-left transition-colors',
+                  selected
+                    ? 'border-accent bg-accent-bg'
+                    : 'border-border bg-canvas hover:border-accent/40 hover:bg-background-lite',
                 )}
               >
+                {selected && (
+                  <Check size={16} aria-hidden className="absolute right-3.5 top-3.5 shrink-0 text-accent" />
+                )}
                 <span className="text-[15px] font-medium text-primary">{tier.label}</span>
                 <span className="mt-0.5 text-[13px] text-muted">
                   補助 {Math.round(tier.subsidy_rate * 100)}%，上限 {money(tier.cap_amount)}

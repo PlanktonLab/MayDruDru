@@ -4,6 +4,7 @@
  * 金額以**帳單上實際扣款的臺幣**為準，這是退件率最高的一欄（見 FAQ `faq_billing`）。
  */
 
+import { Check } from 'lucide-react'
 import { Card, Checkbox, Field, Input, cx } from '@maydru/ui'
 import type { SchemePublic } from '../lib/types'
 import type { ChannelInfo, FieldErrors } from './state'
@@ -33,10 +34,15 @@ export function ChannelStep({ scheme, value, onChange, errors }: ChannelStepProp
                 aria-pressed={selected}
                 onClick={() => onChange({ payment_channel_code: channel.code })}
                 className={cx(
-                  'flex min-h-11 w-full flex-col items-start rounded-xl border p-3.5 text-left',
-                  selected ? 'border-accent bg-accent-bg' : 'border-border bg-canvas hover:bg-background-lite',
+                  'relative flex min-h-11 w-full flex-col items-start rounded-xl border p-3.5 pr-10 text-left transition-colors',
+                  selected
+                    ? 'border-accent bg-accent-bg'
+                    : 'border-border bg-canvas hover:border-accent/40 hover:bg-background-lite',
                 )}
               >
+                {selected && (
+                  <Check size={16} aria-hidden className="absolute right-3.5 top-3.5 shrink-0 text-accent" />
+                )}
                 <span className="text-[15px] font-medium text-primary">{channel.label}</span>
                 <span className="mt-0.5 text-[13px] leading-5 text-muted">
                   需要：{channel.required_document_type_codes.map(labelOf).join('、') || '依方案規定'}

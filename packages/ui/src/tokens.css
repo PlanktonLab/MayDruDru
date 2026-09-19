@@ -39,6 +39,9 @@
   --background: oklch(96.8% 0.007 247.896);
   --background-lite: oklch(98.4% 0.003 247.858);
   --canvas: white;
+  /* 輸入框的填色：比底色再淡一階的灰，框線用透明——一整排欄位讀起來是安靜的一塊，
+     不是一堆框。聚焦時才換成 canvas 並亮起 accent 框線。 */
+  --field: rgba(243, 243, 245, 0.7);
   --accent: #2f6fed;
   --accent-bg: color-mix(in oklab, #2f6fed 12%, transparent);
   --on-accent: #ffffff;            /* text / icons on an accent or danger fill */
@@ -85,6 +88,7 @@
   --background: oklch(12.9% 0.042 264.695);
   --background-lite: oklch(27.9% 0.041 260.031);
   --canvas: oklch(20.8% 0.042 265.755);
+  --field: oklch(27.9% 0.041 260.031);
   --accent: #6b9cff;
   --accent-bg: color-mix(in oklab, #6b9cff 18%, transparent);
   --fb-block: #9aa3ad;

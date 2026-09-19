@@ -194,7 +194,9 @@ export function DocField({ docType, value, onChange, onClear, problems = [], req
 
   return (
     <Card
-      className={cx(blocked && 'border-danger')}
+      // 填好的欄位整張卡換成淺灰底：一排文件掃過去，還沒處理的那幾張是白的，
+      // 一眼就看得出剩下哪些（被規則擋下的那張則是紅框，優先於已填）。
+      className={cx(blocked ? 'border-danger' : value && 'bg-background-lite')}
       title={
         <span className="flex items-center gap-2">
           {docType.label}
@@ -203,10 +205,19 @@ export function DocField({ docType, value, onChange, onClear, problems = [], req
               *
             </span>
           )}
-          {value && <Check size={16} aria-label="已上傳" className="text-good" />}
         </span>
       }
       subtitle={docType.hint}
+      actions={
+        value ? (
+          <span
+            aria-label="已上傳"
+            className="flex size-6 shrink-0 items-center justify-center rounded-full bg-accent text-on-accent"
+          >
+            <Check size={14} strokeWidth={3} aria-hidden />
+          </span>
+        ) : undefined
+      }
     >
       {docType.must_mask && (
         <p className="mb-3 flex items-start gap-2 rounded-xl bg-accent-bg px-3 py-2 text-[13px] leading-5 text-accent">
@@ -262,11 +273,13 @@ export function DocField({ docType, value, onChange, onClear, problems = [], req
           <p className="text-[13px] text-muted">辨識在你的手機上進行，不會上傳原圖。</p>
         </div>
       ) : (
-        <div className="flex flex-wrap gap-2">
-          <Button size="md" variant="primary" icon={<Camera size={16} />} onClick={() => cameraRef.current?.click()}>
+        // 兩顆等寬：手機上拇指不用瞄準，而且「拍照」與「選檔案」是同一層級的選擇，
+        // 不該一大一小看起來像主／次要動作。
+        <div className="grid grid-cols-2 gap-2">
+          <Button size="md" block icon={<Camera size={16} />} onClick={() => cameraRef.current?.click()}>
             拍照
           </Button>
-          <Button size="md" icon={<FileUp size={16} />} onClick={() => fileRef.current?.click()}>
+          <Button size="md" block icon={<FileUp size={16} />} onClick={() => fileRef.current?.click()}>
             選擇檔案
           </Button>
         </div>

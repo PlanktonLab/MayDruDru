@@ -50,7 +50,8 @@ describe('ApplyPage', () => {
   it('不予補助的工具選了也過不去，而且看得到判定理由', async () => {
     open()
     await pickTool('DeepSeek')
-    expect(screen.getByText(/中國公司，具中資背景/)).toBeTruthy()
+    // 判定理由會出現兩次：工具卡片上一次，「不予補助範圍提醒」卡片上再一次。
+    expect(screen.getAllByText(/中國公司，具中資背景/).length).toBeGreaterThan(0)
     next()
     expect((await screen.findByRole('alert')).textContent).toContain('不予補助')
   })

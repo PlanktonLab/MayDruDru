@@ -5,7 +5,7 @@
  */
 
 import { useMemo, useState } from 'react'
-import { Check, Search } from 'lucide-react'
+import { Check, Info, Search } from 'lucide-react'
 import { Badge, Card, Field, Input, cx } from '@maydru/ui'
 import type { EligibleTool, SchemePublic, ToolStatus } from '../lib/types'
 import type { ToolChoice } from './state'
@@ -46,6 +46,13 @@ export function ToolStep({ scheme, value, onChange, error }: ToolStepProps) {
     [scheme.eligible_tools, query],
   )
 
+  // 提醒卡只列不予補助的那幾項，而且不隨搜尋字縮減——它是「申請前先看一眼」的
+  // 固定須知，不是搜尋結果的一部分。
+  const excluded = useMemo(
+    () => scheme.eligible_tools.filter((tool) => tool.status === 'REJECTED'),
+    [scheme.eligible_tools],
+  )
+
   return (
     <div className="space-y-4">
       <Field label="搜尋工具名稱" hint="輸入你在帳單上看到的名字，中英文都可以。">
@@ -78,8 +85,12 @@ export function ToolStep({ scheme, value, onChange, error }: ToolStepProps) {
                   onChange({ name: tool.name, tool_id: tool.id })
                 }}
                 className={cx(
-                  'flex w-full min-h-11 items-start gap-3 rounded-2xl border p-4 text-left transition-colors',
-                  selected ? 'border-accent bg-accent-bg' : 'border-border bg-canvas hover:bg-background-lite',
+                  'flex w-full min-h-11 items-start gap-3 rounded-xl border p-4 text-left transition-colors',
+                  // 選中：accent 框線 + 淡底 + 右側打勾，三個訊號一起給，
+                  // 因為「只靠底色」在強光下的手機螢幕上看不出來。
+                  selected
+                    ? 'border-accent bg-accent-bg'
+                    : 'border-border bg-canvas hover:border-accent/40 hover:bg-background-lite',
                   rejected && 'opacity-90',
                 )}
               >
@@ -100,6 +111,25 @@ export function ToolStep({ scheme, value, onChange, error }: ToolStepProps) {
         })}
       </ul>
 
+      {/* 不予補助的範圍在選工具的當下就講清楚，而不是等送出才擋：
+          這幾類是最常見的誤申請，講在前面能省掉一整趟準備文件的白工。 */}
+      {excluded.length > 0 && (
+        <div className="rounded-xl border border-border bg-background-lite p-4">
+          <p className="flex items-center gap-1.5 text-[14px] font-semibold text-primary">
+            <Info size={15} aria-hidden className="shrink-0 text-accent" />
+            不予補助範圍提醒（請於申請前確認）
+          </p>
+          <ul className="mt-2 space-y-2">
+            {excluded.map((tool) => (
+              <li key={tool.id} className="text-[13px] leading-relaxed">
+                <span className="font-medium text-primary">✕ {tool.name}</span>
+                {tool.verdict_note && <span className="text-muted">：{tool.verdict_note}</span>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {tools.length === 0 && (
         <p className="text-[14px] text-muted">
           沒有符合「{query}」的工具。你可以在下面自己填寫名稱，由承辦人員認定。
@@ -115,11 +145,15 @@ export function ToolStep({ scheme, value, onChange, error }: ToolStepProps) {
             onChange({ name: '', tool_id: null })
           }}
           className={cx(
-            'min-h-11 w-full rounded-xl border px-4 py-2.5 text-left text-[15px]',
-            other ? 'border-accent bg-accent-bg text-accent' : 'border-border bg-canvas',
+            'flex min-h-11 w-full items-center justify-between gap-3 rounded-xl border px-4 py-2.5',
+            'text-left text-[15px] transition-colors',
+            other
+              ? 'border-accent bg-accent-bg font-medium text-accent'
+              : 'border-border bg-canvas hover:border-accent/40 hover:bg-background-lite',
           )}
         >
           其他（自行填寫）
+          {other && <Check size={16} aria-hidden className="shrink-0 text-accent" />}
         </button>
         {other && (
           <div className="mt-3">
