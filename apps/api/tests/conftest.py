@@ -240,6 +240,7 @@ def fake_storage(monkeypatch) -> FakeStorage:
     monkeypatch.setattr(storage, "get", fake.get)
     monkeypatch.setattr(storage, "get_private", lambda key: fake.get("private", key))
     monkeypatch.setattr(storage, "client", lambda: fake)
+    monkeypatch.setattr(storage, "presign_client", lambda: fake)
     return fake
 
 

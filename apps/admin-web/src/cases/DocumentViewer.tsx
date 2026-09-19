@@ -88,6 +88,7 @@ export function DocumentViewer({
   const dragRef = useRef<{ x: number; y: number } | null>(null)
 
   const selected = documents.find((doc) => doc.id === selectedId) ?? current[0] ?? null
+  const isPdf = selected?.mime === 'application/pdf'
 
   useEffect(() => {
     if (!selected) return
@@ -207,41 +208,47 @@ export function DocumentViewer({
       )}
 
       <div className="flex flex-wrap items-center gap-1.5 border-b border-border px-3 py-2">
-        <Button size="sm" icon={<ZoomOut size={14} />} onClick={() => setZoom((z) => clampZoom(z - 0.25))} aria-label="縮小">
-          縮小
-        </Button>
-        <Button size="sm" icon={<ZoomIn size={14} />} onClick={() => setZoom((z) => clampZoom(z + 0.25))} aria-label="放大">
-          放大
-        </Button>
-        <Button size="sm" icon={<RotateCw size={14} />} onClick={() => setRotation((r) => (r + 90) % 360)}>
-          旋轉
-        </Button>
-        <Button
-          size="sm"
-          icon={<Maximize2 size={14} />}
-          onClick={() => {
-            setZoom(1)
-            setPan({ x: 0, y: 0 })
-            setRotation(0)
-          }}
-        >
-          重設
-        </Button>
-        <Button
-          size="sm"
-          variant={showLines ? 'primary' : 'secondary'}
-          icon={<ScanText size={14} />}
-          aria-pressed={showLines}
-          onClick={() => setShowLines((value) => !value)}
-        >
-          OCR 高亮
-        </Button>
-        {selected && onReRecognise && (
-          <Button size="sm" loading={recognising} onClick={() => onReRecognise(selected)}>
-            重新辨識
-          </Button>
+        {isPdf ? (
+          <span className="text-[12px] text-muted">PDF 可直接捲動閱讀；縮放與搜尋請使用瀏覽器的 PDF 工具列。</span>
+        ) : (
+          <>
+            <Button size="sm" icon={<ZoomOut size={14} />} onClick={() => setZoom((z) => clampZoom(z - 0.25))} aria-label="縮小">
+              縮小
+            </Button>
+            <Button size="sm" icon={<ZoomIn size={14} />} onClick={() => setZoom((z) => clampZoom(z + 0.25))} aria-label="放大">
+              放大
+            </Button>
+            <Button size="sm" icon={<RotateCw size={14} />} onClick={() => setRotation((r) => (r + 90) % 360)}>
+              旋轉
+            </Button>
+            <Button
+              size="sm"
+              icon={<Maximize2 size={14} />}
+              onClick={() => {
+                setZoom(1)
+                setPan({ x: 0, y: 0 })
+                setRotation(0)
+              }}
+            >
+              重設
+            </Button>
+            <Button
+              size="sm"
+              variant={showLines ? 'primary' : 'secondary'}
+              icon={<ScanText size={14} />}
+              aria-pressed={showLines}
+              onClick={() => setShowLines((value) => !value)}
+            >
+              OCR 高亮
+            </Button>
+            {selected && onReRecognise && (
+              <Button size="sm" loading={recognising} onClick={() => onReRecognise(selected)}>
+                重新辨識
+              </Button>
+            )}
+            <span className="ml-auto text-[12px] tabular-nums text-muted">{Math.round(zoom * 100)}%</span>
+          </>
         )}
-        <span className="ml-auto text-[12px] tabular-nums text-muted">{Math.round(zoom * 100)}%</span>
       </div>
 
       {selected && (
@@ -293,7 +300,14 @@ export function DocumentViewer({
             {error}
           </p>
         )}
-        {url && (
+        {url && isPdf && selected && (
+          <iframe
+            src={url}
+            title={`${selected.document_type_label}（第 ${selected.revision} 版）`}
+            className="h-full w-full border-0"
+          />
+        )}
+        {url && !isPdf && (
           <div
             data-testid="document-stage"
             className="absolute left-1/2 top-1/2 origin-center"
