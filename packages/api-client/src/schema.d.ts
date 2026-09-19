@@ -437,6 +437,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/help-chat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read Settings */
+        get: operations["read_settings_api_admin_help_chat_get"];
+        /** Write Settings */
+        put: operations["write_settings_api_admin_help_chat_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/knowledge": {
         parameters: {
             query?: never;
@@ -986,6 +1004,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/apply/help-chat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ask */
+        post: operations["ask_api_apply_help_chat_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/apply/schemes": {
         parameters: {
             query?: never;
@@ -1040,6 +1075,23 @@ export interface paths {
          * @description 必要文件由伺服器算（`scheme.required_document_types`），前端不自己推。
          */
         post: operations["required_documents_api_apply_schemes__code__required_documents_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/apply/schemes/{code}/tool-inquiries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Inquire Tool */
+        post: operations["inquire_tool_api_apply_schemes__code__tool_inquiries_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3670,6 +3722,16 @@ export interface components {
             assigned_reviewer?: components["schemas"]["ReviewerOut"] | null;
             /** Assigned Reviewer Id */
             assigned_reviewer_id: string | null;
+            /**
+             * Billing Cycle
+             * @default MONTHLY
+             */
+            billing_cycle: string;
+            /**
+             * Billing Periods
+             * @default 1
+             */
+            billing_periods: number;
             /** Case No */
             case_no: string;
             /** Documents */
@@ -3695,6 +3757,13 @@ export interface components {
             last_submitted_at: string | null;
             /** Note */
             note: string;
+            /** Original Amount */
+            original_amount?: number | null;
+            /**
+             * Original Currency
+             * @default TWD
+             */
+            original_currency: string;
             /** Paid By Proxy */
             paid_by_proxy: boolean;
             /** Payment Amount */
@@ -3740,6 +3809,8 @@ export interface components {
             }[];
             /** Tier Code */
             tier_code: string;
+            /** Tool Id */
+            tool_id?: string | null;
             /** Tool Name */
             tool_name: string;
             /** Verdict */
@@ -4087,6 +4158,11 @@ export interface components {
             is_current: boolean;
             /** Page Count */
             page_count: number;
+            /**
+             * Period Index
+             * @default 1
+             */
+            period_index: number;
             /** Revision */
             revision: number;
             /** Uploaded At */
@@ -4180,6 +4256,56 @@ export interface components {
              * @enum {string}
              */
             theme: "light" | "dark";
+        };
+        /** ChatReply */
+        ChatReply: {
+            /**
+             * Role
+             * @constant
+             */
+            role: "assistant";
+            /** Source Ids */
+            source_ids: string[];
+            /** Text */
+            text: string;
+        };
+        /** ChatSettings */
+        ChatSettings: {
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /**
+             * Max Question Chars
+             * @default 500
+             */
+            max_question_chars: number;
+            /**
+             * Max Results
+             * @default 2
+             */
+            max_results: number;
+            /**
+             * Per Day
+             * @default 60
+             */
+            per_day: number;
+            /**
+             * Per Minute
+             * @default 6
+             */
+            per_minute: number;
+            /**
+             * Tenant Per Day
+             * @default 5000
+             */
+            tenant_per_day: number;
+            /**
+             * Version
+             * @default 1
+             */
+            version: number;
         };
         /** ChatStart */
         ChatStart: {
@@ -4348,6 +4474,11 @@ export interface components {
             ocr?: components["schemas"]["OcrOut"] | null;
             /** Page Count */
             page_count: number;
+            /**
+             * Period Index
+             * @default 1
+             */
+            period_index: number;
             /** Preview Key */
             preview_key?: string | null;
             /** Purged At */
@@ -5430,6 +5561,16 @@ export interface components {
             /** Expected Version */
             expected_version?: number | null;
         };
+        /** Question */
+        Question: {
+            /**
+             * Scheme Code
+             * @default
+             */
+            scheme_code: string;
+            /** Text */
+            text: string;
+        };
         /** QueueOut */
         QueueOut: {
             /** Items */
@@ -6139,6 +6280,11 @@ export interface components {
              */
             note: string;
             /**
+             * Period Index
+             * @default 1
+             */
+            period_index: number;
+            /**
              * Rejection Code
              * @default OTHER
              */
@@ -6153,6 +6299,11 @@ export interface components {
              * @default
              */
             note: string;
+            /**
+             * Period Index
+             * @default 1
+             */
+            period_index: number;
             /**
              * Rejection Code
              * @default
@@ -6220,6 +6371,16 @@ export interface components {
              * @default bearer
              */
             token_type: string;
+        };
+        /** ToolInquiryIn */
+        ToolInquiryIn: {
+            /** Name */
+            name: string;
+        };
+        /** ToolInquiryOut */
+        ToolInquiryOut: {
+            /** Tool Id */
+            tool_id: string | null;
         };
         /**
          * ToolResolveIn
@@ -7510,6 +7671,59 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_settings_api_admin_help_chat_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatSettings"];
+                };
+            };
+        };
+    };
+    write_settings_api_admin_help_chat_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChatSettings"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatSettings"];
                 };
             };
             /** @description Validation Error */
@@ -8828,6 +9042,39 @@ export interface operations {
             };
         };
     };
+    ask_api_apply_help_chat_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Question"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatReply"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_schemes_api_apply_schemes_get: {
         parameters: {
             query?: never;
@@ -8903,6 +9150,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RequiredDocumentsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    inquire_tool_api_apply_schemes__code__tool_inquiries_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ToolInquiryIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ToolInquiryOut"];
                 };
             };
             /** @description Validation Error */

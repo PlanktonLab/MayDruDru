@@ -26,7 +26,7 @@ export function SupplementPanel({ caseData, scheme, onDone }: SupplementPanelPro
   const [error, setError] = useState('')
 
   const items = caseData.supplement_items
-  const codes = items.map((item) => item.document_type_code)
+  const codes = items.map((item) => `${item.document_type_code}:${item.period_index ?? 1}`)
   const ready = codes.every((code) => docs[code])
 
   const send = useCallback(async () => {
@@ -36,16 +36,11 @@ export function SupplementPanel({ caseData, scheme, onDone }: SupplementPanelPro
       await submitSupplement(
         caseData.case_no,
         codes
-          .map((code) => docs[code])
-          .filter(Boolean)
-          .map((doc) => ({
-            document_type_code: doc.document_type_code,
-            masked: doc.masked,
-            mime: doc.mime,
-            page_count: doc.page_count,
-            ocr: doc.ocr,
-            blob: doc.blob,
-            fileName: `${doc.document_type_code}.jpg`,
+          .filter((code) => Boolean(docs[code]))
+          .map((code) => ({
+            ...docs[code],
+            period_index: Number(code.split(':')[1]),
+            fileName: `${code.replace(':', '_')}.jpg`,
           })),
       )
       setDocs({})
@@ -77,11 +72,12 @@ export function SupplementPanel({ caseData, scheme, onDone }: SupplementPanelPro
       </div>
 
       {items.map((item) => {
+        const key = `${item.document_type_code}:${item.period_index ?? 1}`
         const type = scheme.document_types.find((entry) => entry.code === item.document_type_code)
         const rejection = scheme.rejection_codes.find((entry) => entry.code === item.rejection_code)
         if (!type) return null
         return (
-          <div key={item.document_type_code} className="space-y-2">
+          <div key={key} className="space-y-2">
             <Card className="border-warn/40 bg-warn-bg/40" padded>
               <p className="text-[14px] font-medium text-primary">
                 {rejection?.public_what_wrong ?? '這份文件需要重新提供'}
@@ -101,13 +97,14 @@ export function SupplementPanel({ caseData, scheme, onDone }: SupplementPanelPro
             </Card>
             <DocField
               docType={type}
+              label={item.period_index ? `${type.label}（第 ${item.period_index} 期）` : type.label}
               required
-              value={docs[item.document_type_code]}
-              onChange={(doc) => setDocs((current) => ({ ...current, [item.document_type_code]: doc }))}
+              value={docs[key]}
+              onChange={(doc) => setDocs((current) => ({ ...current, [key]: doc }))}
               onClear={() =>
                 setDocs((current) => {
                   const next = { ...current }
-                  delete next[item.document_type_code]
+                  delete next[key]
                   return next
                 })
               }

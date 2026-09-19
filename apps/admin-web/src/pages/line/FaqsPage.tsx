@@ -11,7 +11,8 @@ import { useState } from 'react'
 import { useAuth } from '../../lib/auth'
 import { useInvalidate } from '../../lib/hooks'
 import type { Faq } from '../../lib/types'
-import { Badge, Button, Empty, Field, Input, Modal, Select, Spinner, Textarea, confirm, errMsg, useToast } from '../../components/ui'
+import { Badge, Button, Empty, Field, Input, Select, Spinner, Textarea, confirm, errMsg, useToast } from '../../components/ui'
+import { Drawer } from '../../components/admin/Drawer'
 import { Chips, TagInput } from '../../components/admin/TagInput'
 import { Notice, PageHeader, Table, Td, Th, fmtDate } from '../../components/admin/shared'
 import { createFaq, deleteFaq, fetchFaqs, setFaqActive, updateFaq, type FaqInput } from './queries'
@@ -133,7 +134,7 @@ function FaqModal({ faq, onClose }: { faq: Faq | null; onClose: () => void }) {
   }
 
   return (
-    <Modal open onClose={onClose} title={faq ? '編輯問題' : '新增問題'} subtitle="答案會原樣顯示在 LINE 的訊息泡泡裡。" width={560}>
+    <Drawer onClose={saving ? () => {} : onClose} title={faq ? '編輯問題' : '新增問題'} subtitle="答案會原樣顯示在 LINE 的訊息泡泡裡。">
       <div className="space-y-3">
         <Field label="問題"><Input value={form.question} onChange={(e) => set('question', e.target.value)} placeholder="例如：補助什麼時候會撥款？" /></Field>
         <Field label="答案"><Textarea rows={5} value={form.answer} onChange={(e) => set('answer', e.target.value)} /></Field>
@@ -153,10 +154,10 @@ function FaqModal({ faq, onClose }: { faq: Faq | null; onClose: () => void }) {
           </Field>
         </div>
         <div className="flex justify-end gap-2 pt-1">
-          <Button variant="ghost" onClick={onClose}>取消</Button>
+          <Button variant="ghost" disabled={saving} onClick={onClose}>取消</Button>
           <Button variant="primary" onClick={() => void submit()} loading={saving}>{faq ? '儲存' : '新增'}</Button>
         </div>
       </div>
-    </Modal>
+    </Drawer>
   )
 }

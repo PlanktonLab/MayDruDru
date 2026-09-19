@@ -54,14 +54,15 @@ export function PendingQueue({ code, pending, approved, canWrite, reload }: {
       ) : (
         <div className="space-y-3">
           <Notice tone="muted">
-            這些是民眾送件時自己打的工具名稱。先看看它是不是清單上某個工具的另一種寫法——
+            這些是民眾查詢資格或送件時自己打的工具名稱。先看看它是不是清單上某個工具的另一種寫法——
             是的話請併入，民眾下次打同樣的字就會直接對上。
           </Notice>
           <Table>
             <thead>
               <tr>
                 <Th>民眾打的名稱</Th>
-                <Th className="w-20">被問過</Th>
+                <Th className="w-20">查詢次數</Th>
+                <Th className="w-20">自填送件</Th>
                 <Th>判定說明</Th>
                 <Th className="w-72">處理</Th>
               </tr>
@@ -70,6 +71,7 @@ export function PendingQueue({ code, pending, approved, canWrite, reload }: {
               {pending.map((tool) => (
                 <tr key={tool.id} className="align-top">
                   <Td><span className="font-medium">{tool.name}</span></Td>
+                  <Td className="tabular-nums">{tool.inquiry_count ?? 0}</Td>
                   <Td className="tabular-nums">{tool.request_count}</Td>
                   <Td>
                     <Input
@@ -129,6 +131,8 @@ export default function ToolsTab({ code, tools, pending, canWrite, reload }: {
 }) {
   const columns: Column<EligibleTool>[] = [
     { label: '名稱', render: (t) => t.name },
+    { label: '查詢次數', render: (t) => t.inquiry_count ?? 0 },
+    { label: '自填送件次數', render: (t) => t.request_count },
     { label: '廠商', render: (t) => t.vendor || '—' },
     { label: '別名', render: (t) => <Chips items={t.aliases ?? []} /> },
     { label: '狀態', render: (t) => <Badge tone={STATUS_TONE[t.status]}>{STATUS_LABEL[t.status]}</Badge> },

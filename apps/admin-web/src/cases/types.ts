@@ -59,6 +59,7 @@ export interface QueuePage {
 }
 
 export interface CaseDocument {
+  period_index?: number
   id: string
   document_type_code: string
   document_type_label: string
@@ -125,12 +126,18 @@ export interface ApprovalBlocker {
 }
 
 export interface SupplementItem {
+  period_index?: number
   document_type_code: string
   rejection_code: string
   note: string
 }
 
 export interface CaseDetail extends QueueRow {
+  tool_id?: string | null
+  billing_cycle?: string
+  billing_periods?: number
+  original_currency?: string
+  original_amount?: number | null
   applicant_name: string
   phone_masked: string
   email: string | null

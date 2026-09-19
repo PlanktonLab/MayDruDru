@@ -1,7 +1,9 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
-import { RequireAuth, RequireCap } from './lib/auth'
+import { RequireAuth, RequireCap, useAuth } from './lib/auth'
 import { ToastProvider } from './components/ui'
 import AppShell from './layout/AppShell'
+import HelpChatPage from './pages/HelpChatPage'
+import ToolKnowledgePage from './pages/ToolKnowledgePage'
 import LoginPage from './pages/LoginPage'
 import CanvasPage from './pages/CanvasPage'
 import ReviewQueuePage from './pages/ReviewQueuePage'
@@ -23,13 +25,18 @@ import SchemeEditorPage from './pages/schemes/SchemeEditorPage'
 import SopMappingsPage from './pages/schemes/SopMappingsPage'
 import AuditLogsPage from './pages/AuditLogsPage'
 
+function StartPage() {
+  const { can } = useAuth()
+  return <Navigate to={can('case_review') ? '/cases' : '/canvas'} replace />
+}
+
 export default function App() {
   return (
     <ToastProvider>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route element={<RequireAuth><AppShell /></RequireAuth>}>
-          <Route index element={<Navigate to="/canvas" replace />} />
+          <Route index element={<StartPage />} />
           <Route path="/canvas" element={<CanvasPage />} />
           <Route path="/review" element={<ReviewQueuePage />} />
           {/* 案件審核區（SPEC §8.2）：整區都需要 case_review 能力（決策 D14）。 */}
@@ -52,6 +59,8 @@ export default function App() {
           <Route path="/line/notifications" element={<LineNotificationsPage />} />
           <Route path="/line/unmatched" element={<LineUnmatchedPage />} />
           {/* 方案管理（SPEC §8.2）：讀取開放給登入的承辦人，寫入由頁面內部問 admin。 */}
+          <Route path="/help-chat" element={<HelpChatPage />} />
+          <Route path="/tool-knowledge" element={<ToolKnowledgePage />} />
           <Route path="/schemes" element={<SchemesPage />} />
           <Route path="/schemes/:code" element={<SchemeEditorPage />} />
           <Route path="/sop/document-types" element={<RequireCap capability="admin"><SopMappingsPage /></RequireCap>} />

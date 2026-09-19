@@ -211,6 +211,7 @@ async def seed_demo_cases(db: AsyncSession, tenant: Tenant, scheme: Scheme, repo
         submitted_at = datetime.now(UTC) - timedelta(days=spec["days_ago"])
         app = await case_service.create_application(
             db,
+            track_tool_input=False,
             tenant_id=tenant.id,
             scheme=scheme,
             case_no=spec["case_no"],

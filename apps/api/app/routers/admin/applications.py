@@ -301,6 +301,7 @@ async def _documents_payload(db: AsyncSession, app: Application, scheme: Scheme 
         out.append({
             "id": doc.id,
             "document_type_code": doc.document_type_code,
+            "period_index": doc.period_index,
             "document_type_label": labels.get(doc.document_type_code, ""),
             "revision": doc.revision,
             "is_current": doc.is_current,
@@ -339,6 +340,11 @@ async def get_application(
 
     return ApplicationDetailOut(
         **_row(app, scheme=scheme, reviewer=reviewers.get(app.assigned_reviewer_id or ""), verdict=verdict),
+        tool_id=app.tool_id,
+        billing_cycle=app.billing_cycle,
+        billing_periods=app.billing_periods,
+        original_currency=app.original_currency,
+        original_amount=app.original_amount,
         applicant_name=app.applicant_name,
         email=app.email,
         phone_masked=mask_phone(decrypt_phone(app.phone_encrypted)),

@@ -824,7 +824,12 @@ async def evaluate_application(db: AsyncSession, application: Application) -> li
         required_document_types(scheme, application.tier_code, application.payment_channel_code,
                                 application.paid_by_proxy),
     )
-    return evaluate(rules, documents, facts)
+    findings = evaluate(rules, documents, facts)
+    if application.billing_periods > 1:
+        amount_codes = {r.code for r in rules if r.rule_type == "amount_tolerance"}
+        findings = [Finding(f.rule_code, "PENDING", note=NOTE_AMOUNT_PENDING)
+                    if f.rule_code in amount_codes else f for f in findings]
+    return findings
 
 
 async def dry_run(db: AsyncSession, scheme: Scheme, payload: Mapping[str, Any]) -> dict[str, Any]:
@@ -978,6 +983,20 @@ async def blockers_for(db: AsyncSession, application: Application) -> list[dict[
         row = latest.get(rule.code)
         if row is None or row.status != "MATCH":
             out.append({"rule_code": rule.code, "label": rule.label, "status": row.status if row else "PENDING"})
+    if application.billing_periods > 1:
+        from .documents import PER_PERIOD_TYPES
+        from .scheme import required_document_types
+
+        scheme = await db.get(Scheme, application.scheme_id)
+        if scheme:
+            codes = required_document_types(scheme, application.tier_code, application.payment_channel_code,
+                                            application.paid_by_proxy)
+            present = {(d.document_type_code, d.period_index) for d in await current_documents(db, application)}
+            for code in codes:
+                if code in PER_PERIOD_TYPES:
+                    for period in range(1, application.billing_periods + 1):
+                        if (code, period) not in present:
+                            out.append({"rule_code": f"{code}_{period}", "label": f"{code} 第 {period} 期缺件", "status": "MISMATCH"})
     return out
 
 
