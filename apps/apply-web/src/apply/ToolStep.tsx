@@ -1,12 +1,17 @@
 /** 第 1 步 工具：先確認資格，再讓市民去翻帳單（SPEC §8.1）。
  *
- * 不予補助的工具照樣列出來，而且**說明為什麼**——把它藏起來，市民只會在準備完
- * 所有文件之後才在送件時撞牆。沒有收錄的工具可以自己填，由承辦人工認定。
+ * 選工具用下拉選單而不是一長串卡片：清單有幾十個工具，攤開來會把整個第一步
+ * 變成一面牆，而人要找的是「我買的那一個」——這是選單的工作，不是瀏覽的工作。
+ * 選完之後才把該工具的判定（可補助／不予補助／需人工認定）攤在下面說清楚。
+ *
+ * 不予補助的工具照樣收在選單裡，而且**說明為什麼**——把它藏起來，市民只會在
+ * 準備完所有文件之後才在送件時撞牆。沒有收錄的工具可以自己填，由承辦人工認定。
  */
 
 import { useMemo, useState } from 'react'
-import { Check, Info, Search } from 'lucide-react'
-import { Badge, Card, Field, Input, cx } from '@maydru/ui'
+import { AlertTriangle, Check, Info } from 'lucide-react'
+import { Badge, Card, Field, FlatSelect, Input, cx } from '@maydru/ui'
+import type { FlatSelectOption } from '@maydru/ui'
 import type { EligibleTool, SchemePublic, ToolStatus } from '../lib/types'
 import type { ToolChoice } from './state'
 
@@ -21,6 +26,9 @@ const STATUS_LABEL: Record<ToolStatus, string> = {
   REJECTED: '不予補助',
   PENDING: '需人工認定',
 }
+
+/** 選單裡代表「不在清單上」的那一項；用不可能與 tool id 相撞的字串。 */
+const OTHER = '__other__'
 
 export function matchesQuery(tool: EligibleTool, query: string): boolean {
   const needle = query.trim().toLowerCase()
@@ -38,16 +46,23 @@ export interface ToolStepProps {
 }
 
 export function ToolStep({ scheme, value, onChange, error }: ToolStepProps) {
-  const [query, setQuery] = useState('')
+  // 「其他」是自己填的，所以沒有 tool_id；用這個條件回推目前是不是選了其他。
   const [other, setOther] = useState(() => Boolean(value.name) && value.tool_id === null)
 
-  const tools = useMemo(
-    () => scheme.eligible_tools.filter((tool) => matchesQuery(tool, query)),
-    [scheme.eligible_tools, query],
+  const options: FlatSelectOption[] = useMemo(
+    () => [
+      ...scheme.eligible_tools
+        .map((tool) => ({ value: tool.id, label: tool.name, group: STATUS_LABEL[tool.status] }))
+        // 依名稱排序，找起來才像在翻字典；伺服器的順序是給承辦看的。
+        .sort((a, b) => a.label.localeCompare(b.label, 'en', { sensitivity: 'base' })),
+      { value: OTHER, label: '其他（自行填寫）' },
+    ],
+    [scheme.eligible_tools],
   )
 
-  // 提醒卡只列不予補助的那幾項，而且不隨搜尋字縮減——它是「申請前先看一眼」的
-  // 固定須知，不是搜尋結果的一部分。
+  const selected = scheme.eligible_tools.find((tool) => tool.id === value.tool_id) ?? null
+
+  // 提醒卡只列不予補助的那幾項，是「申請前先看一眼」的固定須知。
   const excluded = useMemo(
     () => scheme.eligible_tools.filter((tool) => tool.status === 'REJECTED'),
     [scheme.eligible_tools],
@@ -55,61 +70,80 @@ export function ToolStep({ scheme, value, onChange, error }: ToolStepProps) {
 
   return (
     <div className="space-y-4">
-      <Field label="搜尋工具名稱" hint="輸入你在帳單上看到的名字，中英文都可以。">
+      <Field label="AI 工具名稱" required error={error} hint="選你實際購買的那一個；找不到就選最後一項自己填。">
         {(props) => (
-          <div className="relative">
-            <Search size={16} aria-hidden className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary" />
-            <Input
-              {...props}
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="例如 ChatGPT、Claude、Canva"
-              className="pl-9"
-              autoComplete="off"
-            />
-          </div>
+          <FlatSelect
+            id={props.id}
+            aria-describedby={props['aria-describedby']}
+            aria-invalid={props['aria-invalid']}
+            value={other ? OTHER : (value.tool_id ?? '')}
+            options={options}
+            placeholder="請選擇 AI 工具"
+            onChange={(next) => {
+              if (next === OTHER) {
+                setOther(true)
+                onChange({ name: '', tool_id: null })
+                return
+              }
+              setOther(false)
+              const tool = scheme.eligible_tools.find((item) => item.id === next)
+              if (tool) onChange({ name: tool.name, tool_id: tool.id })
+            }}
+          />
         )}
       </Field>
 
-      <ul className="space-y-2" aria-label="可選的工具">
-        {tools.map((tool) => {
-          const selected = value.tool_id === tool.id
-          const rejected = tool.status === 'REJECTED'
-          return (
-            <li key={tool.id}>
-              <button
-                type="button"
-                aria-pressed={selected}
-                onClick={() => {
-                  setOther(false)
-                  onChange({ name: tool.name, tool_id: tool.id })
-                }}
-                className={cx(
-                  'flex w-full min-h-11 items-start gap-3 rounded-xl border p-4 text-left transition-colors',
-                  // 選中：accent 框線 + 淡底 + 右側打勾，三個訊號一起給，
-                  // 因為「只靠底色」在強光下的手機螢幕上看不出來。
-                  selected
-                    ? 'border-accent bg-accent-bg'
-                    : 'border-border bg-canvas hover:border-accent/40 hover:bg-background-lite',
-                  rejected && 'opacity-90',
-                )}
+      {/* 選了之後才講這個工具能不能補助。講在選之前沒人看，講在送出時才擋太晚。 */}
+      {selected && (
+        <div
+          className={cx(
+            'rounded-xl border p-4',
+            selected.status === 'REJECTED' ? 'border-danger/30 bg-danger-bg' : 'border-border bg-background-lite',
+          )}
+        >
+          <div className="flex items-start gap-2.5">
+            {selected.status === 'APPROVED' ? (
+              <span
+                aria-hidden
+                className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-accent text-on-accent"
               >
-                <span className="min-w-0 flex-1">
-                  <span className="flex flex-wrap items-center gap-2">
-                    <span className="text-[15px] font-medium text-primary">{tool.name}</span>
-                    <Badge tone={STATUS_TONE[tool.status]}>{STATUS_LABEL[tool.status]}</Badge>
-                  </span>
-                  {tool.vendor && <span className="mt-0.5 block text-[13px] text-muted">{tool.vendor}</span>}
-                  {tool.verdict_note && (
-                    <span className="mt-1 block text-[13px] leading-5 text-muted">{tool.verdict_note}</span>
-                  )}
-                </span>
-                {selected && <Check size={18} aria-hidden className="mt-0.5 shrink-0 text-accent" />}
-              </button>
-            </li>
-          )
-        })}
-      </ul>
+                <Check size={13} strokeWidth={3} />
+              </span>
+            ) : (
+              <AlertTriangle
+                size={17}
+                aria-hidden
+                className={cx('mt-0.5 shrink-0', selected.status === 'REJECTED' ? 'text-danger' : 'text-warn')}
+              />
+            )}
+            <div className="min-w-0">
+              <p className="flex flex-wrap items-center gap-2">
+                <span className="text-[15px] font-semibold text-primary">{selected.name}</span>
+                <Badge tone={STATUS_TONE[selected.status]}>{STATUS_LABEL[selected.status]}</Badge>
+              </p>
+              {selected.vendor && <p className="mt-0.5 text-[13px] text-muted">{selected.vendor}</p>}
+              {selected.verdict_note && (
+                <p className="mt-1 text-[13px] leading-relaxed text-muted">{selected.verdict_note}</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {other && (
+        <Card title="自己填寫工具名稱" subtitle="沒收錄不代表不能申請，只是需要承辦人工認定。">
+          <Field label="工具名稱" required error={error} hint="請照帳單上的英文原名填寫，方便承辦查證。">
+            {(props) => (
+              <Input
+                {...props}
+                value={value.name}
+                onChange={(event) => onChange({ name: event.target.value, tool_id: null })}
+                placeholder="例如 Perplexity Pro"
+              />
+            )}
+          </Field>
+        </Card>
+      )}
 
       {/* 不予補助的範圍在選工具的當下就講清楚，而不是等送出才擋：
           這幾類是最常見的誤申請，講在前面能省掉一整趟準備文件的白工。 */}
@@ -128,53 +162,6 @@ export function ToolStep({ scheme, value, onChange, error }: ToolStepProps) {
             ))}
           </ul>
         </div>
-      )}
-
-      {tools.length === 0 && (
-        <p className="text-[14px] text-muted">
-          沒有符合「{query}」的工具。你可以在下面自己填寫名稱，由承辦人員認定。
-        </p>
-      )}
-
-      <Card title="找不到你的工具？" subtitle="沒收錄不代表不能申請，只是需要人工認定。">
-        <button
-          type="button"
-          aria-pressed={other}
-          onClick={() => {
-            setOther(true)
-            onChange({ name: '', tool_id: null })
-          }}
-          className={cx(
-            'flex min-h-11 w-full items-center justify-between gap-3 rounded-xl border px-4 py-2.5',
-            'text-left text-[15px] transition-colors',
-            other
-              ? 'border-accent bg-accent-bg font-medium text-accent'
-              : 'border-border bg-canvas hover:border-accent/40 hover:bg-background-lite',
-          )}
-        >
-          其他（自行填寫）
-          {other && <Check size={16} aria-hidden className="shrink-0 text-accent" />}
-        </button>
-        {other && (
-          <div className="mt-3">
-            <Field label="工具名稱" required error={error} hint="請照帳單上的英文原名填寫，方便承辦查證。">
-              {(props) => (
-                <Input
-                  {...props}
-                  value={value.name}
-                  onChange={(event) => onChange({ name: event.target.value, tool_id: null })}
-                  placeholder="例如 Perplexity Pro"
-                />
-              )}
-            </Field>
-          </div>
-        )}
-      </Card>
-
-      {error && !other && (
-        <p role="alert" className="text-[13px] text-danger">
-          {error}
-        </p>
       )}
     </div>
   )

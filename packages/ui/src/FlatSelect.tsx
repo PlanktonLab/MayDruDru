@@ -59,8 +59,12 @@ export function FlatSelect({
   }, [open])
 
   // 用鍵盤移動時把目前這一項捲進視野，否則長清單按到一半就看不見游標在哪。
+  // `scrollIntoView` 不是每個環境都有（jsdom 就沒有），沒有的話跳過捲動就好——
+  // 這只是輔助，不該讓整個選單炸掉。
   useEffect(() => {
-    if (open) document.getElementById(`${rootId}-${active}`)?.scrollIntoView({ block: 'nearest' })
+    if (!open) return
+    const option = document.getElementById(`${rootId}-${active}`)
+    option?.scrollIntoView?.({ block: 'nearest' })
   }, [active, open, rootId])
 
   const selected = options.find((option) => option.value === value)

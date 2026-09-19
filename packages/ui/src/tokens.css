@@ -28,22 +28,24 @@
   --font-sans: -apple-system, "PingFang TC", "Noto Sans TC", sans-serif;
 }
 
-/* Design tokens (slate series) — carried over from the ChillJudge canvas. */
+/* 中性偏暖的灰階（不是藍調 slate）：底色 #f8f8f7、框線 #e3e5e2。
+   政府申辦頁面整片都是文字與表單，藍調的灰會讓整頁看起來冷冰冰，
+   而且與 accent 的藍混在一起，分不出哪裡是可點的。 */
 :root {
-  --primary: oklch(37.2% 0.044 257.287);
-  --muted: oklch(55.4% 0.046 257.417);
-  --secondary: oklch(70.4% 0.04 256.788);
-  --tertiary: oklch(86.9% 0.022 252.894);
-  --elevated: oklch(98.4% 0.003 247.858);
-  --border: oklch(92.9% 0.013 255.508);
-  --background: oklch(96.8% 0.007 247.896);
-  --background-lite: oklch(98.4% 0.003 247.858);
+  --primary: #15181f;
+  --muted: #667085;
+  --secondary: #98a2b3;
+  --tertiary: #d0d5dd;
+  --elevated: #ffffff;
+  --border: #e3e5e2;
+  --background: #f8f8f7;
+  --background-lite: rgba(243, 243, 245, 0.7);
   --canvas: white;
   /* 輸入框的填色：比底色再淡一階的灰，框線用透明——一整排欄位讀起來是安靜的一塊，
      不是一堆框。聚焦時才換成 canvas 並亮起 accent 框線。 */
   --field: rgba(243, 243, 245, 0.7);
-  --accent: #2f6fed;
-  --accent-bg: color-mix(in oklab, #2f6fed 12%, transparent);
+  --accent: #1a56db;
+  --accent-bg: #eff6ff;
   --on-accent: #ffffff;            /* text / icons on an accent or danger fill */
   --scrim: rgba(15, 23, 42, 0.12); /* behind sheets and modals */
   --scrim-strong: rgba(15, 23, 42, 0.72); /* lightbox */

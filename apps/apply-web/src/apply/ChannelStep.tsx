@@ -41,7 +41,12 @@ export function ChannelStep({ scheme, value, onChange, errors }: ChannelStepProp
                 )}
               >
                 {selected && (
-                  <Check size={16} aria-hidden className="absolute right-3.5 top-3.5 shrink-0 text-accent" />
+                  <span
+                    aria-hidden
+                    className="absolute right-3.5 top-3.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-accent text-on-accent"
+                  >
+                    <Check size={12} strokeWidth={3} />
+                  </span>
                 )}
                 <span className="text-[15px] font-medium text-primary">{channel.label}</span>
                 <span className="mt-0.5 text-[13px] leading-5 text-muted">

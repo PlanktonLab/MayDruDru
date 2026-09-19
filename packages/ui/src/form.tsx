@@ -57,7 +57,7 @@ export function Field({ label, hint, error, required, className, children }: Fie
   const message = error ?? hint
   return (
     <div className={cx('space-y-1.5', className)}>
-      <label htmlFor={id} className="block text-[13px] font-medium text-muted">
+      <label htmlFor={id} className="block text-[12px] font-medium text-muted">
         {label}
         {required && (
           <span className="ml-1 text-danger" aria-label="必填">
@@ -71,7 +71,12 @@ export function Field({ label, hint, error, required, className, children }: Fie
         'aria-invalid': error ? true : undefined,
       })}
       {message && (
-        <p id={messageId} className={cx('text-[13px] leading-5', error ? 'text-danger' : 'text-muted')}>
+        // 錯誤要當場被螢幕閱讀器念出來；提示文字則只是靜態說明，不該打斷人。
+        <p
+          id={messageId}
+          role={error ? 'alert' : undefined}
+          className={cx('text-[13px] leading-5', error ? 'text-danger' : 'text-muted')}
+        >
           {message}
         </p>
       )}

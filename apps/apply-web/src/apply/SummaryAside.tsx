@@ -7,6 +7,7 @@
  * 尚未填的欄位顯示「尚未填寫」而不是空白：空白看起來像壞掉，占位字看起來像待辦。
  */
 
+import { ShieldCheck } from 'lucide-react'
 import { money, date } from '../lib/format'
 import type { SchemePublic } from '../lib/types'
 import type { ApplyState } from './state'
@@ -43,10 +44,13 @@ export function SummaryAside({ scheme, state, requiredCodes }: SummaryAsideProps
   return (
     <aside
       aria-label="申請摘要"
-      className="apply-aside rounded-2xl border border-border bg-canvas p-6"
-      style={{ boxShadow: 'var(--shadow-card)' }}
+      // 白框線而非灰框線，與表單面板同一個做法：卡片靠亮度浮出來，不靠一圈線。
+      className="apply-aside rounded-[20px] border border-canvas bg-canvas p-6"
     >
-      <h2 className="text-[15px] font-semibold tracking-tight text-primary">申請摘要</h2>
+      <h2 className="flex items-center gap-2 text-[15px] font-semibold tracking-tight text-primary">
+        <ShieldCheck size={17} strokeWidth={1.5} aria-hidden className="shrink-0" />
+        申請摘要
+      </h2>
 
       <dl className="mt-5 space-y-4">
         <Row label="申請工具" value={state.tool.name || PENDING} />
@@ -61,12 +65,12 @@ export function SummaryAside({ scheme, state, requiredCodes }: SummaryAsideProps
         />
       </dl>
 
-      <div className="mt-6 rounded-2xl bg-background-lite p-5">
-        <p className="text-[13px] text-muted">預估補助金額</p>
-        <p className="mt-1 text-2xl font-semibold tracking-tight tabular-nums text-primary">
+      <div className="mt-6 rounded-[14px] bg-background-lite p-5">
+        <p className="text-[12px] text-muted">預估補助金額</p>
+        <p className="mt-2 text-[26px] font-semibold tracking-tight tabular-nums text-primary">
           {estimate != null ? money(estimate) : '—'}
         </p>
-        <p className="mt-2 text-[12px] leading-5 text-muted">實際金額以承辦人員審核結果為準。</p>
+        <p className="mt-2 text-[11px] leading-5 text-muted">實際金額以承辦人員審核結果為準。</p>
       </div>
     </aside>
   )

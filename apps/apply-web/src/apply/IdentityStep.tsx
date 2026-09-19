@@ -98,7 +98,12 @@ export function IdentityStep({ scheme, value, onChange, errors }: IdentityStepPr
                 )}
               >
                 {selected && (
-                  <Check size={16} aria-hidden className="absolute right-3.5 top-3.5 shrink-0 text-accent" />
+                  <span
+                    aria-hidden
+                    className="absolute right-3.5 top-3.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-accent text-on-accent"
+                  >
+                    <Check size={12} strokeWidth={3} />
+                  </span>
                 )}
                 <span className="text-[15px] font-medium text-primary">{tier.label}</span>
                 <span className="mt-0.5 text-[13px] text-muted">

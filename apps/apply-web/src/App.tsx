@@ -45,7 +45,7 @@ function DesktopHeader() {
           </span>
         </Link>
 
-        <nav aria-label="主要導覽" className="flex shrink-0 items-center gap-6 text-[14px]">
+        <nav aria-label="主要導覽" className="flex shrink-0 items-center gap-5 text-[13px]">
           {DESKTOP_LINKS.map(({ to, label, end }) => (
             <NavLink
               key={to}
