@@ -179,13 +179,60 @@ def test_the_default_sender_never_touches_the_network_in_tests():
     assert isinstance(sender_module.get_sender(), sender_module.NoopLineSender)
 
 
-def test_the_sender_slices_to_five_messages():
+async def test_the_sender_slices_to_five_messages():
+    """LINE 一次只收 5 則。多出來的不能讓最後一則（通常是那張卡）消失。"""
     fake = sender_module.NoopLineSender()
-    import asyncio
-
-    asyncio.get_event_loop_policy()
-    asyncio.run(fake.push("U1", [{"type": "text", "text": str(i)} for i in range(9)]))
+    await fake.push("U1", [{"type": "text", "text": str(i)} for i in range(9)])
     assert len(fake.sent[0]["messages"]) == sender_module.MAX_MESSAGES
+
+
+# ------------------------------------------------------------- 端到端劇本
+
+async def test_verify_then_supplement_then_teach_me(client, db, tenant, scheme, line_sender, fake_redis,
+                                                    monkeypatch):
+    """SPEC §14 劇本的 P2 段：LINE 綁定 → 退件 → 推播 →「教我準備」。
+
+    全程走 `POST /__test__/line/inbound`，也就是 E2E 真正會打的那一條路。
+    """
+    from app.services import application as case_service
+    from app.services.line import conversation
+
+    app = await make_case(db, tenant, scheme)
+    monkeypatch.setattr(case_service, "_redis", lambda: fake_redis)
+
+    async def inbound(event):
+        r = await client.post("/__test__/line/inbound", json={"event": event, "tenant_id": tenant.id})
+        assert r.status_code == 200
+        return r.json()["messages"]
+
+    def postback(data):
+        return {"type": "postback", "source": {"userId": USER}, "replyToken": "rt", "postback": {"data": data}}
+
+    def text(value):
+        return {"type": "message", "source": {"userId": USER}, "replyToken": "rt",
+                "message": {"type": "text", "text": value}}
+
+    # 1) 民眾用案號 + 末四碼把案件綁到自己的 LINE
+    await inbound(postback("action=case_status"))
+    await inbound(text(app.case_no))
+    assert (await inbound(text("5678")))[0]["type"] == "flex"
+    assert (await db.execute(select(CaseVerification))).scalars().one().line_user_id == USER
+
+    # 2) 承辦人要求補件 → 排一筆推播
+    await drive(db, app, "T2")
+    row = await only_notification(db)
+    assert row.status == "queued" and row.line_user_id == USER
+
+    # 3) worker 送出，訊息上帶著兩條路
+    monkeypatch.setattr(tasks, "sessionmaker", lambda: _single(db))
+    assert await tasks.send_notification({}, row.id) == "sent"
+    pushed = line_sender.last("push")
+    teach = pushed[1]["contents"]["footer"]["contents"][0]["action"]["data"]
+
+    # 4) 按下「教我準備」：留一筆 pending 給 P4 接，這一版先回文件清單
+    assert (await inbound(postback(teach)))[0]["type"] == "flex"
+    state = await conversation.get(db, tenant.id, USER)
+    assert state.flow == "sop_pending" and state.value("case_no") == app.case_no
 
 
 def _single(db):
