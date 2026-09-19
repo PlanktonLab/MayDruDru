@@ -15,9 +15,11 @@ from .routers import (
     auth,
     catalog_admin,
     components,
+    contents,
     dashboard,
     evals,
     flows,
+    line,
     media,
     playground,
     public_api,
@@ -25,6 +27,10 @@ from .routers import (
     variants,
 )
 from .routers.admin import applications as admin_applications
+from .routers.admin import contents as admin_contents
+from .routers.admin import faqs as admin_faqs
+from .routers.admin import line as admin_line
+from .routers.admin import media as admin_media
 from .routers.admin import schemes as admin_schemes
 from .security import hash_password
 
@@ -51,6 +57,19 @@ async def _bootstrap_from_env() -> None:
         await db.commit()
 
 
+async def _sync_contents() -> None:
+    """每次啟動把 registry 的 key 補進 `contents`（SPEC §8.6）。
+
+    只補缺的列、只刷新中繼資料，承辦人改過的字永遠不動（services/contents.py）。
+    """
+    from .services import contents as contents_service
+
+    async with sessionmaker()() as db:
+        for tenant_id in (await db.execute(select(Tenant.id))).scalars().all():
+            await contents_service.sync_defaults(db, tenant_id)
+        await db.commit()
+
+
 def check_settings() -> None:
     s = get_settings()
     problems = s.insecure_defaults()
@@ -74,6 +93,11 @@ async def lifespan(app: FastAPI):
     except Exception:
         # an unbootstrapped instance leaves POST /api/auth/bootstrap open — say so loudly
         log.exception("環境變數 bootstrap 失敗，/api/auth/bootstrap 仍開放，請盡快完成設定")
+    try:
+        await _sync_contents()
+    except Exception:
+        # 文案缺列不會讓 bot 沉默（會退回 registry 預設值），所以這裡只警告不中止。
+        log.warning("罐頭訊息 sync_defaults 失敗，將以 registry 預設值運作", exc_info=True)
     yield
 
 
@@ -83,6 +107,9 @@ def create_app() -> FastAPI:
     app.add_middleware(CORSMiddleware, allow_origins=s.cors_origins, allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
     for r in (auth, tenant, catalog_admin, components, flows, variants, playground, evals, dashboard,
               admin_schemes, admin_applications, public_api, media):
+        app.include_router(r.router)
+    # P2 內容與 LINE（SPEC §8.4 / §8.6）
+    for r in (contents, line, admin_contents, admin_faqs, admin_media, admin_line):
         app.include_router(r.router)
 
     @app.get("/health")

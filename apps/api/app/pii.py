@@ -28,6 +28,7 @@ __all__ = [
     "encrypt_phone",
     "fernet",
     "hash_last4",
+    "hash_user_id",
     "last4",
     "mask_name",
     "mask_phone",
@@ -106,3 +107,14 @@ def mask_phone(phone: str) -> str:
     if len(digits) <= LAST4_LENGTH:
         return digits
     return "*" * (len(digits) - LAST4_LENGTH) + digits[-LAST4_LENGTH:]
+
+
+def hash_user_id(value: str) -> str:
+    """外部識別碼（LINE userId）的加鹽 hash。
+
+    未命中訊息要餵給內容助理分析，但 SPEC §11 的外送清單寫明「去 LINE userId」；
+    存 hash 才能同時做到「同一個人問了三次」的聚類與「查不回是誰」。
+    """
+    if not value:
+        return ""
+    return hmac.new(_salt(), value.encode(), hashlib.sha256).hexdigest()
