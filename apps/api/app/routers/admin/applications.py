@@ -196,7 +196,18 @@ def _transitions_for(user: CurrentUser, app: Application) -> list[dict[str, Any]
     return out
 
 
-def _finding_out(row: ReviewFinding, *, reviewer: User | None, superseded: bool) -> dict[str, Any]:
+def _finding_out(
+    row: ReviewFinding,
+    *,
+    reviewer: User | None,
+    superseded: bool,
+    document_types: dict[str, str],
+) -> dict[str, Any]:
+    """`review_findings` 的一列 → 契約 §Finding + 案件頁的落地欄位。
+
+    `document_type_code` 沒有自己的欄位，由 `document_id` 反查——finding 指向的是
+    某一個版本的文件，而不是某個類型。
+    """
     return {
         "id": row.id,
         "rule_id": row.rule_id,
@@ -207,7 +218,7 @@ def _finding_out(row: ReviewFinding, *, reviewer: User | None, superseded: bool)
         "expected_value": row.expected_value or None,
         "confidence": row.confidence,
         "bbox": dict(row.bbox) if row.bbox else None,
-        "document_type_code": None,
+        "document_type_code": document_types.get(row.document_id or ""),
         "note": row.note or None,
         "suggested_supplement": None,
         "source": row.source,
@@ -222,12 +233,24 @@ async def _findings_payload(db: AsyncSession, app: Application) -> list[dict[str
     history = await review.all_findings(db, app)
     latest = {row.id for row in await review.latest_findings(db, app)}
     reviewers = await _reviewers(db, {row.reviewer_id or "" for row in history})
+    document_types = {
+        d.id: d.document_type_code
+        for d in (
+            await db.execute(
+                select(ApplicationDocument).where(ApplicationDocument.application_id == app.id)
+            )
+        ).scalars()
+    }
     current = [r for r in history if r.id in latest]
     older = [r for r in history if r.id not in latest]
+
+    def out(row: ReviewFinding, *, superseded: bool) -> dict[str, Any]:
+        return _finding_out(row, reviewer=reviewers.get(row.reviewer_id or ""),
+                            superseded=superseded, document_types=document_types)
+
     return (
-        [_finding_out(r, reviewer=reviewers.get(r.reviewer_id or ""), superseded=False)
-         for r in sorted(current, key=lambda r: r.rule_code)]
-        + [_finding_out(r, reviewer=reviewers.get(r.reviewer_id or ""), superseded=True) for r in older]
+        [out(r, superseded=False) for r in sorted(current, key=lambda r: r.rule_code)]
+        + [out(r, superseded=True) for r in older]
     )
 
 

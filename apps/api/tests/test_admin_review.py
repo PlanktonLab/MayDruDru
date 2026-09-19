@@ -435,3 +435,13 @@ async def test_t8_notifies_when_the_supplement_deadline_passes(db, tenant, schem
     await case_service.expire_overdue(db, datetime.now(UTC) + timedelta(days=30))
     rows = (await db.execute(select(Notification).where(Notification.application_id == app.id))).scalars().all()
     assert [r.payload["transition_code"] for r in rows] == ["T2", "T8"]
+
+
+async def test_findings_carry_the_document_type_they_were_read_from(admin_client, auth_headers, db,
+                                                                    rules, case):
+    await add_ocr(db, case, "金額 NT$6,000")
+    body = (await admin_client.post(f"{CASES}/{case.case_no}/evaluate",
+                                    headers=auth_headers("case_reviewer"))).json()
+    amount = next(f for f in body["findings"] if f["rule_code"] == "AMOUNT")
+    assert amount["document_type_code"] == "BILLING_STATEMENT"
+    assert amount["document_id"]
