@@ -509,6 +509,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/line/richmenu/image": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Richmenu Image
+         * @description 目前選單圖；沒有客製圖時回傳系統內建美術稿。
+         */
+        get: operations["richmenu_image_api_admin_line_richmenu_image_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/line/richmenu/sync": {
         parameters: {
             query?: never;
@@ -7765,6 +7785,26 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+        };
+    };
+    richmenu_image_api_admin_line_richmenu_image_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/jpeg": unknown;
                 };
             };
         };

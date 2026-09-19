@@ -103,9 +103,9 @@ describe('DocField', () => {
     expect(ocr.disposeCanvas).toHaveBeenCalled()
   })
 
-  it('強制遮罩的文件會在按下之前就說明遮罩會發生什麼事', () => {
+  it('強制遮罩的文件不再重複顯示遮罩說明', () => {
     render(<DocField docType={billing} onChange={vi.fn()} onClear={vi.fn()} />)
-    expect(screen.getByText(/原圖不會離開這支手機/)).toBeTruthy()
+    expect(screen.queryByText(/原圖不會離開這支手機/)).toBeNull()
   })
 
   it('HEIC 會被標記成已轉 JPEG', async () => {

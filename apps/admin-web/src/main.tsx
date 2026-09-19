@@ -2,9 +2,14 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import pdfWorkerUrl from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url'
+import { setPdfWorkerSrc } from '@maydru/ocr'
 import './index.css'
 import App from './App'
 import { AuthProvider } from './lib/auth'
+
+// 案件審核頁會把 PDF 轉成可疊加重點標記的畫布；worker 獨立執行，避免大檔卡住 UI。
+setPdfWorkerSrc(`${pdfWorkerUrl}?module=1`)
 
 const qc = new QueryClient({ defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false, staleTime: 5_000 } } })
 

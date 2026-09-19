@@ -269,7 +269,7 @@ async def presigned_url(object_key_: str, *, seconds: int = PRESIGNED_SECONDS) -
     """private bucket 的短效連結（SPEC §11：只經 presigned URL、5 分鐘）。"""
     bucket = get_settings().s3_bucket_private
     url = await asyncio.to_thread(
-        storage.client().presigned_get_object, bucket, object_key_, timedelta(seconds=seconds)
+        storage.presign_client().presigned_get_object, bucket, object_key_, timedelta(seconds=seconds)
     )
     return str(url), datetime.now(UTC) + timedelta(seconds=seconds)
 

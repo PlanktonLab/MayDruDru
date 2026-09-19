@@ -9567,6 +9567,24 @@
         ]
       }
     },
+    "/api/admin/line/richmenu/image": {
+      "get": {
+        "description": "目前選單圖；沒有客製圖時回傳系統內建美術稿。",
+        "operationId": "richmenu_image_api_admin_line_richmenu_image_get",
+        "responses": {
+          "200": {
+            "content": {
+              "image/jpeg": {}
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Richmenu Image",
+        "tags": [
+          "admin-line"
+        ]
+      }
+    },
     "/api/admin/line/richmenu/sync": {
       "post": {
         "description": "建立並發布圖文選單。沒有上傳圖就沿用目前那一張（或內建美術稿）。",

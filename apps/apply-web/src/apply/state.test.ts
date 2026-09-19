@@ -143,7 +143,7 @@ describe('第 2 步 身分', () => {
 
   it('基本資料五個欄位都填齊才過得去', () => {
     expect(identityErrors(filled().identity)).toEqual({})
-    // 每一欄留空都要各自擋下來（D36 之後身分證與 email 也是必填）。
+    // 每一欄留空都要各自擋下來（D40 之後身分證與 email 也是必填）。
     expect(identityErrors({ ...filled().identity, applicant_name: '' }).applicant_name).toBeTruthy()
     expect(identityErrors({ ...filled().identity, id_number: '' }).id_number).toBeTruthy()
     expect(identityErrors({ ...filled().identity, email: '' }).email).toBeTruthy()

@@ -60,7 +60,7 @@ export interface UploadedDoc {
 export interface Identity {
   applicant_name: string
   phone: string
-  /** 完整身分證字號（D36）。送到伺服器後加密保存，畫面上一律只顯示末四碼。 */
+  /** 完整身分證字號（D40）。送到伺服器後加密保存，畫面上一律只顯示末四碼。 */
   id_number: string
   email: string
   tier_code: string

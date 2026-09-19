@@ -67,6 +67,7 @@ type Handler = Callable[[_Context], Awaitable[list[dict[str, Any]]]]
 
 VERIFY_FLOW = "case_verify"
 SESSION_FLOW = sop_service.SESSION_FLOW
+PICKER_FLOW = sop_service.PICKER_FLOW
 STEP_CASE_NO = "case_no"
 STEP_LAST4 = "last4"
 PICKER_LIMIT = 12
@@ -305,12 +306,13 @@ async def _act_scheme_detail(ctx: _Context) -> list[dict[str, Any]]:
 # ---- 申請小幫手 / 文件清單 ----------------------------------------------
 
 async def _act_sop_start(ctx: _Context) -> list[dict[str, Any]]:
-    """決策 D20：六題資格問卷收掉，改成直接問「你要準備哪一份文件」。
-
-    選完文件之後走 `sop_document`，那裡才真的開 session（`services/line/sop.py`）。
-    """
+    """決策 D20：先問銀行／平台，再列出該平台全部已發布的操作指引。"""
     await sop_service.close(ctx.sop)
-    return [await _ask_document(ctx)]
+    return await sop_service.begin_platform_picker(ctx.sop)
+
+
+async def _act_sop_platform(ctx: _Context) -> list[dict[str, Any]]:
+    return await sop_service.flow_picker_for_platform(ctx.sop, ctx.params.get("platform", ""))
 
 
 async def _ask_document(ctx: _Context, key: str = "line.sop.ask_document") -> dict[str, Any]:
@@ -330,7 +332,7 @@ async def _act_sop_open(ctx: _Context) -> list[dict[str, Any]]:
     code = ctx.params.get("doc", "")
     flow = await ctx.db.get(Flow, ctx.params.get("flow", ""))
     if flow is None or flow.tenant_id != ctx.tenant_id or flow.status != "published":
-        return [await _ask_document(ctx)]
+        return await sop_service.begin_platform_picker(ctx.sop)
     label = await _document_label(ctx.db, ctx.tenant_id, code)
     return await sop_service.open_for_flow(ctx.sop, flow, document_code=code, document_label=label)
 
@@ -400,7 +402,7 @@ async def _act_sop_session(ctx: _Context) -> list[dict[str, Any]]:
     state = await conversation.get(ctx.db, ctx.tenant_id, ctx.user_id, now=ctx.now)
     action = ctx.params.get("action", "")
     if state.flow != SESSION_FLOW:
-        return [await _ask_document(ctx)]
+        return await sop_service.begin_platform_picker(ctx.sop)
     return await sop_service.handle_action(ctx.sop, state, action)
 
 
@@ -434,7 +436,9 @@ async def _act_help(ctx: _Context) -> list[dict[str, Any]]:
 
 # rich menu 上的六個入口。按下其中任何一個都代表「我要做別的事了」，
 # 進行中的教學因此會先被收掉（SPEC §8.4 的退出條件之一）。
-MENU_ACTIONS: frozenset[str] = frozenset(action for action, _ in flex.MAIN_MENU)
+MENU_ACTIONS: frozenset[str] = frozenset(
+    [*(action for action, _ in flex.MAIN_MENU), "subsidy_info", "eligibility"]
+)
 
 ACTIONS: dict[str, Handler] = {
     "case_status": _act_case_status,
@@ -447,7 +451,11 @@ ACTIONS: dict[str, Handler] = {
     "scheme_latest": _act_scheme_latest,
     "scheme_closing": _act_scheme_closing,
     "scheme_detail": _act_scheme_detail,
+    # 舊 youth-line-bot 已發布選單的 postback；保留相容，避免切版期間按鈕失效。
+    "subsidy_info": _act_scheme_info,
+    "eligibility": _act_sop_start,
     "sop_start": _act_sop_start,
+    "sop_platform": _act_sop_platform,
     "sop_document": _act_sop_document,
     "sop_open": _act_sop_open,
     "sop_choose": _act_sop_choose,
@@ -493,6 +501,22 @@ async def _handle_text(
         return await _verify_step(ctx, state, text.strip())
     if state.flow == SESSION_FLOW:
         return await sop_service.handle_text(ctx.sop, state, text)
+    if state.flow == PICKER_FLOW:
+        if intent_rules.classify_rules(text).intent == "cancel":
+            return await _act_cancel(ctx)
+        if state.step == "platform":
+            platform = await sop_service.platform_from_text(db, tenant_id, text)
+            if platform is None:
+                return await sop_service.begin_platform_picker(ctx.sop, key="line.sop.platform_not_found")
+            return await sop_service.flow_picker_for_platform(ctx.sop, platform.id)
+        flow = await sop_service.flow_from_text(
+            db, tenant_id, str(state.value("platform", "") or ""), text
+        )
+        if flow is None:
+            return await sop_service.flow_picker_for_platform(
+                ctx.sop, str(state.value("platform", "") or "")
+            )
+        return await sop_service.open_for_flow(ctx.sop, flow, document_label=flow.name)
 
     decision = await intent_rules.classify(
         db, tenant_id, text, mode="idle", candidates=await _idle_candidates(db, tenant_id),
@@ -663,7 +687,7 @@ async def _handle_image(
 
     png = await _message_content(message_id)
     if png is None:
-        return [notice, await _ask_document(ctx, "line.sop.not_recognized")]
+        return [notice, *(await sop_service.begin_platform_picker(ctx.sop, key="line.sop.not_recognized"))]
 
     if state.flow == SESSION_FLOW:
         return await sop_service.handle_image(ctx.sop, state, png)
@@ -671,7 +695,7 @@ async def _handle_image(
     located = await sop_service.open_from_screenshot(ctx.sop, png)
     if located is not None:
         return [notice, *located][:5]
-    return [notice, await _ask_document(ctx, "line.sop.not_recognized")]
+    return [notice, *(await sop_service.begin_platform_picker(ctx.sop, key="line.sop.not_recognized"))]
 
 
 async def _message_content(message_id: str) -> bytes | None:

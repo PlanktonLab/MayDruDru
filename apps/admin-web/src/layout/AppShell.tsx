@@ -1,6 +1,6 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import { clsx } from 'clsx'
-import { BarChart3, Bell, BookOpen, ClipboardCheck, FileClock, FileSearch, FlaskConical, FolderCog, HelpCircle, KeyRound, LayoutGrid, Link2, LogOut, MessageSquare, MessageSquareText, Moon, PanelLeftClose, PanelLeftOpen, SearchX, Sun, Users, Workflow } from 'lucide-react'
+import { BarChart3, Bell, BookOpen, ClipboardCheck, FileClock, FileSearch, FlaskConical, FolderCog, HelpCircle, KeyRound, LayoutGrid, Link2, ListChecks, LogOut, MessageSquare, MessageSquareText, Moon, PanelLeftClose, PanelLeftOpen, SearchX, Sun, Users, Workflow } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useAuth } from '../lib/auth'
 import { ROLE_LABEL, type Capability } from '../lib/types'
@@ -11,7 +11,6 @@ const LS_NAV_COLLAPSED = 'sop_nav_collapsed'
 const NAV: { to: string; label: string; icon: typeof Workflow; cap?: Capability }[] = [
   { to: '/canvas', label: '流程', icon: Workflow },
   { to: '/review', label: 'SOP 審核', icon: ClipboardCheck },
-  { to: '/cases', label: '案件審核', icon: FileSearch, cap: 'case_review' },
   { to: '/playground', label: '測試對話', icon: MessageSquare },
   { to: '/evals', label: '評測', icon: FlaskConical },
   { to: '/dashboard', label: '儀表板', icon: BarChart3 },
@@ -19,6 +18,11 @@ const NAV: { to: string; label: string; icon: typeof Workflow; cap?: Capability 
   { to: '/members', label: '成員', icon: Users, cap: 'admin' },
   { to: '/api-keys', label: 'API Key', icon: KeyRound, cap: 'admin' },
   { to: '/audit-logs', label: '稽核日誌', icon: FileClock, cap: 'admin' },
+]
+
+const CASE_NAV: { to: string; label: string; icon: typeof Workflow; cap?: Capability }[] = [
+  { to: '/cases', label: '案件總覽', icon: FileSearch, cap: 'case_review' },
+  { to: '/review-settings', label: '資料重點設定', icon: ListChecks },
 ]
 
 /**
@@ -75,12 +79,20 @@ export default function AppShell() {
             {collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
           </button>
         </div>
-        <nav className="flex-1 space-y-0.5 px-2">
+        <nav className="min-h-0 flex-1 space-y-0.5 overflow-y-auto px-2 pb-3">
           {NAV.filter((n) => !n.cap || can(n.cap)).map((n) => (
             <NavLink key={n.to} to={n.to} title={collapsed ? n.label : undefined} aria-label={n.label} className={({ isActive }) => clsx('flex items-center gap-2 rounded-lg py-1.5 text-sm', collapsed ? 'justify-center px-0' : 'px-2.5', isActive ? 'bg-accent-bg text-accent font-medium' : 'text-muted hover:bg-background-lite hover:text-primary')}>
               <n.icon size={15} className="shrink-0" />{!collapsed && <span className="truncate">{n.label}</span>}
             </NavLink>
           ))}
+          <div className="mt-3 space-y-0.5 border-t border-border pt-3">
+            {!collapsed && <div className="px-2.5 pb-1 text-[11px] font-medium uppercase tracking-wide text-secondary">審查作業</div>}
+            {CASE_NAV.filter((n) => !n.cap || can(n.cap)).map((n) => (
+              <NavLink key={n.to} to={n.to} title={collapsed ? n.label : undefined} aria-label={n.label} className={navLinkClass(collapsed)}>
+                <n.icon size={15} className="shrink-0" />{!collapsed && <span className="truncate">{n.label}</span>}
+              </NavLink>
+            ))}
+          </div>
           <div className="mt-3 space-y-0.5 border-t border-border pt-3">
             {!collapsed && <div className="px-2.5 pb-1 text-[11px] font-medium uppercase tracking-wide text-secondary">SOP</div>}
             {SOP_NAV.filter((n) => !n.cap || can(n.cap)).map((n) => (

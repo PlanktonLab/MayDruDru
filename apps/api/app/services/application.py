@@ -182,7 +182,7 @@ async def create_application(
         phone_encrypted=encrypt_phone(phone),
         phone_last4_hash=hash_last4(phone),
         id_last4_hash=hash_last4(id_number),
-        # 只有拿到完整字號才加密保存（D36）；舊客戶端只送末四碼時這裡留空，
+        # 只有拿到完整字號才加密保存（D40）；舊客戶端只送末四碼時這裡留空，
         # 否則資料庫裡會出現一批「密文解開只有四碼」的假完整號碼。
         id_number_encrypted=encrypt_pii(id_number) if len(id_number.strip()) > LAST4_LENGTH else "",
         email=email,

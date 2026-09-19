@@ -15,6 +15,7 @@ import { ApiError } from '../../lib/api'
 import { ToastProvider } from '../../components/ui'
 import SchemesPage, { windowText } from './SchemesPage'
 import SchemeEditorPage from './SchemeEditorPage'
+import ReviewSettingsPage from '../ReviewSettingsPage'
 import { foldConfig, unfoldConfig, textToOcr } from './RulesTab'
 import { countUnverified } from './CopilotPanel'
 import * as queries from './queries'
@@ -139,6 +140,18 @@ function renderEditor() {
   )
 }
 
+function renderReviewSettings(route = '/review-settings?scheme=HC115') {
+  return render(
+    <QueryClientProvider client={client()}>
+      <ToastProvider>
+        <MemoryRouter initialEntries={[route]}>
+          <Routes><Route path="/review-settings" element={<ReviewSettingsPage />} /></Routes>
+        </MemoryRouter>
+      </ToastProvider>
+    </QueryClientProvider>,
+  )
+}
+
 const openEditor = async () => { renderEditor(); await screen.findByDisplayValue('AI 領航青年數位工具補助') }
 const goTab = async (user: ReturnType<typeof userEvent.setup>, name: string) =>
   user.click(screen.getByRole('tab', { name }))
@@ -165,6 +178,25 @@ beforeEach(() => {
 })
 
 afterEach(() => { vi.clearAllMocks(); document.body.innerHTML = '' })
+
+/* ======================================================== 資料重點工作入口 */
+
+describe('資料重點設定頁', () => {
+  it('依方案顯示重點摘要，並共用規則編輯器', async () => {
+    renderReviewSettings()
+    expect(await screen.findByRole('heading', { name: '資料重點設定' })).toBeTruthy()
+    expect(await screen.findByText('1 / 2')).toBeTruthy()
+    expect(screen.getByText('帳單上有臺幣金額')).toBeTruthy()
+    expect(screen.getByRole('button', { name: /新增規則/ })).toBeTruthy()
+  })
+
+  it('沒有 admin 能力仍可檢視，但不能新增規則', async () => {
+    can.mockReturnValue(false)
+    renderReviewSettings()
+    expect(await screen.findByText('帳單上有臺幣金額')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /新增規則/ })).toBeNull()
+  })
+})
 
 /* ================================================================== 清單 */
 
