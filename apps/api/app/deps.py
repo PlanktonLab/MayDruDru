@@ -161,7 +161,12 @@ async def _check_rate_limit(key: ApiKey) -> None:
 
 
 def last_used_is_stale(last_used_at: datetime | None, now: datetime) -> bool:
-    return last_used_at is None or now - last_used_at >= LAST_USED_RESOLUTION
+    """SQLite 取回來的時間沒有時區；補上 UTC 才比得了大小（同 `services/line/conversation`）。"""
+    if last_used_at is None:
+        return True
+    if last_used_at.tzinfo is None:
+        last_used_at = last_used_at.replace(tzinfo=UTC)
+    return now - last_used_at >= LAST_USED_RESOLUTION
 
 
 async def api_caller(

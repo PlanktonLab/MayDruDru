@@ -59,6 +59,7 @@ OUTCOMES = (LOCATED, AMBIGUOUS, OFF_FLOW, UNKNOWN_PLATFORM, NOT_APP_SCREEN, NOT_
 _SYSTEM_KINDS = ("home_screen", "lock_screen", "system_screen")
 _POOL = 12          # candidates kept per ranking before fusion
 _PRIOR_STEPS = 3    # how many steps after the current one count as "expected next"
+_NEUTRAL_DISTANCE = 1.0   # stands in for the vector distance where pgvector is unavailable
 
 
 @dataclass
@@ -132,33 +133,54 @@ async def _published_entries(db: AsyncSession, tenant_id: str, *, flow_id: str |
     return entries
 
 
+def vector_ranking_available(db: AsyncSession) -> bool:
+    """Is the vector half of the ranking usable on this engine?
+
+    `cosine_distance` compiles to pgvector's `<=>`, which only Postgres
+    understands. The aiosqlite test database cannot run it, so there the
+    ranking falls back to its lexical half alone (same candidate pool, same
+    fusion, every distance neutral) — enough for the whole SOP path to be
+    exercised offline, and never reached in a real deployment."""
+    bind = db.get_bind()
+    return getattr(getattr(bind, "dialect", None), "name", "") == "postgresql"
+
+
 async def _scored_entries(db: AsyncSession, tenant_id: str, vec: list[float], *, flow_id: str | None,
                           platform_ids: list[str] | None, content_mode: str, pinned: dict[str, str], cache: dict[str, dict]) -> list[dict]:
     """Every candidate in scope with its vector distance and stored words."""
+    vectors = vector_ranking_available(db)
+    # 表達式本身不碰資料庫，先建起來讓型別固定；只有 vectors 為真時才會放進 select
     dist = Variant.embedding.cosine_distance(vec).label("distance")
     if content_mode == "published":
         entries = await _published_entries(db, tenant_id, flow_id=flow_id, platform_ids=platform_ids, pinned=pinned, cache=cache)
         if not entries:
             return []
-        rows = (await db.execute(
-            select(Variant.id, Variant.description, Variant.keywords, dist)
-            .where(Variant.id.in_(list(entries)), Variant.embedding.isnot(None))
-        )).all()
-        return [{**entries[vid], "distance": float(d), "description": desc, "keywords": list(kw or [])} for vid, desc, kw, d in rows]
+        columns = [Variant.id, Variant.description, Variant.keywords]
+        q = select(*columns, dist) if vectors else select(*columns)
+        q = q.where(Variant.id.in_(list(entries)))
+        if vectors:
+            q = q.where(Variant.embedding.isnot(None))
+        rows = (await db.execute(q)).all()
+        return [{**entries[row[0]], "distance": float(row[3]) if vectors else _NEUTRAL_DISTANCE,
+                 "description": row[1], "keywords": list(row[2] or [])} for row in rows]
 
-    q = (select(Variant, Step, Flow, dist)
-         .join(Step, Step.id == Variant.step_id).join(Flow, Flow.id == Step.flow_id)
-         .where(Flow.tenant_id == tenant_id, Variant.status.in_(("approved", "annotating", "rendering", "completed")),
-                Variant.embedding.isnot(None), Variant.replica_png_key.isnot(None)))
+    entities = (Variant, Step, Flow)
+    q = select(*entities, dist) if vectors else select(*entities)
+    q = (q.join(Step, Step.id == Variant.step_id).join(Flow, Flow.id == Step.flow_id)
+          .where(Flow.tenant_id == tenant_id, Variant.status.in_(("approved", "annotating", "rendering", "completed")),
+                 Variant.replica_png_key.isnot(None)))
+    if vectors:
+        q = q.where(Variant.embedding.isnot(None))
     if flow_id:
         q = q.where(Flow.id == flow_id)
     if platform_ids:
         q = q.where(Flow.platform_id.in_(platform_ids))
     rows = (await db.execute(q)).all()
     return [{"variant_id": v.id, "step_id": s.id, "flow_id": f.id, "platform_id": f.platform_id, "step_title": s.title,
-             "flow_name": f.name, "theme": v.theme, "distance": float(d), "replica_png_key": v.replica_png_key,
+             "flow_name": f.name, "theme": v.theme, "distance": float(row[3]) if vectors else _NEUTRAL_DISTANCE,
+             "replica_png_key": v.replica_png_key,
              "description": v.description, "keywords": list(v.keywords or []), "preview_url": storage.public_url(v.stepcard_preview_key)}
-            for v, s, f, d in rows]
+            for row in rows for v, s, f in [(row[0], row[1], row[2])]]
 
 
 # ------------------------------------------------------------------ scoring

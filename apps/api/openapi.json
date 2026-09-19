@@ -1022,6 +1022,64 @@
         "title": "Body_create_case_api_evals_cases_post",
         "type": "object"
       },
+      "Body_locate_api_sop_locate_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          },
+          "flow_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Flow Id"
+          },
+          "goal_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Goal Id"
+          },
+          "platform_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Platform Id"
+          },
+          "step_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Step Id"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_locate_api_sop_locate_post",
+        "type": "object"
+      },
       "Body_locate_screenshot_v1_locate_post": {
         "properties": {
           "file": {
@@ -1124,6 +1182,107 @@
           "file"
         ],
         "title": "Body_send_screenshot_v1_sessions__session_id__screenshots_post",
+        "type": "object"
+      },
+      "Body_sop_chat_message_v1_sop_chat__chat_id__messages_post": {
+        "properties": {
+          "file": {
+            "anyOf": [
+              {
+                "contentMediaType": "application/octet-stream",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          }
+        },
+        "title": "Body_sop_chat_message_v1_sop_chat__chat_id__messages_post",
+        "type": "object"
+      },
+      "Body_sop_locate_screenshot_v1_sop_locate_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          },
+          "flow_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Flow Id"
+          },
+          "goal_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Goal Id"
+          },
+          "platform_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Platform Id"
+          },
+          "step_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Step Id"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_sop_locate_screenshot_v1_sop_locate_post",
+        "type": "object"
+      },
+      "Body_sop_send_screenshot_v1_sop_sessions__session_id__screenshots_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_sop_send_screenshot_v1_sop_sessions__session_id__screenshots_post",
         "type": "object"
       },
       "Body_upload_api_admin_media_post": {
@@ -5382,6 +5541,37 @@
         "title": "SessionCreate",
         "type": "object"
       },
+      "SopFlowLinkIn": {
+        "properties": {
+          "flow_id": {
+            "title": "Flow Id",
+            "type": "string"
+          },
+          "platform_id": {
+            "title": "Platform Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "flow_id",
+          "platform_id"
+        ],
+        "title": "SopFlowLinkIn",
+        "type": "object"
+      },
+      "SopFlowLinksIn": {
+        "properties": {
+          "links": {
+            "items": {
+              "$ref": "#/components/schemas/SopFlowLinkIn"
+            },
+            "title": "Links",
+            "type": "array"
+          }
+        },
+        "title": "SopFlowLinksIn",
+        "type": "object"
+      },
       "StaffOut": {
         "description": "`GET /api/admin/reviewers` 的一列：可以被指派案件的人。",
         "properties": {
@@ -8949,6 +9139,126 @@
         ]
       }
     },
+    "/api/admin/schemes/{code}/document-types/{dt_code}/sop-flows": {
+      "get": {
+        "operationId": "list_sop_flows_api_admin_schemes__code__document_types__dt_code__sop_flows_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "dt_code",
+            "required": true,
+            "schema": {
+              "title": "Dt Code",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Sop Flows Api Admin Schemes  Code  Document Types  Dt Code  Sop Flows Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Sop Flows",
+        "tags": [
+          "admin-schemes"
+        ]
+      },
+      "put": {
+        "operationId": "put_sop_flows_api_admin_schemes__code__document_types__dt_code__sop_flows_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "dt_code",
+            "required": true,
+            "schema": {
+              "title": "Dt Code",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SopFlowLinksIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Put Sop Flows Api Admin Schemes  Code  Document Types  Dt Code  Sop Flows Put",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Sop Flows",
+        "tags": [
+          "admin-schemes"
+        ]
+      }
+    },
     "/api/admin/schemes/{code}/settings": {
       "get": {
         "description": "案件頁要的方案設定：退件碼（含 `staff_label`）、文件類型、管道、級距、天數。\n\n要 `case_review` 而不是 `admin`——承辦人不能改方案，但看不到退件碼的內部說法就\n沒辦法退件。必須排在 `/{code}/{kind}` 之前，否則 `settings` 會被當成子設定表。",
@@ -12061,6 +12371,344 @@
         ]
       }
     },
+    "/api/sop/catalog/flows": {
+      "get": {
+        "description": "已發布的流程，可依平台過濾。",
+        "operationId": "catalog_flows_api_sop_catalog_flows_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "platform_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Platform Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Catalog Flows Api Sop Catalog Flows Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Catalog Flows",
+        "tags": [
+          "sop"
+        ]
+      }
+    },
+    "/api/sop/catalog/goals": {
+      "get": {
+        "description": "有教學的目標文件。",
+        "operationId": "catalog_goals_api_sop_catalog_goals_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Catalog Goals Api Sop Catalog Goals Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Catalog Goals",
+        "tags": [
+          "sop"
+        ]
+      }
+    },
+    "/api/sop/catalog/platforms": {
+      "get": {
+        "description": "有教學的平台（App／網頁／電腦版）。",
+        "operationId": "catalog_platforms_api_sop_catalog_platforms_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Catalog Platforms Api Sop Catalog Platforms Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Catalog Platforms",
+        "tags": [
+          "sop"
+        ]
+      }
+    },
+    "/api/sop/document-types/{code}/flows": {
+      "get": {
+        "description": "這份文件有哪些教學（SPEC §8.5 的 `document_type_sop_flows`）。\n\n帶 `scheme` + `rejection_code` 時先看承辦人在那個退件碼上挑過哪幾條，\n沒挑才退回文件類型本身的對照。",
+        "operationId": "document_type_flows_api_sop_document_types__code__flows_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "platform_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Platform Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scheme",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Scheme",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "rejection_code",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Rejection Code",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Document Type Flows Api Sop Document Types  Code  Flows Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Document Type Flows",
+        "tags": [
+          "sop"
+        ]
+      }
+    },
+    "/api/sop/flows/{flow_id}/steps": {
+      "get": {
+        "description": "一條已發布流程的逐步卡片（每一步一張編號圖，沒有圖就退回文字）。",
+        "operationId": "flow_steps_api_sop_flows__flow_id__steps_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "flow_id",
+            "required": true,
+            "schema": {
+              "title": "Flow Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "goal_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Goal Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from_step_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From Step Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "theme",
+            "required": false,
+            "schema": {
+              "default": "light",
+              "enum": [
+                "light",
+                "dark"
+              ],
+              "title": "Theme",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "number_from",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "title": "Number From",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Flow Steps Api Sop Flows  Flow Id  Steps Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Flow Steps",
+        "tags": [
+          "sop"
+        ]
+      }
+    },
+    "/api/sop/locate": {
+      "post": {
+        "description": "「我卡住了」：這張截圖是哪一步。\n\n回 `{outcome, step, guidance, cards}`。圖片只在記憶體裡走一遭，永不落地。",
+        "operationId": "locate_api_sop_locate_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_locate_api_sop_locate_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Locate Api Sop Locate Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Locate",
+        "tags": [
+          "sop"
+        ]
+      }
+    },
     "/api/steps": {
       "post": {
         "operationId": "create_step_api_steps_post",
@@ -13669,6 +14317,99 @@
         ]
       }
     },
+    "/v1/document-types/{code}/flows": {
+      "get": {
+        "description": "The published flows that teach how to obtain one document type\n(SPEC §8.5). With `scheme` + `rejection_code` the clerk's picks on that\nrejection code win; the document type's own mapping is the fallback.",
+        "operationId": "document_type_flows_v1_document_types__code__flows_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "platform_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Platform Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scheme",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Scheme",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "rejection_code",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Rejection Code",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Document Type Flows",
+        "tags": [
+          "public"
+        ]
+      }
+    },
     "/v1/flows/{flow_id}/steps": {
       "get": {
         "description": "The steps of a published flow toward one goal, and the messages a\nchannel sends for them (one numbered card per step). `from_step_id`\nstarts partway (after a screenshot located the citizen).",
@@ -14204,6 +14945,1016 @@
           }
         },
         "summary": "Send Screenshot",
+        "tags": [
+          "public"
+        ]
+      }
+    },
+    "/v1/sop/catalog/flows": {
+      "get": {
+        "operationId": "sop_catalog_flows_v1_sop_catalog_flows_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sop Catalog Flows",
+        "tags": [
+          "public"
+        ]
+      }
+    },
+    "/v1/sop/catalog/flows/{flow_id}/cards": {
+      "get": {
+        "operationId": "sop_catalog_cards_v1_sop_catalog_flows__flow_id__cards_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "flow_id",
+            "required": true,
+            "schema": {
+              "title": "Flow Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sop Catalog Cards",
+        "tags": [
+          "public"
+        ]
+      }
+    },
+    "/v1/sop/catalog/goals": {
+      "get": {
+        "operationId": "sop_catalog_goals_v1_sop_catalog_goals_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sop Catalog Goals",
+        "tags": [
+          "public"
+        ]
+      }
+    },
+    "/v1/sop/catalog/platforms": {
+      "get": {
+        "operationId": "sop_catalog_platforms_v1_sop_catalog_platforms_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sop Catalog Platforms",
+        "tags": [
+          "public"
+        ]
+      }
+    },
+    "/v1/sop/chat": {
+      "post": {
+        "description": "Opens a chat and returns the greeting. Messages come back as\n`{kind: text|image|choices, …}`; `choices` carries `text` (the question)\nand `options[].label` — send the chosen label back as a text message.",
+        "operationId": "sop_create_chat_v1_sop_chat_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sop Create Chat",
+        "tags": [
+          "public"
+        ]
+      }
+    },
+    "/v1/sop/chat/{chat_id}": {
+      "get": {
+        "operationId": "sop_chat_status_v1_sop_chat__chat_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "chat_id",
+            "required": true,
+            "schema": {
+              "title": "Chat Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sop Chat Status",
+        "tags": [
+          "public"
+        ]
+      }
+    },
+    "/v1/sop/chat/{chat_id}/messages": {
+      "post": {
+        "description": "One turn: text, a screenshot, or both (multipart). Every picture gets\nan answer — a located step and the cards from there, a question with\noptions, or a request for a better picture.",
+        "operationId": "sop_chat_message_v1_sop_chat__chat_id__messages_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "chat_id",
+            "required": true,
+            "schema": {
+              "title": "Chat Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_sop_chat_message_v1_sop_chat__chat_id__messages_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sop Chat Message",
+        "tags": [
+          "public"
+        ]
+      }
+    },
+    "/v1/sop/document-types/{code}/flows": {
+      "get": {
+        "description": "The published flows that teach how to obtain one document type\n(SPEC §8.5). With `scheme` + `rejection_code` the clerk's picks on that\nrejection code win; the document type's own mapping is the fallback.",
+        "operationId": "sop_document_type_flows_v1_sop_document_types__code__flows_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "platform_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Platform Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scheme",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Scheme",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "rejection_code",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Rejection Code",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sop Document Type Flows",
+        "tags": [
+          "public"
+        ]
+      }
+    },
+    "/v1/sop/flows/{flow_id}/steps": {
+      "get": {
+        "description": "The steps of a published flow toward one goal, and the messages a\nchannel sends for them (one numbered card per step). `from_step_id`\nstarts partway (after a screenshot located the citizen).",
+        "operationId": "sop_flow_steps_v1_sop_flows__flow_id__steps_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "flow_id",
+            "required": true,
+            "schema": {
+              "title": "Flow Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "goal_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Goal Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from_step_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From Step Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "theme",
+            "required": false,
+            "schema": {
+              "default": "light",
+              "enum": [
+                "light",
+                "dark"
+              ],
+              "title": "Theme",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "number_from",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "title": "Number From",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sop Flow Steps",
+        "tags": [
+          "public"
+        ]
+      }
+    },
+    "/v1/sop/intent": {
+      "post": {
+        "description": "The citizen's words → platform, goal and the published flow that\ndelivers it; `needs` lists what is still missing (platform / channel /\ngoal / flow) so the caller can ask.",
+        "operationId": "sop_parse_intent_v1_sop_intent_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IntentIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sop Parse Intent",
+        "tags": [
+          "public"
+        ]
+      }
+    },
+    "/v1/sop/locate": {
+      "post": {
+        "description": "Where is this screenshot? Returns the outcome (located / ambiguous /\noff_flow / unknown_platform / not_app_screen / not_a_screenshot /\nunreadable), the best step with confidence, the candidates, and a\n`guidance` block saying what to do next (steps to send, question to ask).\n`platform_id` is a hard filter; `flow_id`/`step_id`/`goal_id` describe\nwhere the citizen was, which the ranking favours.",
+        "operationId": "sop_locate_screenshot_v1_sop_locate_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_sop_locate_screenshot_v1_sop_locate_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sop Locate Screenshot",
+        "tags": [
+          "public"
+        ]
+      }
+    },
+    "/v1/sop/sessions": {
+      "post": {
+        "operationId": "sop_create_session_v1_sop_sessions_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SessionCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sop Create Session",
+        "tags": [
+          "public"
+        ]
+      }
+    },
+    "/v1/sop/sessions/{session_id}": {
+      "get": {
+        "operationId": "sop_get_session_v1_sop_sessions__session_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sop Get Session",
+        "tags": [
+          "public"
+        ]
+      }
+    },
+    "/v1/sop/sessions/{session_id}/actions": {
+      "post": {
+        "operationId": "sop_send_action_v1_sop_sessions__session_id__actions_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SessionAction"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sop Send Action",
+        "tags": [
+          "public"
+        ]
+      }
+    },
+    "/v1/sop/sessions/{session_id}/messages": {
+      "post": {
+        "operationId": "sop_send_message_v1_sop_sessions__session_id__messages_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MessageIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sop Send Message",
+        "tags": [
+          "public"
+        ]
+      }
+    },
+    "/v1/sop/sessions/{session_id}/screenshots": {
+      "post": {
+        "operationId": "sop_send_screenshot_v1_sop_sessions__session_id__screenshots_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_sop_send_screenshot_v1_sop_sessions__session_id__screenshots_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sop Send Screenshot",
         "tags": [
           "public"
         ]

@@ -134,8 +134,8 @@ async def open_for_flow(
 ) -> list[dict[str, Any]]:
     """開一個 session 並回第一張步驟卡。
 
-    `known_context` 帶上平台，引擎因此不會再問一次「你用的是哪個 App」——
-    民眾剛剛已經選過了，再問一次只會讓人覺得這個 bot 沒在聽。
+    `known_context` 直接指名平台與流程，引擎因此一題都不問就從第一步開始——
+    民眾剛剛已經選過文件了，再問一次「你用的是哪個 App」只會讓人覺得沒在聽。
     """
     engine = SessionEngine(ctx.db)
     response = await engine.start(
@@ -144,17 +144,9 @@ async def open_for_flow(
         theme=THEME, source="line",
     )
     session_id = str(response.get("session_id") or "")
-    if not session_id:
+    if not session_id or response.get("type") == "escalation":
         await conversation.clear(ctx.db, ctx.tenant_id, ctx.user_id)
-        return await ctx.say_with_menu("line.sop.no_flow", document=document_label or document_code)
-
-    # `known_context` 只定住平台；把流程真的走進去要一個 action。
-    if response.get("type") == "clarification":
-        picked = _option_for_flow(response, flow.id)
-        if picked:
-            response = await engine.handle(
-                ctx.tenant_id, session_id, {"kind": "action", "action": "choose_option", "option_id": picked}
-            )
+        return await ctx.say_with_menu("line.sop.no_flow", document=document_label or document_code or flow.name)
 
     await _remember(ctx, session_id, document_code=document_code, document_label=document_label, flow_id=flow.id)
     lead = await ctx.t("line.sop.started", document=document_label or document_code or flow.name)
@@ -162,15 +154,6 @@ async def open_for_flow(
     messages = [flex.text_message(lead), flex.text_message(notice)]
     messages.extend(await render(ctx, response))
     return messages[:5]
-
-
-def _option_for_flow(response: dict[str, Any], flow_id: str) -> str:
-    """從一個澄清題裡找出「就是這條流程」的那個選項，找不到回空字串。"""
-    for option in response.get("options") or []:
-        option_id = str(option.get("option_id") or "")
-        if option_id.endswith(flow_id) or option_id == f"flow:{flow_id}":
-            return option_id
-    return ""
 
 
 async def open_from_screenshot(ctx: SopTurn, png: bytes) -> list[dict[str, Any]] | None:

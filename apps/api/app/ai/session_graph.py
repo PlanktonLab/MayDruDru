@@ -360,6 +360,14 @@ async def handle_start(state: SessionState) -> dict:
     kc = state.get("known_context") or {}
     state["platform_id"] = kc.get("platform_id")
     state["goal_id"] = kc.get("goal_id")
+    # A channel that already knows which flow to walk (the LINE document picker,
+    # a deep link from a rejection notice) says so and skips every question.
+    flow_id = kc.get("flow_id")
+    if flow_id:
+        flow = await _ctx().db.get(Flow, flow_id)
+        if flow and flow.tenant_id == state["tenant_id"]:
+            return _reply(state, await _start_flow(state, flow, goal_id=state.get("goal_id")))
+        return _reply(state, _escalation(state, errors.FLOW_NOT_FOUND, "指定的流程不存在"))
     hint = state["event"].get("hint")
     if hint:
         return await _run_intent(state, hint)

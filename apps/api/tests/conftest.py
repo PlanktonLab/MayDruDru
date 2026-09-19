@@ -195,10 +195,29 @@ class FakeStorage:
         self.objects: dict[str, bytes] = {}
         self.deleted: list[str] = []
         self.presigned: list[str] = []
+        self.reads: list[str] = []
+        self._seeded: set[str] = set()
+
+    @property
+    def writes(self) -> list[str]:
+        """被**寫進去**的 key（預先 seed 的不算）。斷言「截圖沒有落地」用它。"""
+        return [k for k in self.objects if k not in self._seeded]
 
     def put(self, bucket: str, key: str, data: bytes, content_type: str = "") -> str:
         self.objects[key] = data
         return key
+
+    def get(self, bucket: str, key: str) -> bytes:
+        """讀取。找不到就照真的 MinIO 那樣丟例外，呼叫端的退路才會被走到。"""
+        self.reads.append(key)
+        if key not in self.objects:
+            raise KeyError(key)
+        return self.objects[key]
+
+    def seed(self, key: str, data: bytes) -> None:
+        """預先放一個物件進去（SOP 的復刻圖要真的讀得到才跑得完重排）。"""
+        self.objects[key] = data
+        self._seeded.add(key)
 
     def delete(self, bucket: str, key: str) -> None:
         self.deleted.append(key)
@@ -218,6 +237,8 @@ def fake_storage(monkeypatch) -> FakeStorage:
     monkeypatch.setattr(storage, "put", fake.put)
     monkeypatch.setattr(storage, "delete", fake.delete)
     monkeypatch.setattr(storage, "put_private", lambda key, data, ct="": fake.put("private", key, data, ct))
+    monkeypatch.setattr(storage, "get", fake.get)
+    monkeypatch.setattr(storage, "get_private", lambda key: fake.get("private", key))
     monkeypatch.setattr(storage, "client", lambda: fake)
     return fake
 
