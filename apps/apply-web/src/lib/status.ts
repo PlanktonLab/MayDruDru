@@ -52,6 +52,21 @@ export const STATUS_TONE: Record<CaseStatus, BadgeTone> = {
   EXPIRED: 'neutral',
 }
 
+/** 標籤用的短名：`STATUS_PUBLIC_LABEL` 是一整句，塞不進一顆 badge。 */
+export const STATUS_SHORT: Record<CaseStatus, string> = {
+  SUBMITTED: '已收件',
+  UNDER_REVIEW: '審核中',
+  NEEDS_REVISION: '待補件',
+  REVISION_SUBMITTED: '已補件',
+  APPROVED: '已核定',
+  DISBURSING: '撥款中',
+  DISBURSED: '已撥款',
+  REJECTED: '未通過',
+  WITHDRAWN: '已撤回',
+  CANCELLED_BY_STAFF: '已註銷',
+  EXPIRED: '已逾期',
+}
+
 export const ALL_STATUSES = Object.keys(STATUS_PUBLIC_LABEL) as CaseStatus[]
 
 /** contents 的 key 命名（SPEC §7）；查詢頁一次要到所有狀態的兩種文案。 */

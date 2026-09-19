@@ -7,7 +7,7 @@
 import { useCallback, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
-import { Badge, Button, Card, Modal, Spinner, Timeline, type TimelineEvent } from '@maydru/ui'
+import { Button, Card, Modal, Spinner, Timeline, type TimelineEvent } from '@maydru/ui'
 import { SupplementPanel } from '../status/SupplementPanel'
 import { VerifyForm } from '../status/VerifyForm'
 import { ApiError, caseToken } from '../lib/api'
@@ -97,10 +97,10 @@ export default function CasePage() {
     <section className="md-risein space-y-5">
       <header>
         <p className="font-mono text-[13px] tabular-nums text-muted">{caseData.case_no}</p>
-        <h1 className="mt-1 flex flex-wrap items-center gap-2 text-2xl font-semibold tracking-tight">
-          {publicLabel(caseData.status, overlay)}
-          <Badge tone={STATUS_TONE[caseData.status]}>{caseData.scheme.name}</Badge>
-        </h1>
+        {/* 狀態本身就是標題，不再用 badge 重講一次；方案名稱是說明，放下面一行——
+            它很長，塞進 badge 會在手機寬度上折行壓到標題。 */}
+        <h1 className="mt-1 text-2xl font-semibold tracking-tight">{publicLabel(caseData.status, overlay)}</h1>
+        <p className="mt-1 text-[14px] text-muted">{caseData.scheme.name}</p>
         <p className="mt-2 text-[15px] leading-relaxed text-muted">{nextAction(caseData.status, overlay)}</p>
       </header>
 
