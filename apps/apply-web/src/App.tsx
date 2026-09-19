@@ -1,6 +1,8 @@
 import { NavLink, Route, Routes } from 'react-router-dom'
 import { FileText, HelpCircle, ListChecks, Map } from 'lucide-react'
+import SchemesPage from './pages/SchemesPage'
 import ApplyPage from './pages/ApplyPage'
+import SubmittedPage from './pages/SubmittedPage'
 import StatusPage from './pages/StatusPage'
 import SopPage from './pages/SopPage'
 import HelpPage from './pages/HelpPage'
@@ -17,9 +19,12 @@ export default function App() {
     <div className="mx-auto flex min-h-full max-w-screen-sm flex-col">
       <main className="flex-1 px-4 pb-24 pt-6">
         <Routes>
-          <Route path="/" element={<ApplyPage />} />
+          <Route path="/" element={<SchemesPage />} />
+          <Route path="/apply/:scheme" element={<ApplyPage />} />
+          <Route path="/apply/:scheme/done" element={<SubmittedPage />} />
           <Route path="/status" element={<StatusPage />} />
           <Route path="/sop" element={<SopPage />} />
+          <Route path="/sop/:flow" element={<SopPage />} />
           <Route path="/help" element={<HelpPage />} />
           <Route path="*" element={<HelpPage />} />
         </Routes>

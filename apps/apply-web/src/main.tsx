@@ -17,14 +17,23 @@ const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false, staleTime: 30_000 } },
 })
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <ToastProvider>
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
-      </ToastProvider>
-    </QueryClientProvider>
-  </StrictMode>,
-)
+/** `VITE_USE_MOCKS=1` 時先把 MSW 掛起來，整個 app 就能離線跑（見 README）。 */
+async function boot() {
+  if (import.meta.env.VITE_USE_MOCKS === '1') {
+    const { startMocks } = await import('./mocks/browser')
+    await startMocks()
+  }
+  createRoot(document.getElementById('root')!).render(
+    <StrictMode>
+      <QueryClientProvider client={queryClient}>
+        <ToastProvider>
+          <BrowserRouter>
+            <App />
+          </BrowserRouter>
+        </ToastProvider>
+      </QueryClientProvider>
+    </StrictMode>,
+  )
+}
+
+void boot()
