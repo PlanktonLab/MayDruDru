@@ -74,6 +74,9 @@ class Settings(BaseSettings):
     embedding_dim: int = 1536
     llm_timeout_seconds: float = 180.0
     llm_max_retries: int = 2
+    # LINE 只等幾秒就判定逾時並重送整批事件，所以意圖分類不能用 llm_timeout_seconds
+    # 那種「跑圖片分析用」的上限（SPEC §9 紅線 6：模型慢了要能立刻落回規則式分類）。
+    line_intent_timeout_seconds: float = 8.0
     image_max_edge: int = 1500
     # USD per 1M tokens, used for cost estimates on the dashboard
     price_input_per_m: float = 1.25

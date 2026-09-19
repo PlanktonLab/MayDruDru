@@ -8,10 +8,17 @@
 * **postback**：`ACTIONS` 那張表，一個 action 一個函式。所有按鈕的 data 都長
   `action=…&k=v`，所以永遠不必猜使用者按了什麼。
 * **文字**：先看是不是「取消」，再看有沒有正在進行的流程（流程中的輸入優先於
-  關鍵字，否則使用者打「0912」會被當成在問補助），接著規則式意圖分類，
-  再接著 FAQ 關鍵字，最後才是「聽不懂」——並把這句話留一筆 `unmatched_messages`
+  意圖分類，否則使用者打「0912」會被當成在問補助），接著 §9.1 的意圖分類
+  （LLM ＋ 規則式 fallback ＋ FAQ 向量檢索，見 `ai/intent.py`），
+  最後才是「聽不懂」——並把這句話留一筆 `unmatched_messages`
   （只存 userId 的 hash）餵給內容助理。
-* **圖片**：先給截圖安全提醒，再問這是哪一份文件。真正的定位是 P4。
+* **圖片**：先給截圖安全提醒，再把圖交給 §9.2 定位。教學進行中就定位到目前這條
+  流程上；idle 則橫掃整個機關已發布的流程，命中就直接開一段教學（`services/line/sop.py`）。
+  圖片的 bytes 只在記憶體裡走一遭，永不落地（SPEC §11 紅線 3）。
+
+SOP 教學（`sop_session`）本身在 `services/line/sop.py`；這裡只負責「哪個事件
+交給它」。任何 rich menu 的 postback 都會先把進行中的教學收掉——使用者顯然
+改去做別的事了，把他留在教學狀態只會讓下一句話得到牛頭不對馬嘴的回應（SPEC §8.4）。
 
 案件查詢是兩段式的：案號 → 末四碼。**案號那一步刻意不檢查案件存不存在**，
 先確認案號真偽等於送一個查詢介面給想猜案號的人（youth-line-bot 的教訓）。
@@ -37,6 +44,8 @@ from ...models import (
     Application,
     CaseVerification,
     DocumentType,
+    Faq,
+    Flow,
     LineUser,
     Scheme,
     UnmatchedMessage,
@@ -46,7 +55,8 @@ from .. import application as case_service
 from .. import contents
 from .. import faq as faq_service
 from .. import scheme as scheme_service
-from . import conversation, flex
+from . import conversation, flex, sender
+from . import sop as sop_service
 
 log = logging.getLogger("maydru.line.handlers")
 
@@ -56,6 +66,7 @@ __all__ = ["ACTIONS", "build_event_reply", "parse_postback"]
 type Handler = Callable[[_Context], Awaitable[list[dict[str, Any]]]]
 
 VERIFY_FLOW = "case_verify"
+SESSION_FLOW = sop_service.SESSION_FLOW
 STEP_CASE_NO = "case_no"
 STEP_LAST4 = "last4"
 PICKER_LIMIT = 12
@@ -105,7 +116,7 @@ async def build_event_reply(
         if message.get("type") == "text":
             return await _handle_text(db, tenant_id, user_id, message.get("text", ""), redis=redis, now=now)
         if message.get("type") == "image":
-            return await _handle_image(db, tenant_id, user_id)
+            return await _handle_image(db, tenant_id, user_id, str(message.get("id") or ""), now=now)
         return [flex.text_message(await contents.t(db, tenant_id, "error.non_text_message"))]
     return []
 
@@ -142,6 +153,12 @@ async def _handle_postback(
     if handler is None:
         return await _unknown(db, tenant_id)
     ctx = _Context(db=db, tenant_id=tenant_id, user_id=user_id, params=params, redis=redis, now=now)
+    # SPEC §8.4：任一 rich menu 的按鈕都會退出進行中的教學。使用者按了「案件查詢」
+    # 就是要查案件，不是要看下一張教學圖；把他留在 sop_session 只會讓回應牛頭不對馬嘴。
+    if action in MENU_ACTIONS:
+        state = await conversation.get(db, tenant_id, user_id, now=now)
+        if state.flow == SESSION_FLOW:
+            await sop_service.close(ctx.sop, state)
     return await handler(ctx)
 
 
@@ -177,6 +194,11 @@ class _Context:
                 await self.t(key, **variables), await flex.main_menu_quick_reply(self.db, self.tenant_id)
             )
         ]
+
+    @property
+    def sop(self) -> sop_service.SopTurn:
+        """同一回合的 SOP 版 context。`services/line/sop.py` 只需要這三個欄位。"""
+        return sop_service.SopTurn(db=self.db, tenant_id=self.tenant_id, user_id=self.user_id, now=self.now)
 
 
 # ---- 案件 --------------------------------------------------------------
@@ -285,26 +307,57 @@ async def _act_scheme_detail(ctx: _Context) -> list[dict[str, Any]]:
 async def _act_sop_start(ctx: _Context) -> list[dict[str, Any]]:
     """決策 D20：六題資格問卷收掉，改成直接問「你要準備哪一份文件」。
 
-    真正開 SOP session 是 P4；這裡先把選擇器擺好，選項的 postback 已經是最終格式。
+    選完文件之後走 `sop_document`，那裡才真的開 session（`services/line/sop.py`）。
     """
-    await conversation.clear(ctx.db, ctx.tenant_id, ctx.user_id)
-    picker = await _document_picker(ctx.db, ctx.tenant_id)
-    return [flex.text_message(await ctx.t("line.sop.ask_document"), picker or None)]
+    await sop_service.close(ctx.sop)
+    return [await _ask_document(ctx)]
+
+
+async def _ask_document(ctx: _Context, key: str = "line.sop.ask_document") -> dict[str, Any]:
+    picker = await sop_service.document_picker(ctx.db, ctx.tenant_id)
+    return flex.text_message(await ctx.t(key), picker or None)
+
+
+async def _act_sop_document(ctx: _Context) -> list[dict[str, Any]]:
+    """文件選擇器的選項：開一段這份文件的教學。"""
+    code = ctx.params.get("doc", "")
+    label = await _document_label(ctx.db, ctx.tenant_id, code)
+    return await sop_service.open_for_document(ctx.sop, code, document_label=label)
+
+
+async def _act_sop_open(ctx: _Context) -> list[dict[str, Any]]:
+    """同一份文件有好幾條教學時，選了其中一條（`sop_open&flow=…`）。"""
+    code = ctx.params.get("doc", "")
+    flow = await ctx.db.get(Flow, ctx.params.get("flow", ""))
+    if flow is None or flow.tenant_id != ctx.tenant_id or flow.status != "published":
+        return [await _ask_document(ctx)]
+    label = await _document_label(ctx.db, ctx.tenant_id, code)
+    return await sop_service.open_for_flow(ctx.sop, flow, document_code=code, document_label=label)
+
+
+async def _act_sop_choose(ctx: _Context) -> list[dict[str, Any]]:
+    """教學中的選擇題（引擎的 clarification）被按下去了。"""
+    state = await conversation.get(ctx.db, ctx.tenant_id, ctx.user_id, now=ctx.now)
+    if state.flow != SESSION_FLOW:
+        return [await _ask_document(ctx, "line.sop.expired")]
+    return await sop_service.choose_option(ctx.sop, state, ctx.params.get("option", ""))
 
 
 async def _act_sop_prepare(ctx: _Context) -> list[dict[str, Any]]:
-    """退件推播的「教我準備」。P4 會把這筆 pending 接成一個 SOP session。"""
+    """退件推播的「教我準備」（SPEC §8.4 的雙按鈕之一）。
+
+    推播帶著案號與卡住的那一份文件，所以這裡可以直接開始教，不必再問一次。
+    文件沒帶到（舊推播、或案件根本沒有補件項目）才退回選擇器。
+    """
     case_no = ctx.params.get("case_no", "")
     doc = ctx.params.get("doc", "")
-    await conversation.set_state(
-        ctx.db, ctx.tenant_id, ctx.user_id, "sop_pending", "prepare",
-        {"case_no": case_no, "doc": doc}, now=ctx.now,
-    )
-    scheme = await _scheme_of_case(ctx.db, ctx.tenant_id, case_no)
-    if scheme is None:
-        picker = await _document_picker(ctx.db, ctx.tenant_id)
-        return [flex.text_message(await ctx.t("line.sop.ask_document"), picker or None)]
-    return [await _checklist(ctx.db, ctx.tenant_id, ctx.user_id, scheme, now=ctx.now)]
+    if not doc:
+        return [await _ask_document(ctx)]
+    label = await _document_label(ctx.db, ctx.tenant_id, doc)
+    messages = await sop_service.open_for_document(ctx.sop, doc, document_label=label)
+    if case_no:
+        log.info("sop_prepare 由退件推播開啟：case=%s doc=%s", case_no, doc)
+    return messages
 
 
 async def _act_checklist(ctx: _Context) -> list[dict[str, Any]]:
@@ -335,14 +388,20 @@ async def _act_apply_toggle(ctx: _Context) -> list[dict[str, Any]]:
 
 
 async def _act_sop_exit(ctx: _Context) -> list[dict[str, Any]]:
+    state = await conversation.get(ctx.db, ctx.tenant_id, ctx.user_id, now=ctx.now)
+    if state.flow == SESSION_FLOW:
+        return await sop_service.handle_action(ctx.sop, state, "sop_exit")
     await conversation.clear(ctx.db, ctx.tenant_id, ctx.user_id)
     return await ctx.say_with_menu("error.cancelled")
 
 
-async def _act_sop_session_stub(ctx: _Context) -> list[dict[str, Any]]:
-    """下一步／我卡住了／換流程：P4 才有 session，現在先把人帶回選擇器。"""
-    picker = await _document_picker(ctx.db, ctx.tenant_id)
-    return [flex.text_message(await ctx.t("line.sop.ask_document"), picker or None)]
+async def _act_sop_session(ctx: _Context) -> list[dict[str, Any]]:
+    """下一步／我卡住了／換流程。沒有進行中的教學就把人帶回文件選擇器。"""
+    state = await conversation.get(ctx.db, ctx.tenant_id, ctx.user_id, now=ctx.now)
+    action = ctx.params.get("action", "")
+    if state.flow != SESSION_FLOW:
+        return [await _ask_document(ctx)]
+    return await sop_service.handle_action(ctx.sop, state, action)
 
 
 # ---- 其他 --------------------------------------------------------------
@@ -373,6 +432,10 @@ async def _act_help(ctx: _Context) -> list[dict[str, Any]]:
     return await ctx.say_with_menu("home.welcome")
 
 
+# rich menu 上的六個入口。按下其中任何一個都代表「我要做別的事了」，
+# 進行中的教學因此會先被收掉（SPEC §8.4 的退出條件之一）。
+MENU_ACTIONS: frozenset[str] = frozenset(action for action, _ in flex.MAIN_MENU)
+
 ACTIONS: dict[str, Handler] = {
     "case_status": _act_case_status,
     "refresh_case": _act_refresh_case,
@@ -385,10 +448,13 @@ ACTIONS: dict[str, Handler] = {
     "scheme_closing": _act_scheme_closing,
     "scheme_detail": _act_scheme_detail,
     "sop_start": _act_sop_start,
+    "sop_document": _act_sop_document,
+    "sop_open": _act_sop_open,
+    "sop_choose": _act_sop_choose,
     "sop_prepare": _act_sop_prepare,
-    "sop_next": _act_sop_session_stub,
-    "sop_stuck": _act_sop_session_stub,
-    "sop_switch": _act_sop_session_stub,
+    "sop_next": _act_sop_session,
+    "sop_stuck": _act_sop_session,
+    "sop_switch": _act_sop_session,
     "sop_exit": _act_sop_exit,
     "checklist": _act_checklist,
     "apply_toggle": _act_apply_toggle,
@@ -405,41 +471,93 @@ ACTIONS: dict[str, Handler] = {
 async def _handle_text(
     db: AsyncSession, tenant_id: str, user_id: str, text: str, *, redis: Any = None, now: datetime | None = None
 ) -> list[dict[str, Any]]:
-    result = intent_rules.classify_rules(text)
-    ctx = _Context(db=db, tenant_id=tenant_id, user_id=user_id, params=result.entities, redis=redis, now=now)
+    """自由文字的四段路：取消 → 深連結 → 進行中的流程 → §9.1 意圖分類。
 
-    if result.intent == "cancel":
-        return await _act_cancel(ctx)
+    順序不是隨便排的。進行中的流程要**優先於**意圖分類，否則使用者在「請輸入手機
+    末四碼」那一步打「0912」會被當成在問補助；教學進行中打「下一步」也該是下一步，
+    不是重新開一段。
+    """
+    entities = intent_rules.extract_entities(text)
+    ctx = _Context(db=db, tenant_id=tenant_id, user_id=user_id, params=entities, redis=redis, now=now)
 
     # 深連結（送件完成頁的「加入好友」按鈕）：案號已經知道了，直接問末四碼。
-    if result.entities.get("deep_link"):
-        return await _start_last4(ctx, result.entities["case_no"])
+    if entities.get("deep_link"):
+        await sop_service.close(ctx.sop)
+        return await _start_last4(ctx, entities["case_no"])
 
     state = await conversation.get(db, tenant_id, user_id, now=now)
     if state.flow == VERIFY_FLOW:
+        # 驗證流程裡「取消」還是要能離開，其餘的字一律當成答案。
+        if intent_rules.classify_rules(text).intent == "cancel":
+            return await _act_cancel(ctx)
         return await _verify_step(ctx, state, text.strip())
+    if state.flow == SESSION_FLOW:
+        return await sop_service.handle_text(ctx.sop, state, text)
+
+    decision = await intent_rules.classify(
+        db, tenant_id, text, mode="idle", candidates=await _idle_candidates(db, tenant_id),
+        ref_id=hash_user_id(user_id),
+    )
+    if decision.intent == "cancel":
+        return await _act_cancel(ctx)
+    if decision.intent == intent_rules.FAQ_INTENT:
+        answer = await _faq_answer(db, tenant_id, decision.target_id)
+        if answer is not None:
+            return answer
 
     # 意圖的名字就是 action 的名字，所以文字與按鈕走的是同一張表，不會兩邊行為不一致。
-    handler = ACTIONS.get(result.intent)
+    handler = ACTIONS.get(decision.intent)
     if handler is not None:
-        if result.intent == "case_status" and result.entities.get("case_no"):
-            return await _start_last4(ctx, result.entities["case_no"])
+        if decision.intent == "case_status" and entities.get("case_no"):
+            return await _start_last4(ctx, entities["case_no"])
         return await handler(ctx)
 
-    answer = await faq_service.best(db, tenant_id, text)
-    if answer is not None:
-        return [
-            flex.text_message(
-                f"{answer.question}\n{answer.answer}", await flex.main_menu_quick_reply(db, tenant_id)
-            )
-        ]
-
-    await _record_unmatched(db, tenant_id, user_id, text, result)
+    await _record_unmatched(db, tenant_id, user_id, text, decision)
     return await ctx.say_with_menu("home.unknown")
 
 
+async def _idle_candidates(db: AsyncSession, tenant_id: str) -> list[intent_rules.IntentCandidate]:
+    """idle 時模型能挑的動作，標籤用的是民眾在選單上真的看到的那幾個字。
+
+    FAQ 候選由 `ai/intent.py` 自己補（它才知道怎麼算向量）；這裡只負責按鈕那一半。
+    """
+    labels = (
+        ("case_status", "button.case_status"),
+        ("my_cases", "button.my_cases"),
+        ("scheme_info", "button.subsidy_info"),
+        ("sop_start", "button.eligibility"),
+        ("faq", "button.faq"),
+        ("contact", "button.contact"),
+        ("checklist", "button.checklist"),
+        ("security_check", "security.title"),
+        ("cancel", "button.cancel"),
+    )
+    out: list[intent_rules.IntentCandidate] = []
+    for action, key in labels:
+        label = await contents.t(db, tenant_id, key)
+        if label.strip():
+            out.append(intent_rules.IntentCandidate(action, label.strip()))
+    return out
+
+
+async def _faq_answer(db: AsyncSession, tenant_id: str, faq_id: str) -> list[dict[str, Any]] | None:
+    """一則 FAQ 的問與答。找不到那一筆就回 None，讓呼叫端往下走。"""
+    if not faq_id:
+        return None
+    row = (
+        await db.execute(select(Faq).where(Faq.tenant_id == tenant_id, Faq.id == faq_id, Faq.active.is_(True)))
+    ).scalar_one_or_none()
+    if row is None:
+        return None
+    return [
+        flex.text_message(
+            f"{row.question}\n{row.answer}", await flex.main_menu_quick_reply(db, tenant_id)
+        )
+    ]
+
+
 async def _record_unmatched(
-    db: AsyncSession, tenant_id: str, user_id: str, text: str, result: intent_rules.IntentResult
+    db: AsyncSession, tenant_id: str, user_id: str, text: str, decision: intent_rules.IntentDecision
 ) -> None:
     """留給內容助理 (b) 聚類用。只存 userId 的 hash（SPEC §11 外送清單）。"""
     db.add(
@@ -447,7 +565,7 @@ async def _record_unmatched(
             tenant_id=tenant_id,
             line_user_id_hash=hash_user_id(user_id),
             text=text[:2000],
-            intent_result=result.dict(),
+            intent_result=decision.dict(),
         )
     )
     await db.flush()
@@ -526,13 +644,45 @@ async def _bind(db: AsyncSession, tenant_id: str, user_id: str, application: App
 
 # ------------------------------------------------------------------ 圖片
 
-async def _handle_image(db: AsyncSession, tenant_id: str, user_id: str) -> list[dict[str, Any]]:
-    """截圖定位是 P4；這一版先給安全提醒，再問這是哪一份文件。"""
-    picker = await _document_picker(db, tenant_id)
-    return [
-        flex.text_message(await contents.t(db, tenant_id, "security.screenshot_notice")),
-        flex.text_message(await contents.t(db, tenant_id, "line.sop.not_recognized"), picker or None),
-    ]
+async def _handle_image(
+    db: AsyncSession, tenant_id: str, user_id: str, message_id: str, *, now: datetime | None = None
+) -> list[dict[str, Any]]:
+    """民眾傳了一張截圖（SPEC §8.4、§9.2）。
+
+    圖檔要另外去 LINE 的 blob API 取；取回來的 bytes **只在記憶體**，交給定位之後
+    就離開作用域，這個函式不寫物件儲存、不寫資料庫（SPEC §11 紅線 3）。
+
+    教學進行中就定位到那條流程上；idle 則橫掃整個機關已發布的流程，命中就直接開一段
+    教學，沒命中才回「認不出來，你要準備哪一份文件？」。
+
+    取不到圖（token 過期、LINE 那邊出錯）不是沉默的理由：照樣回選擇器。
+    """
+    ctx = _Context(db=db, tenant_id=tenant_id, user_id=user_id, params={}, now=now)
+    state = await conversation.get(db, tenant_id, user_id, now=now)
+    notice = flex.text_message(await contents.t(db, tenant_id, "security.screenshot_notice"))
+
+    png = await _message_content(message_id)
+    if png is None:
+        return [notice, await _ask_document(ctx, "line.sop.not_recognized")]
+
+    if state.flow == SESSION_FLOW:
+        return await sop_service.handle_image(ctx.sop, state, png)
+
+    located = await sop_service.open_from_screenshot(ctx.sop, png)
+    if located is not None:
+        return [notice, *located][:5]
+    return [notice, await _ask_document(ctx, "line.sop.not_recognized")]
+
+
+async def _message_content(message_id: str) -> bytes | None:
+    """LINE 的 blob API。失敗一律回 None——一張取不到的圖不該讓 bot 整個沉默。"""
+    if not message_id:
+        return None
+    try:
+        return await sender.get_sender().get_message_content(message_id)
+    except Exception:
+        log.warning("取得 LINE 圖片內容失敗")
+        return None
 
 
 # ------------------------------------------------------------------ 查詢
@@ -618,21 +768,19 @@ async def _document_types(db: AsyncSession, scheme: Scheme) -> list[DocumentType
     return list(rows)
 
 
-async def _document_picker(db: AsyncSession, tenant_id: str) -> dict[str, Any]:
-    """所有啟用方案的文件類型，去重後當成快速回覆。P4 會把選項接到 SOP session。"""
-    rows = (
+async def _document_label(db: AsyncSession, tenant_id: str, code: str) -> str:
+    """一個文件類型代碼在這個機關的顯示名稱。沒有設 label 就用代碼本身。"""
+    if not code:
+        return ""
+    row = (
         await db.execute(
             select(DocumentType)
             .join(Scheme, Scheme.id == DocumentType.scheme_id)
-            .where(Scheme.tenant_id == tenant_id, Scheme.active.is_(True))
+            .where(Scheme.tenant_id == tenant_id, DocumentType.code == code)
             .order_by(DocumentType.sort_order)
         )
-    ).scalars().all()
-    seen: dict[str, str] = {}
-    for row in rows:
-        seen.setdefault(row.code, row.label or row.code)
-    items = [(label, flex.postback("sop_prepare", doc=code)) for code, label in list(seen.items())[:PICKER_LIMIT]]
-    return flex.quick_reply(items) if items else {}
+    ).scalars().first()
+    return (row.label or code) if row is not None else code
 
 
 async def _checklist(

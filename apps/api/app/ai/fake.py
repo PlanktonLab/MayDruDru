@@ -13,6 +13,7 @@ from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from pydantic import BaseModel
 
 from .schemas import (
+    IntentClassification,
     IntentResult,
     ReplicaOutput,
     RerankResult,
@@ -153,7 +154,69 @@ html,body{{margin:0;background:{bg};font-family:"Noto Sans TC","PingFang TC","No
         return VisualReview(score=0.9, issues=[], privacy_leak=False)
     if schema is IntentResult:
         return _fake_intent(ctx.get("text", text), ctx)
+    if schema is IntentClassification:
+        return _fake_intent_classification(ctx.get("text", text), ctx)
     raise ValueError(f"fake provider 不支援 {schema.__name__}")
+
+
+_LABEL_MATCH_MIN = 0.5      # 最長共同子字串要覆蓋標籤的幾成
+_LABEL_MATCH_MIN_LEN = 2    # 且至少這麼長（單字重疊到處都是，不算數）
+
+
+def _fake_intent_classification(text: str, ctx: dict) -> IntentClassification:
+    """SPEC §9.1 分類器的離線替身。兩步，順序固定所以結果**決定性**：
+
+    1. 先問規則式分類器（`ai/intent.py` 的關鍵字表）。它有意見、而且那個意圖
+       真的在候選清單裡，就用它。這讓 fake 與 fallback 對同一句話給同一個答案，
+       離線跑出來的行為不會跟真的掉下去時完全兩樣。
+    2. 規則沒意見（例如 FAQ 標題這種關鍵字表裡沒有的候選），才比對標籤：
+       取最長共同子字串，要覆蓋標籤五成以上且至少兩個字。
+
+    兩步都沒有結果就回 unknown——替身也不該硬挑一個，那會讓測試看不出
+    「低信心要走快速回覆選單」這條路有沒有壞掉。
+    """
+    from .intent import classify_rules, classify_session_rules
+
+    q = (text or "").strip()
+    cands = [c for c in (ctx.get("candidates") or []) if str(c.get("label") or "").strip()]
+    mode = ctx.get("mode", "idle")
+
+    rules = classify_session_rules(q) if mode == "sop_session" else classify_rules(q)
+    if rules.intent != "unknown":
+        hit = next((c for c in cands if c.get("intent") == rules.intent and not c.get("target_id")), None)
+        if hit is not None:
+            return IntentClassification(intent=rules.intent, confidence=0.85, reason="fake provider 規則命中")
+
+    lowered = q.lower()
+    best, best_score = None, 0.0
+    for c in cands:
+        label = str(c["label"]).strip().lower()
+        shared = _longest_common_substring(label, lowered)
+        if len(shared) < _LABEL_MATCH_MIN_LEN:
+            continue
+        score = len(shared) / len(label)
+        if score >= _LABEL_MATCH_MIN and score > best_score:
+            best, best_score = c, score
+    if best is None:
+        return IntentClassification(intent="unknown", confidence=0.0, reason="fake provider 找不到夠像的候選")
+    return IntentClassification(intent=str(best.get("intent") or "unknown"), target_id=str(best.get("target_id") or ""),
+                                confidence=round(min(0.95, 0.55 + best_score / 3), 2), reason="fake provider 標籤比對")
+
+
+def _longest_common_substring(a: str, b: str) -> str:
+    if not a or not b:
+        return ""
+    best_end, best_len = 0, 0
+    row = [0] * (len(b) + 1)
+    for i in range(1, len(a) + 1):
+        prev = 0
+        for j in range(1, len(b) + 1):
+            current = row[j]
+            row[j] = prev + 1 if a[i - 1] == b[j - 1] else 0
+            if row[j] > best_len:
+                best_len, best_end = row[j], i
+            prev = current
+    return a[best_end - best_len:best_end]
 
 
 def _fake_intent(text: str, ctx: dict) -> IntentResult:

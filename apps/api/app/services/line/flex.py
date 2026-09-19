@@ -41,6 +41,9 @@ __all__ = [
     "quick_reply",
     "scheme_carousel_message",
     "scheme_message",
+    "sop_options_message",
+    "sop_quick_reply",
+    "sop_step_messages",
     "step_card_message",
     "text_message",
 ]
@@ -104,6 +107,9 @@ STATUS_COLOR: dict[str, str] = {
 LABEL_LIMIT = 20  # LINE 的 quick reply / 按鈕字數上限
 CAROUSEL_LIMIT = 10
 ROW_LIMIT = 10
+# LINE 一次最多收 5 則；SOP 一回合最多用掉 3 則（前導句 + 說明 + 卡片），
+# 剩下的留給安全提醒之類的前置訊息。
+MAX_SOP_MESSAGES = 3
 
 
 # ------------------------------------------------------------------ 小工具
@@ -575,22 +581,77 @@ async def step_card_message(
     *,
     image_url: str,
     alt_text: str,
+    preview_url: str = "",
     width: int = 1040,
     height: int = 1040,
 ) -> list[dict[str, Any]]:
-    """SOP step card：一張圖 + 四個動作快速回覆。session 本體是 P4，這裡只負責長相。"""
+    """SOP step card：一張圖 + 四個動作快速回覆（SPEC §8.4）。"""
     return [
         {
             "type": "image",
             "originalContentUrl": image_url,
-            "previewImageUrl": image_url,
+            "previewImageUrl": preview_url or image_url,
             "animated": False,
-            "altText": alt_text,
+            "altText": _clip(alt_text, 400) or alt_text,
             "size": "full",
-            "aspectRatio": f"{width}:{height}",
+            "aspectRatio": f"{max(1, width)}:{max(1, height)}",
             "quickReply": await sop_quick_reply(db, tenant_id),
         }
     ]
+
+
+async def sop_step_messages(
+    db: AsyncSession,
+    tenant_id: str,
+    step: dict[str, Any],
+    *,
+    lead: str = "",
+) -> list[dict[str, Any]]:
+    """session engine 的 `type=step` 回應 → LINE 訊息。
+
+    有卡片就送圖（四個動作掛在圖上），沒有卡片就退回文字——一條還在製作中的流程
+    不該在 LINE 上變成一則空訊息。`lead` 是定位成功那一類的前導句，由 policy 產出
+    （也就是承辦人在後台改得到的 `sop.template.*`），這個檔案不造句。
+    """
+    card = step.get("card") or {}
+    body = "\n".join(
+        part for part in (
+            str((step.get("step") or {}).get("title") or ""),
+            str((step.get("step") or {}).get("instruction") or ""),
+        ) if part.strip()
+    )
+    messages: list[dict[str, Any]] = []
+    if lead.strip():
+        messages.append(text_message(lead.strip()))
+    image_url = card.get("image_url")
+    if image_url:
+        if body.strip():
+            messages.append(text_message(body))
+        messages.extend(
+            await step_card_message(
+                db, tenant_id, image_url=str(image_url), preview_url=str(card.get("preview_url") or ""),
+                alt_text=body or str(image_url),
+                width=int(card.get("width") or 1040), height=int(card.get("height") or 1040),
+            )
+        )
+        return messages[-MAX_SOP_MESSAGES:]
+    messages.append(text_message(body, await sop_quick_reply(db, tenant_id)))
+    return messages[-MAX_SOP_MESSAGES:]
+
+
+async def sop_options_message(
+    db: AsyncSession,
+    tenant_id: str,
+    question: str,
+    options: Sequence[tuple[str, str]],
+) -> dict[str, Any]:
+    """session engine 的 `type=clarification`、或「這份文件有好幾條教學」的選擇題。
+
+    `options` 是 `[(label, postback_data)]`；沒有選項時退化成純文字加主選單，
+    因為一個沒有項目的 quickReply 會被 LINE 拒收。
+    """
+    quick = quick_reply(options)
+    return text_message(question, quick or await main_menu_quick_reply(db, tenant_id))
 
 
 # -------------------------------------------------------------- 後台預覽面

@@ -23,6 +23,7 @@ from ..ai.checks import needs_scrub, scrub_pii
 from ..ai.image_utils import make_preview
 from ..ai.ingestion_graph import build_graph, initial_state, transition
 from ..ai.retrieval import locate
+from ..ai.session_graph import SessionStore
 from ..config import get_settings
 from ..db import sessionmaker
 from ..models import EvalCase, EvalRun, Goal, Platform, Variant
@@ -414,6 +415,9 @@ async def send_notification(ctx: dict, notification_id: str) -> str:
 
 
 async def sweep_conversations(ctx: dict) -> dict:
-    """LINE 對話狀態逾時（SPEC §8.4：30 分鐘無互動就退出）。每 5 分鐘掃一次。"""
+    """LINE 對話狀態逾時（SPEC §8.4：30 分鐘無互動就退出）。每 5 分鐘掃一次。
+
+    掛著 SOP session 的列連 Redis 裡的 session 一起刪，不留孤兒（P4）。
+    """
     async with sessionmaker()() as db:
-        return {"expired": await line_conversation.sweep_expired(db)}
+        return {"expired": await line_conversation.sweep_expired(db, drop_session=SessionStore.delete)}

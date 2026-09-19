@@ -8,6 +8,7 @@
 測試從不寫入向量。
 """
 
+import importlib
 import os
 
 os.environ.setdefault("LLM_PROVIDER", "fake")
@@ -296,3 +297,116 @@ def rich_menu_client():
     richmenu.set_client_for_testing(client)
     yield client
     richmenu.set_client_for_testing(None)
+
+
+# ------------------------------------------------- P4：SOP session 用的替身
+
+class FakeAsyncRedis:
+    """SOP session 存放處的記憶體替身（`app.redis_client.redis()`）。
+
+    `ai/session_graph.py` 的 `SessionStore` 與 `SessionLock` 只用到 set / get /
+    delete / eval 四個指令，所以這裡也只實作那四個加上 incr / expire。
+    TTL 記下來但不真的到期——要驗的是「逾時後 session 被刪掉」，不是時鐘。
+    """
+
+    def __init__(self) -> None:
+        self.values: dict[str, bytes] = {}
+        self.ttls: dict[str, float] = {}
+
+    async def set(self, key: str, value: Any, *, ex: Any = None, nx: bool = False, px: Any = None) -> bool | None:
+        if nx and key in self.values:
+            return None
+        self.values[key] = value.encode() if isinstance(value, str) else bytes(value)
+        if ex is not None:
+            self.ttls[key] = float(ex)
+        if px is not None:
+            self.ttls[key] = float(px) / 1000
+        return True
+
+    async def get(self, key: str) -> bytes | None:
+        return self.values.get(key)
+
+    async def delete(self, *keys: str) -> int:
+        return sum(1 for k in keys if self.values.pop(k, None) is not None)
+
+    async def eval(self, script: str, numkeys: int, *args: Any) -> int:
+        """只支援 `SessionLock` 那一段「值相符才刪」的腳本。"""
+        key = str(args[0])
+        token = args[1]
+        want = token.encode() if isinstance(token, str) else token
+        if self.values.get(key) == want:
+            del self.values[key]
+            return 1
+        return 0
+
+    async def incr(self, key: str) -> int:
+        value = int(self.values.get(key, b"0")) + 1
+        self.values[key] = str(value).encode()
+        return value
+
+    async def expire(self, key: str, seconds: int) -> bool:
+        self.ttls[key] = float(seconds)
+        return True
+
+    def sessions(self) -> list[str]:
+        """目前存在的 session key，測試用它斷言「退出時真的刪掉了」。"""
+        return sorted(k for k in self.values if k.startswith("sess:"))
+
+
+@pytest.fixture(autouse=True)
+def session_redis(monkeypatch) -> FakeAsyncRedis:
+    """測試永遠不連真的 Redis（CLAUDE.md 規則 7 的同一個理由）。
+
+    `redis()` 有 `lru_cache`，所以換掉的是模組上的那個名字，不是快取內容。
+    """
+    from app import redis_client
+
+    fake = FakeAsyncRedis()
+    monkeypatch.setattr(redis_client, "redis", lambda: fake)
+    for module in ("app.ai.session_graph", "app.ai.assistant"):
+        mod = importlib.import_module(module)
+        if hasattr(mod, "redis"):
+            monkeypatch.setattr(mod, "redis", lambda: fake)
+    return fake
+
+
+@pytest.fixture(autouse=True)
+def llm_usage(monkeypatch) -> list[dict[str, Any]]:
+    """`llm_usage` 的寫入換成記憶體清單，回傳的數字跟正式環境一模一樣。
+
+    正式環境的 `record_usage()` 會另開一個 `sessionmaker()` session 把用量寫進
+    資料庫；測試裡那個 sessionmaker 指著真的 Postgres，於是每一次模型呼叫都在
+    對著不存在的資料庫撥號。算錢的那一段是純算術（`llm.usage_record`），
+    這裡只把「寫進資料庫」換掉，測試因此仍然看得到 token 與成本。
+    """
+    from app.ai import llm
+
+    rows: list[dict[str, Any]] = []
+
+    async def record(task: str, model: str, usage: dict, latency_ms: int, tenant_id: str | None,
+                     ref_type: str = "", ref_id: str = "") -> dict[str, Any]:
+        rec = llm.usage_record(task, model, usage, latency_ms)
+        rows.append({**rec, "tenant_id": tenant_id, "ref_type": ref_type, "ref_id": ref_id})
+        return rec
+
+    monkeypatch.setattr(llm, "record_usage", record)
+    return rows
+
+
+@pytest.fixture(autouse=True)
+def arq_pool(monkeypatch) -> list[tuple[str, tuple[Any, ...]]]:
+    """排入背景工作也不連 Redis，只記下「誰被排進去了」。
+
+    在 P4 之前這一層沒有替身，於是每一個會寫 `notifications` 的測試都在對著
+    `localhost:6379` 撥號、等它拒絕、再吞掉例外——慢，而且日誌裡全是雜訊。
+    """
+    from app import jobs
+
+    calls: list[tuple[str, tuple[Any, ...]]] = []
+
+    async def fake_enqueue(name: str, *args: Any, **kwargs: Any) -> str:
+        calls.append((name, args))
+        return f"job:{name}:{len(calls)}"
+
+    monkeypatch.setattr(jobs, "enqueue", fake_enqueue)
+    return calls

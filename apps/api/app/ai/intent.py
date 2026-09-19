@@ -1,8 +1,19 @@
-"""意圖分類（SPEC §9.1）。
+"""意圖分類（SPEC §9.1、§9.7）。
 
-這一版**只有規則**：關鍵字比對加上案號／手機的抽取，完全不呼叫模型。P4 會在前面
-加一層 LLM 分類器，但 `classify_rules()` 會留著當 fallback——SPEC §9「紅線 6」要求
-模型逾時或低信心時系統仍然要回得出東西，永遠不因為 LLM 掛掉而沉默。
+兩層，永遠是兩層：
+
+1. **LLM**（`classify()`）——把候選集合交給模型，讓它挑一個。候選是 postback action
+   的標籤、FAQ 標題（向量檢索的 top-k）、以及 SOP 對話裡的四個動作。模型只能**挑**，
+   不產生任何給市民的字（紅線 1）。
+2. **規則**（`classify_rules()` / `classify_session_rules()`）——關鍵字比對加上案號／
+   手機的抽取，完全不碰網路。
+
+第 2 層不是舊版的遺跡，是 SPEC §9「紅線 6」的硬要求：模型逾時、出錯或信心不足時，
+系統仍然要回得出東西。兩層都認不出來時 handler 會改回快速回覆選單（`home.unknown`），
+**永不因為 LLM 掛掉而沉默**。
+
+LINE 的逾時上限另外設（`LINE_INTENT_TIMEOUT_SECONDS`，預設 8 秒）：LINE 平台只等
+幾秒就判定逾時並重送整批事件，用跑圖片分析那種三分鐘的上限等於保證重送。
 
 規則表移植自 youth-line-bot `src/services/intentService.ts`，關鍵字原樣保留，
 只把兩個意圖改名對上新的 action：`SUBSIDY_INFO` → `SCHEME_INFO`（補助改叫方案）、
@@ -13,10 +24,36 @@
 
 from __future__ import annotations
 
+import asyncio
+import logging
 import re
 from dataclasses import dataclass, field
 
-__all__ = ["INTENTS", "RULES", "IntentResult", "classify_rules", "extract_entities"]
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from ..config import get_settings
+from ..services import faq as faq_service
+from .llm import dumps, embed, structured_call
+from .prompts import INTENT_CLASSIFY_SYSTEM
+from .schemas import IntentClassification
+
+log = logging.getLogger("maydru.ai.intent")
+
+__all__ = [
+    "FAQ_INTENT",
+    "INTENTS",
+    "RULES",
+    "SESSION_INTENTS",
+    "SESSION_RULES",
+    "IntentCandidate",
+    "IntentDecision",
+    "IntentResult",
+    "classify",
+    "classify_rules",
+    "classify_session_rules",
+    "extract_entities",
+    "faq_candidates",
+]
 
 INTENTS = (
     "case_status",
@@ -134,3 +171,185 @@ def classify_rules(text: str) -> IntentResult:
         return IntentResult("case_status", 0.8, entities, "rule")
 
     return IntentResult("unknown", 0.0, entities, "fallback")
+
+
+# ------------------------------------------------------------ SOP 對話的意圖
+
+# `sop_session` 裡使用者只有四件事可做，名字與 postback action 一致（同一張表）。
+SESSION_INTENTS: tuple[str, ...] = ("sop_next", "sop_stuck", "sop_switch", "sop_exit")
+
+SESSION_RULES: tuple[tuple[str, int, tuple[str, ...]], ...] = (
+    ("sop_exit", 5, ("結束", "離開", "不用了", "先這樣", "取消", "停", "exit", "quit", "回主選單")),
+    ("sop_stuck", 4, ("卡住", "不會", "找不到", "看不到", "沒有這個", "怎麼辦", "不懂", "看不懂",
+                      "不一樣", "沒看到", "help", "求助", "幫我看")),
+    ("sop_switch", 4, ("換流程", "換一個", "換平台", "換別的", "其他文件", "另一份", "改成", "換 app", "換成")),
+    # 刻意不收單字「好」：「天氣真好」也會中，一句閒聊就把人往下一步推。
+    ("sop_next", 3, ("下一步", "下一張", "下一", "繼續", "然後呢", "接下來", "好了", "完成了", "做好了",
+                     "ok", "next", "了解")),
+)
+
+
+def classify_session_rules(text: str) -> IntentResult:
+    """SOP 對話裡的關鍵字分類。四個意圖以外一律 unknown，由 handler 決定怎麼接。"""
+    raw = (text or "").strip()
+    if not raw:
+        return IntentResult("unknown", 0.0, {}, "fallback")
+    lowered = raw.lower()
+    best_intent, best_score = "", 0.0
+    for intent, weight, keywords in SESSION_RULES:
+        for keyword in keywords:
+            if keyword.lower() not in lowered:
+                continue
+            s = weight + len(keyword) / 10
+            if s > best_score:
+                best_intent, best_score = intent, s
+    if best_intent:
+        return IntentResult(best_intent, min(best_score / _MAX_SCORE, 1.0), {}, "rule")
+    return IntentResult("unknown", 0.0, {}, "fallback")
+
+
+# ------------------------------------------------------------------ 候選與決定
+
+#: FAQ 命中用的意圖名。handler 看到它就去把 `target_id` 那一則的答案唸出來。
+FAQ_INTENT = "faq_answer"
+FAQ_TOP_K = 5
+
+
+@dataclass(frozen=True)
+class IntentCandidate:
+    """模型能挑的一個選項。`label` 是民眾看得到的字（按鈕文字、FAQ 標題）。"""
+
+    intent: str
+    label: str
+    target_id: str = ""
+    hint: str = ""
+
+    def public(self) -> dict[str, str]:
+        out = {"intent": self.intent, "label": self.label}
+        if self.target_id:
+            out["target_id"] = self.target_id
+        if self.hint:
+            out["hint"] = self.hint
+        return out
+
+
+@dataclass(frozen=True)
+class IntentDecision:
+    """一次分類的結果。`source` 說得出這個答案是誰給的，稽核與除錯都靠它。"""
+
+    intent: str
+    target_id: str = ""
+    confidence: float = 0.0
+    source: str = "rules"  # llm | rules | faq
+    entities: dict[str, str] = field(default_factory=dict)
+
+    @property
+    def is_unknown(self) -> bool:
+        return self.intent in ("", "unknown")
+
+    def dict(self) -> dict[str, object]:
+        return {"intent": self.intent, "target_id": self.target_id, "confidence": self.confidence,
+                "source": self.source, "entities": dict(self.entities)}
+
+
+async def faq_candidates(db: AsyncSession, tenant_id: str, text: str, *, limit: int = FAQ_TOP_K) -> list[IntentCandidate]:
+    """語意最接近的幾則 FAQ（SPEC §9.7）。
+
+    向量算不出來（沒有金鑰、模型掛了）也不會讓整條路斷掉：`faq.search()` 收到
+    空向量就走關鍵字，回傳形狀一樣。
+    """
+    vector: list[float] | None = None
+    try:
+        vector = await embed(text)
+    except Exception:
+        log.warning("FAQ 向量計算失敗，改用關鍵字比對", exc_info=True)
+    hits = await faq_service.search(db, tenant_id, text, limit=limit, vector=vector)
+    return [IntentCandidate(FAQ_INTENT, hit.faq.question, target_id=hit.faq.id, hint=hit.source) for hit in hits]
+
+
+async def classify(
+    db: AsyncSession,
+    tenant_id: str,
+    text: str,
+    *,
+    mode: str = "idle",
+    candidates: list[IntentCandidate] | None = None,
+    timeout: float | None = None,
+    ref_id: str = "",
+) -> IntentDecision:
+    """一句話 → 一個意圖（SPEC §9.1）。
+
+    `mode` 決定候選集合怎麼補齊與哪一張規則表當 fallback：`idle` 會自己去找
+    語意最接近的幾則 FAQ 加進候選；`sop_session` 不找（教學進行中提 FAQ 只會打斷節奏）。
+
+    落回的順序是 LLM → 規則 → FAQ 最佳命中 → unknown，任何一步失敗都只是往下一步走，
+    **不會拋例外**（SPEC §9 紅線 6）。
+    """
+    raw = (text or "").strip()
+    entities = extract_entities(raw)
+    if not raw:
+        return IntentDecision("unknown", source="rules", entities=entities)
+
+    pool = list(candidates or [])
+    faqs: list[IntentCandidate] = []
+    if mode == "idle":
+        try:
+            faqs = await faq_candidates(db, tenant_id, raw)
+        except Exception:
+            log.warning("FAQ 候選查詢失敗", exc_info=True)
+        pool.extend(faqs)
+
+    decided = await _llm_decision(raw, pool, tenant_id=tenant_id, mode=mode, timeout=timeout, ref_id=ref_id)
+    if decided is not None:
+        return IntentDecision(decided[0], decided[1], decided[2], "llm", entities)
+
+    rules = classify_session_rules(raw) if mode == "sop_session" else classify_rules(raw)
+    if rules.intent != "unknown":
+        return IntentDecision(rules.intent, "", rules.confidence, "rules", entities)
+
+    if faqs:
+        return IntentDecision(FAQ_INTENT, faqs[0].target_id, 0.5, "faq", entities)
+    return IntentDecision("unknown", source="rules", entities=entities)
+
+
+async def _llm_decision(
+    text: str,
+    pool: list[IntentCandidate],
+    *,
+    tenant_id: str,
+    mode: str,
+    timeout: float | None,
+    ref_id: str,
+) -> tuple[str, str, float] | None:
+    """模型那一層。逾時、出錯、選了清單外的東西、信心不足——一律回 None。
+
+    回 None 的意思永遠是「這一層沒有答案」，不是「沒有答案」：呼叫端接著走規則。
+    """
+    if not pool:
+        return None
+    s = get_settings()
+    limit = s.line_intent_timeout_seconds if timeout is None else timeout
+    prompt = (
+        f"模式：{mode}\n候選清單：{dumps([c.public() for c in pool])}\n民眾文字：{text}"
+    )
+    try:
+        out, _usage = await asyncio.wait_for(
+            structured_call("intent", IntentClassification, INTENT_CLASSIFY_SYSTEM, prompt, None,
+                            tenant_id=tenant_id, ref_type="line_intent", ref_id=ref_id,
+                            fake_context={"candidates": [c.public() for c in pool], "text": text, "mode": mode}),
+            timeout=max(0.1, limit),
+        )
+    except TimeoutError:
+        log.warning("意圖分類逾時（%.1fs），改用規則式分類", limit)
+        return None
+    except Exception:
+        log.warning("意圖分類失敗，改用規則式分類", exc_info=True)
+        return None
+
+    match = next(
+        (c for c in pool if c.intent == out.intent and (not c.target_id or c.target_id == out.target_id)),
+        None,
+    )
+    if match is None or out.confidence < s.intent_confidence_threshold:
+        return None
+    return match.intent, match.target_id, float(out.confidence)

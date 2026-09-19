@@ -24,6 +24,7 @@ from .routers import (
     media,
     playground,
     public_api,
+    sop,
     tenant,
     variants,
 )
@@ -34,6 +35,7 @@ from .routers.admin import line as admin_line
 from .routers.admin import media as admin_media
 from .routers.admin import reviewers as admin_reviewers
 from .routers.admin import schemes as admin_schemes
+from .routers.admin import sop_flows as admin_sop_flows
 from .security import hash_password
 from .services import tenancy
 
@@ -119,6 +121,8 @@ def create_app() -> FastAPI:
               admin_schemes, admin_applications, admin_reviewers, public_api, media):
         app.include_router(r.router)
     app.include_router(apply.router)  # P3 送件與審核：市民匿名端點（SPEC §8.1）
+    app.include_router(sop.router)  # P4 SOP 串接：市民匿名的教學端點（SPEC §8.5 / §10.2）
+    app.include_router(admin_sop_flows.router)  # P4 後台的文件類型 ↔ flow 對照（SPEC §8.2）
     # P2 內容與 LINE（SPEC §8.4 / §8.6）
     for r in (contents, line, admin_contents, admin_faqs, admin_media, admin_line):
         app.include_router(r.router)

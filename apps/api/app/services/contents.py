@@ -50,6 +50,7 @@ __all__ = [
     "get_or_create",
     "invalidate",
     "list_contents",
+    "prefixed",
     "preview",
     "publish",
     "publish_draft",
@@ -138,6 +139,24 @@ async def t(db: AsyncSession, tenant_id: str, key: str) -> str:
 async def tf(db: AsyncSession, tenant_id: str, key: str, **variables: Any) -> str:
     """帶變數的文案。`{{name}}` 會被代換，未知的 placeholder 原樣留著。"""
     return substitute(await t(db, tenant_id, key), variables)
+
+
+async def prefixed(db: AsyncSession, tenant_id: str, prefix: str) -> dict[str, str]:
+    """某個前綴底下的所有文案，key 已去掉前綴。
+
+    registry 有、資料表沒有的 key 也會出現（帶著出廠預設值）——呼叫端拿到的是
+    「這個機關現在會說的每一句」，不是「承辦人剛好改過的那幾句」。
+    `services/policy.py` 用它把 `sop.template.*` 灌進 SOP 對話的語句表（SPEC §8.5）。
+    """
+    table = await _published(db, tenant_id)
+    out: dict[str, str] = {}
+    for definition in CONTENT_REGISTRY:
+        if definition.key.startswith(prefix) and definition.default.strip():
+            out[definition.key[len(prefix):]] = definition.default
+    for key, text in table.items():
+        if key.startswith(prefix) and text.strip():
+            out[key[len(prefix):]] = text
+    return out
 
 
 def substitute(text: str, variables: dict[str, Any] | None) -> str:

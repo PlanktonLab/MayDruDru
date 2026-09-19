@@ -8,6 +8,7 @@
 - `flex` 訊息組裝（文字一律從 `services/contents` 來）
 - `richmenu` 圖文選單的版面、圖檔檢查與同步
 - `conversation` 對話狀態（含 30 分鐘逾時）
+- `sop` SOP 教學對話（`sop_session`，接 `ai/session_graph.py` 的引擎）
 - `handlers` 事件路由（follow / postback / text / image）
 
 **這個套件裡不得出現任何給市民看的中文字串**（CLAUDE.md 規則 4）；
@@ -16,4 +17,4 @@
 
 from __future__ import annotations
 
-__all__ = ["conversation", "flex", "handlers", "richmenu", "sender", "signature", "theme"]
+__all__ = ["conversation", "flex", "handlers", "richmenu", "sender", "signature", "sop", "theme"]

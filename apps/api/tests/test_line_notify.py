@@ -229,10 +229,11 @@ async def test_verify_then_supplement_then_teach_me(client, db, tenant, scheme, 
     pushed = line_sender.last("push")
     teach = pushed[1]["contents"]["footer"]["contents"][0]["action"]["data"]
 
-    # 4) 按下「教我準備」：留一筆 pending 給 P4 接，這一版先回文件清單
-    assert (await inbound(postback(teach)))[0]["type"] == "flex"
-    state = await conversation.get(db, tenant.id, USER)
-    assert state.flow == "sop_pending" and state.value("case_no") == app.case_no
+    # 4) 按下「教我準備」：那份文件還沒有對照到任何已發布的 SOP 流程，
+    #    所以 bot 老實說「還沒有教學」而不是丟一個空的選擇題（P4）。
+    replies = await inbound(postback(teach))
+    assert replies[0]["type"] == "text"
+    assert (await conversation.get(db, tenant.id, USER)).is_idle
 
 
 def _single(db):

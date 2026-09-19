@@ -121,6 +121,15 @@ class IntentResult(BaseModel):
     reason: str = ""
 
 
+class IntentClassification(BaseModel):
+    """LINE 意圖分類（SPEC §9.1）。模型只能**挑**候選，不產生任何給市民的字。"""
+
+    intent: str = Field(default="unknown", description="候選清單裡的 intent 識別字；都不像就填 unknown")
+    target_id: str = Field(default="", description="候選帶 target_id 時（例如 FAQ）填該候選的 target_id，否則留空")
+    confidence: float = Field(default=0.0, ge=0, le=1)
+    reason: str = Field(default="", description="一句話說明為什麼選它，給稽核看的")
+
+
 class VisualReview(BaseModel):
     """Self-check after rendering: does the replica look like the original?"""
     score: float = Field(ge=0, le=1, description="版面相似度 0~1（只看版面比例與元件，不看資料內容）")

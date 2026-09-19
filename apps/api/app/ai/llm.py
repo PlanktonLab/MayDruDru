@@ -64,15 +64,23 @@ def _embeddings():
                             dimensions=s.embedding_dim, request_timeout=s.llm_timeout_seconds, max_retries=s.llm_max_retries)
 
 
-async def record_usage(task: str, model: str, usage: dict, latency_ms: int, tenant_id: str | None,
-                       ref_type: str = "", ref_id: str = "") -> dict:
+def usage_record(task: str, model: str, usage: dict, latency_ms: int) -> dict:
+    """The `llm_usage` row as a plain dict — token counts and the cost estimate.
+
+    Pure arithmetic, no I/O: the test suite swaps out the write (it must never
+    open a database connection) but still wants the same numbers."""
     s = get_settings()
     inp = int(usage.get("input_tokens", 0) or 0)
     out = int(usage.get("output_tokens", 0) or 0)
     cached = int((usage.get("input_token_details") or {}).get("cache_read", 0) or 0)
     cost = ((inp - cached) * s.price_input_per_m + cached * s.price_cached_input_per_m + out * s.price_output_per_m) / 1_000_000
-    rec = {"task": task, "model": model, "input_tokens": inp, "cached_tokens": cached,
-           "output_tokens": out, "latency_ms": latency_ms, "cost_usd": round(cost, 6)}
+    return {"task": task, "model": model, "input_tokens": inp, "cached_tokens": cached,
+            "output_tokens": out, "latency_ms": latency_ms, "cost_usd": round(cost, 6)}
+
+
+async def record_usage(task: str, model: str, usage: dict, latency_ms: int, tenant_id: str | None,
+                       ref_type: str = "", ref_id: str = "") -> dict:
+    rec = usage_record(task, model, usage, latency_ms)
     try:
         async with sessionmaker()() as db:
             db.add(LlmUsage(tenant_id=tenant_id, ref_type=ref_type, ref_id=ref_id, **rec))

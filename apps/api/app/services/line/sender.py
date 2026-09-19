@@ -29,6 +29,7 @@ __all__ = [
     "LineSender",
     "NoopLineSender",
     "RealLineSender",
+    "fixture_png",
     "get_sender",
     "reset_sender",
     "set_sender_for_testing",
@@ -38,13 +39,42 @@ MAX_MESSAGES = 5
 
 
 class LineSender(Protocol):
-    """LINE 需要的兩個動作。回覆 token 只能用一次、30 秒內有效。"""
+    """LINE 需要的三個動作。回覆 token 只能用一次、30 秒內有效。
+
+    `get_message_content()` 是 P4 加的：民眾在 LINE 傳圖片時，事件裡只有
+    `message.id`，圖檔要另外去 blob API 取。取回來的 bytes **只在記憶體**——
+    定位完就丟，不寫物件儲存、不寫資料庫（SPEC §11 紅線 3）。
+    """
 
     enabled: bool
 
     async def reply(self, reply_token: str, messages: list[dict[str, Any]]) -> None: ...
 
     async def push(self, line_user_id: str, messages: list[dict[str, Any]]) -> None: ...
+
+    async def get_message_content(self, message_id: str) -> bytes: ...
+
+
+def fixture_png(width: int = 64, height: int = 96) -> bytes:
+    """離線開發用的替身圖檔，**在記憶體裡畫出來**而不是讀檔。
+
+    git 裡不放任何真實截圖（CLAUDE.md 規則 9），而測試又需要「民眾傳了一張圖」
+    這件事真的有 bytes 可以走完整條路。畫一張固定內容的小圖最省事，
+    `LLM_PROVIDER=fake` 的描述器看到它會回一組固定的關鍵字，定位結果因此也是決定性的。
+    """
+    import io
+
+    from PIL import Image, ImageDraw
+
+    img = Image.new("RGB", (width, height), (255, 255, 255))
+    draw = ImageDraw.Draw(img)
+    draw.rectangle((4, 4, width - 5, 20), fill=(46, 163, 93))
+    for row in range(3):
+        top = 30 + row * 20
+        draw.rectangle((6, top, width - 7, top + 12), fill=(214, 217, 222))
+    buffer = io.BytesIO()
+    img.save(buffer, format="PNG")
+    return buffer.getvalue()
 
 
 @dataclass
@@ -54,12 +84,21 @@ class NoopLineSender:
     enabled: bool = False
     sent: list[dict[str, Any]] = field(default_factory=list)
     fail_with: Exception | None = None
+    #: 測試可以換掉：`get_message_content()` 回傳的 bytes。None 代表用內建的替身圖。
+    content: bytes | None = None
+    fetched: list[str] = field(default_factory=list)
 
     async def reply(self, reply_token: str, messages: list[dict[str, Any]]) -> None:
         self._record("reply", reply_token, messages)
 
     async def push(self, line_user_id: str, messages: list[dict[str, Any]]) -> None:
         self._record("push", line_user_id, messages)
+
+    async def get_message_content(self, message_id: str) -> bytes:
+        self.fetched.append(message_id)
+        if self.fail_with is not None:
+            raise self.fail_with
+        return self.content if self.content is not None else fixture_png()
 
     def _record(self, kind: str, to: str, messages: list[dict[str, Any]]) -> None:
         if self.fail_with is not None:
@@ -95,6 +134,20 @@ class RealLineSender:
 
         payload = {"to": line_user_id, "messages": messages[:MAX_MESSAGES]}
         await self._call(lambda api: api.push_message(PushMessageRequest.from_dict(payload)))
+
+    async def get_message_content(self, message_id: str) -> bytes:
+        """民眾傳的圖片。走的是 blob endpoint（`api-data.line.me`），不是一般 API host。
+
+        回傳的 bytes 由呼叫端立刻用掉就丟，這裡不快取、不寫檔（SPEC §11 紅線 3）。
+        """
+        from linebot.v3.messaging import AsyncApiClient, AsyncMessagingApiBlob, Configuration
+
+        client = AsyncApiClient(Configuration(access_token=self._access_token))
+        try:
+            data = await AsyncMessagingApiBlob(client).get_message_content(message_id)
+            return bytes(data)
+        finally:
+            await client.close()
 
     async def _call(self, run: Any) -> Any:
         from linebot.v3.messaging import AsyncApiClient, AsyncMessagingApi, Configuration

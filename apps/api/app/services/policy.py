@@ -28,7 +28,13 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from . import contents as contents_service
+
 POLICY_KEY = "policy"
+# `contents` 裡 SOP 語句的 key 前綴（決策 D23：內文用 Python 的單大括號佔位符）。
+CONTENT_PREFIX = "sop.template."
 LEGACY_KEY = "assistant"  # the first version stored name/goal_noun/extra_rules/handoff_message here
 
 DELIVERY = ("all_at_once", "one_by_one")
@@ -204,6 +210,29 @@ class Policy:
         return cls.from_dict(raw)
 
     @classmethod
+    async def load(cls, db: AsyncSession, tenant_id: str, settings: dict | None = None,
+                   overrides: dict | None = None) -> Policy:
+        """同 `from_settings()`，外加把承辦人在後台改過的 `sop.template.*` 灌進語句表。
+
+        優先序（高到低）：tenant settings 裡明寫的 `policy.templates` → `contents` 的
+        已發布文案 → registry 出廠預設 → 這個檔案內建的 zh-TW／en 句子。
+        中間那兩層都由 `contents.prefixed()` 供應，所以承辦人在「教學對話」那一區改字，
+        LINE 與網頁的 SOP 對話下一次就會說新的話，不必改 code（SPEC §8.5、CLAUDE.md 規則 4）。
+
+        讀不到 `contents`（資料表還沒建、連線斷了）就照舊用內建句子——一個機關的
+        語氣設定失敗，不該讓整條教學啞掉。
+        """
+        p = cls.from_settings(settings, overrides)
+        try:
+            published = await contents_service.prefixed(db, tenant_id, CONTENT_PREFIX)
+        except Exception:  # pragma: no cover - 防禦性；contents 自己已經不拋錯了
+            return p
+        merged = {k: v for k, v in published.items() if v.strip()}
+        merged.update(p.templates)  # 明寫的 policy.templates 仍然最大
+        p.templates = merged
+        return p
+
+    @classmethod
     def from_dict(cls, raw: dict | None) -> Policy:
         raw = raw or {}
         p = cls()
@@ -245,17 +274,21 @@ class Policy:
         base = TEMPLATES.get(self.language) or TEMPLATES["zh-TW"]
         return base.get(key) or TEMPLATES["zh-TW"].get(key, "")
 
+    def _resolved(self, key: str) -> str:
+        """語句表（承辦人改過的 `sop.template.*`）優先，否則語言的內建句子。"""
+        return self.templates.get(key) or self._builtin(key)
+
     @property
     def display_name(self) -> str:
-        return self.name or self._builtin("name")
+        return self.name or self._resolved("name")
 
     @property
     def tone_line(self) -> str:
-        return self.tone or self._builtin("tone")
+        return self.tone or self._resolved("tone")
 
     @property
     def noun(self) -> str:
-        return self.goal_noun or self._builtin("goal_noun")
+        return self.goal_noun or self._resolved("goal_noun")
 
     @property
     def handoff_line(self) -> str:

@@ -221,16 +221,15 @@ async def test_sop_start_asks_which_document(db, tenant, scheme):
     """決策 D20：六題資格問卷收掉，改成直接問要準備哪一份文件。"""
     messages = await reply(db, tenant, postback_event("sop_start"))
     assert texts(messages) == await say(db, tenant, "line.sop.ask_document")
-    assert all(d.startswith("action=sop_prepare") for d in quick_actions(messages[0]))
+    assert all(d.startswith("action=sop_document") for d in quick_actions(messages[0]))
 
 
-async def test_sop_prepare_stores_a_pending_row_for_p4(db, tenant, scheme):
+async def test_sop_prepare_without_a_mapped_flow_says_so(db, tenant, scheme):
+    """退件推播的「教我準備」：那份文件還沒有對照到教學時，老實說沒有。"""
     app = await make_case(db, tenant, scheme)
     messages = await reply(db, tenant, postback_event("sop_prepare", case_no=app.case_no, doc="ID_CARD_FRONT"))
-    state = await conversation.get(db, tenant.id, USER)
-    assert state.flow == "sop_pending"
-    assert state.value("case_no") == app.case_no and state.value("doc") == "ID_CARD_FRONT"
-    assert messages[0]["type"] == "flex"     # 先回清單，P4 才接 SOP session
+    assert await say(db, tenant, "line.sop.no_flow", document="ID_CARD_FRONT") in texts(messages)
+    assert (await conversation.get(db, tenant.id, USER)).is_idle
 
 
 async def test_checklist_renders_the_document_types(db, tenant, scheme):
@@ -300,6 +299,7 @@ async def test_sop_exit_also_clears_the_conversation(db, tenant):
 
 
 async def test_sop_session_buttons_fall_back_to_the_picker(db, tenant, scheme):
+    """沒有進行中的教學時按那三顆按鈕，把人帶回文件選擇器而不是報錯。"""
     for action in ("sop_next", "sop_stuck", "sop_switch"):
         messages = await reply(db, tenant, postback_event(action))
         assert texts(messages) == await say(db, tenant, "line.sop.ask_document")
@@ -481,11 +481,13 @@ async def test_an_unknown_step_resets_the_flow(db, tenant):
 
 # --------------------------------------------------------------------- 圖片
 
-async def test_an_image_gets_the_safety_notice_then_the_question(db, tenant, scheme):
+async def test_an_image_gets_the_safety_notice_then_the_question(db, tenant, scheme, line_sender):
+    """沒有任何已發布流程時，截圖定位不到東西，bot 回安全提醒 + 文件選擇器。"""
     messages = await reply(db, tenant, event("message", message={"type": "image", "id": "1"}))
     assert texts(messages).startswith(await say(db, tenant, "security.screenshot_notice"))
     assert await say(db, tenant, "line.sop.not_recognized") in texts(messages)
-    assert all(d.startswith("action=sop_prepare") for d in quick_actions(messages[-1]))
+    assert all(d.startswith("action=sop_document") for d in quick_actions(messages[-1]))
+    assert line_sender.fetched == ["1"]     # 圖檔真的去 blob API 取了
 
 
 # --------------------------------------------------------------- 對話逾時

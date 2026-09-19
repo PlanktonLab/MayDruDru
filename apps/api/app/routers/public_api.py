@@ -12,6 +12,12 @@ Three layers, pick what fits the channel:
 * **Building blocks** (`/v1/locate`, `/v1/intent`, `/v1/flows/{id}/steps`,
   `/v1/catalog/*`): stateless functions for anyone composing their own
   behaviour — the same functions the two engines use.
+
+SPEC §8.5 groups all of it under one prefix: every endpoint below is also
+mounted at `/v1/sop/…` (see `_SOP_ALIASES` at the bottom). The flat paths stay
+as aliases for one version so existing integrations keep working; new callers
+should use `/v1/sop/*`. The SOP read paths share `services/sop_public.py` with
+the anonymous `/api/sop/*` router — one door per audience, one implementation.
 """
 
 from typing import Any, Literal
@@ -23,15 +29,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from .. import errors
 from ..ai.assistant import ChatEngine
 from ..ai.image_utils import ImageTooLarge, InvalidImage, read_image_upload
-from ..ai.retrieval import locate
 from ..ai.session_graph import SessionEngine
 from ..db import get_db
 from ..deps import ApiCaller, api_caller
 from ..models import Tenant
 from ..security import hash_external_user
+from ..services import sop_public
 from ..services.content import card_preview_url, card_url, load_snapshot, tenant_catalog
-from ..services.guide import goal_for, locate_guidance, resolve_intent, step_messages, step_rows
-from ..services.policy import Policy
+from ..services.guide import resolve_intent
 
 router = APIRouter(prefix="/v1", tags=["public"])
 
@@ -121,23 +126,8 @@ async def locate_screenshot(file: UploadFile, platform_id: str | None = Form(Non
     `platform_id` is a hard filter; `flow_id`/`step_id`/`goal_id` describe
     where the citizen was, which the ranking favours."""
     png = await _read_png(file)
-    snapshot = None
-    if flow_id:
-        loaded = await load_snapshot(db, caller.tenant_id, flow_id, "published")
-        snapshot = loaded[0] if loaded else None
-        if snapshot is None:
-            flow_id = None
-    tenant = await db.get(Tenant, caller.tenant_id)
-    policy = Policy.from_settings(tenant.settings if tenant else None)
-    try:
-        res = await locate(db, caller.tenant_id, png, flow_id=flow_id, platform_id=platform_id, content_mode="published",
-                           session_id=f"api:{caller.api_key_id}", step_id=step_id, goal_id=goal_id, snapshot=snapshot,
-                           threshold=policy.locate_threshold, low=policy.locate_low)
-    finally:
-        del png
-    g = await locate_guidance(db, caller.tenant_id, res, content_mode="published", theme=res.theme, session_flow_id=flow_id,
-                              session_goal_id=goal_id, policy=policy)
-    return {**res.public(), "guidance": g.to_dict()}
+    return await sop_public.locate(db, caller.tenant_id, png, platform_id=platform_id, flow_id=flow_id,
+                                   step_id=step_id, goal_id=goal_id, session_id=f"api:{caller.api_key_id}")
 
 
 class IntentIn(BaseModel):
@@ -161,21 +151,8 @@ async def flow_steps(flow_id: str, goal_id: str | None = None, from_step_id: str
     """The steps of a published flow toward one goal, and the messages a
     channel sends for them (one numbered card per step). `from_step_id`
     starts partway (after a screenshot located the citizen)."""
-    loaded = await load_snapshot(db, caller.tenant_id, flow_id, "published")
-    if not loaded:
-        raise errors.ApiError(404, errors.FLOW_NOT_PUBLISHED, "flow 不存在或未發布")
-    snap, _ = loaded
-    goal = goal_for(snap, goal_id)
-    rows = step_rows(snap, goal)
-    ids = [r["step_id"] for r in rows["steps"]]
-    if from_step_id:
-        if from_step_id not in ids:
-            raise errors.ApiError(404, errors.FLOW_NOT_FOUND, "步驟不在這條流程裡")
-        ids = ids[ids.index(from_step_id):]
-    tenant = await db.get(Tenant, caller.tenant_id)
-    batch = await step_messages(snap, ids, theme, goal_id=goal, start_number=max(1, number_from),
-                                policy=Policy.from_settings(tenant.settings if tenant else None))
-    return {**rows, "version": snap.get("version"), "messages": batch.messages}
+    return await sop_public.flow_steps(db, caller.tenant_id, flow_id, goal_id=goal_id,
+                                       from_step_id=from_step_id, theme=theme, number_from=number_from)
 
 
 @router.post("/sessions")
@@ -236,3 +213,42 @@ async def catalog_cards(flow_id: str, caller: ApiCaller = Depends(api_caller), d
             "steps": [{"id": s["id"], "title": s["title"], "instruction": s["instruction"], "is_start": s["is_start"], "is_end": s["is_end"],
                        "cards": {t: {"image_url": card_url(v), "preview_url": card_preview_url(v), "width": v["width"], "height": v["height"]}
                                  for t, v in s["variants"].items()}} for s in snap["steps"]]}
+
+
+@router.get("/document-types/{code}/flows")
+async def document_type_flows(code: str, platform_id: str | None = None, scheme: str = "", rejection_code: str = "",
+                              caller: ApiCaller = Depends(api_caller), db: AsyncSession = Depends(get_db)):
+    """The published flows that teach how to obtain one document type
+    (SPEC §8.5). With `scheme` + `rejection_code` the clerk's picks on that
+    rejection code win; the document type's own mapping is the fallback."""
+    return await sop_public.document_type_flows(db, caller.tenant_id, code, platform_id=platform_id,
+                                                scheme_code=scheme, rejection_code=rejection_code)
+
+
+# ---- /v1/sop/* (SPEC §8.5 / §10.1)
+#
+# One prefix for everything SOP. The flat paths above stay mounted for one
+# version as aliases (決策 D28) so a channel that already integrated keeps
+# working; both spellings reach the same function, so they can never drift.
+
+_SOP_ALIASES: tuple[tuple[str, str, Any], ...] = (
+    ("POST", "/sop/chat", create_chat),
+    ("POST", "/sop/chat/{chat_id}/messages", chat_message),
+    ("GET", "/sop/chat/{chat_id}", chat_status),
+    ("POST", "/sop/locate", locate_screenshot),
+    ("POST", "/sop/intent", parse_intent),
+    ("GET", "/sop/flows/{flow_id}/steps", flow_steps),
+    ("POST", "/sop/sessions", create_session),
+    ("POST", "/sop/sessions/{session_id}/messages", send_message),
+    ("POST", "/sop/sessions/{session_id}/screenshots", send_screenshot),
+    ("POST", "/sop/sessions/{session_id}/actions", send_action),
+    ("GET", "/sop/sessions/{session_id}", get_session),
+    ("GET", "/sop/catalog/platforms", catalog_platforms),
+    ("GET", "/sop/catalog/goals", catalog_goals),
+    ("GET", "/sop/catalog/flows", catalog_flows),
+    ("GET", "/sop/catalog/flows/{flow_id}/cards", catalog_cards),
+    ("GET", "/sop/document-types/{code}/flows", document_type_flows),
+)
+
+for _method, _path, _fn in _SOP_ALIASES:
+    router.add_api_route(_path, _fn, methods=[_method], name=f"sop_{_fn.__name__}")

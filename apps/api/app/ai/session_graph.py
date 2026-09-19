@@ -677,8 +677,10 @@ class SessionEngine:
         t0 = time.perf_counter()
         tenant = await self.db.get(Tenant, state["tenant_id"])
         overrides = (state.get("known_context") or {}).get("policy")
-        ctx = TurnContext(db=self.db, screenshot=screenshot,
-                          policy=Policy.from_settings(tenant.settings if tenant else None, overrides if isinstance(overrides, dict) else None))
+        # 語句表從 `contents` 讀（SPEC §8.5）：承辦人在後台改的字，下一回合就生效。
+        policy = await Policy.load(self.db, state["tenant_id"], tenant.settings if tenant else None,
+                                   overrides if isinstance(overrides, dict) else None)
+        ctx = TurnContext(db=self.db, screenshot=screenshot, policy=policy)
         state["event"] = event
         state["response"] = {}
         state["debug"] = {}
