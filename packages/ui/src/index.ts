@@ -1,35 +1,18 @@
-/** `@maydru/ui` — admin-web 與 apply-web 共用的設計 token 與元件。
+/** `@maydru/ui` — admin-web 與 apply-web 共用的設計 token 與元件（SPEC §15）。
  *
- * P0 只提供 token（`@maydru/ui/tokens.css`）與下面的 token 名稱表；共用元件在
- * P3 之後隨頁面一起長出來（SPEC §15）。
+ * 兩個前端各自 `@import "@maydru/ui/tokens.css"` 取得 Tailwind 4 的 `@theme`
+ * 與深色模式變數；顏色、字級、間距、圓角一律走 token，不硬編色碼。
+ *
+ * 可及性是硬規則：觸控目標 ≥ 44pt、對比 ≥ 4.5:1、鍵盤可操作、每個控制項都有標籤。
  */
 
-/** tokens.css 所定義的語意顏色，供元件以字串引用時做編譯期檢查。 */
-export const colorTokens = [
-  'primary',
-  'muted',
-  'secondary',
-  'tertiary',
-  'elevated',
-  'border',
-  'background',
-  'background-lite',
-  'canvas',
-  'accent',
-  'accent-bg',
-  'danger',
-  'danger-bg',
-  'good',
-  'good-bg',
-  'warn',
-  'warn-bg',
-  'on-accent',
-  'scrim',
-] as const
+export { cx, type ClassValue } from './cx'
+export { TOUCH_TARGET, colorTokens, cssVar, type ColorToken } from './tokens'
 
-export type ColorToken = (typeof colorTokens)[number]
-
-/** `cssVar('accent')` → `var(--accent)`，讓行內樣式也走 token。 */
-export function cssVar(token: ColorToken): string {
-  return `var(--${token})`
-}
+export { Button, type ButtonProps, type ButtonSize, type ButtonVariant } from './Button'
+export { Checkbox, Field, Input, Select, Textarea, type CheckboxProps, type FieldProps } from './form'
+export { Badge, Card, EmptyState, Spinner, type BadgeTone, type CardProps } from './surfaces'
+export { Modal, type ModalProps } from './Modal'
+export { Stepper, Timeline, type Step, type TimelineEvent } from './progress'
+export { ToastProvider } from './Toast'
+export { useToast, type ToastApi, type ToastItem, type ToastTone } from './toastContext'
