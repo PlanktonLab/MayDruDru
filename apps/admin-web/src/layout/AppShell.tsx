@@ -1,6 +1,6 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import { clsx } from 'clsx'
-import { BarChart3, Bell, BookOpen, ClipboardCheck, FileSearch, FlaskConical, HelpCircle, KeyRound, LayoutGrid, LogOut, MessageSquare, MessageSquareText, Moon, PanelLeftClose, PanelLeftOpen, SearchX, Sun, Users, Workflow } from 'lucide-react'
+import { BarChart3, Bell, BookOpen, ClipboardCheck, FileSearch, FlaskConical, FolderCog, HelpCircle, KeyRound, LayoutGrid, LogOut, MessageSquare, MessageSquareText, Moon, PanelLeftClose, PanelLeftOpen, SearchX, Sun, Users, Workflow } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useAuth } from '../lib/auth'
 import { ROLE_LABEL, type Capability } from '../lib/types'
@@ -32,6 +32,14 @@ const LINE_NAV: { to: string; label: string; icon: typeof Workflow }[] = [
   { to: '/line/richmenu', label: '圖文選單', icon: LayoutGrid },
   { to: '/line/notifications', label: '推播紀錄', icon: Bell },
   { to: '/line/unmatched', label: '未命中訊息', icon: SearchX },
+]
+
+/**
+ * 方案管理（SPEC §8.2）。和 LINE 內容同一個規矩：每個登入的承辦人都讀得到——審案時
+ * 常要回頭確認這個方案是怎麼設定的——能不能改由頁面裡的按鈕各自問 `can('admin')`。
+ */
+const SCHEME_NAV: { to: string; label: string; icon: typeof Workflow }[] = [
+  { to: '/schemes', label: '方案設定', icon: FolderCog },
 ]
 
 const navLinkClass = (collapsed: boolean) => ({ isActive }: { isActive: boolean }) =>
@@ -71,6 +79,14 @@ export default function AppShell() {
           <div className="mt-3 space-y-0.5 border-t border-border pt-3">
             {!collapsed && <div className="px-2.5 pb-1 text-[11px] font-medium uppercase tracking-wide text-secondary">LINE 內容</div>}
             {LINE_NAV.map((n) => (
+              <NavLink key={n.to} to={n.to} title={collapsed ? n.label : undefined} aria-label={n.label} className={navLinkClass(collapsed)}>
+                <n.icon size={15} className="shrink-0" />{!collapsed && <span className="truncate">{n.label}</span>}
+              </NavLink>
+            ))}
+          </div>
+          <div className="mt-3 space-y-0.5 border-t border-border pt-3">
+            {!collapsed && <div className="px-2.5 pb-1 text-[11px] font-medium uppercase tracking-wide text-secondary">方案管理</div>}
+            {SCHEME_NAV.map((n) => (
               <NavLink key={n.to} to={n.to} title={collapsed ? n.label : undefined} aria-label={n.label} className={navLinkClass(collapsed)}>
                 <n.icon size={15} className="shrink-0" />{!collapsed && <span className="truncate">{n.label}</span>}
               </NavLink>

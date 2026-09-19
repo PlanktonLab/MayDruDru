@@ -162,6 +162,8 @@ class SchemeOut(BaseModel):
     retention_days: int
     supplement_days: int
     max_revisions: int
+    application_start: date | None = None
+    application_end: date | None = None
     updated_at: datetime | None = None
 
 

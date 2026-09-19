@@ -30,12 +30,22 @@ from .schemas import (
 
 router = APIRouter(prefix="/api/admin/schemes", tags=["admin-schemes"])
 
+# `scheme_public_view()` 是給市民看的形狀，這幾個欄位它刻意沒帶；方案編輯器要改，
+# 所以在後台的檢視上補回去。順序就是編輯器上的分組順序。
+_EDITOR_ONLY_FIELDS = (
+    "max_revisions", "application_method", "required_documents",
+    "student_requirement", "employment_requirement", "residency_requirement", "image_url",
+)
+
 
 def _out(s: Any) -> SchemeOut:
     return SchemeOut(
         id=s.id, code=s.code, name=s.name, category=s.category, active=s.active,
         version=s.version, retention_days=s.retention_days, supplement_days=s.supplement_days,
         max_revisions=s.max_revisions, updated_at=s.updated_at,
+        # 清單上就要看得到申請期間：「這個方案現在還收不收件」是承辦人員打開這一頁
+        # 最常問的問題，再點進去一層才看得到等於沒回答。
+        application_start=s.application_start, application_end=s.application_end,
     )
 
 
@@ -79,6 +89,9 @@ async def get_scheme(
     view["version"] = scheme.version
     view["review_rules"] = [_child_out(r) for r in sorted(scheme.review_rules, key=lambda r: (r.sort_order, r.code))]
     view["rejection_codes"] = [_child_out(r) for r in sorted(scheme.rejection_codes, key=lambda r: (r.sort_order, r.code))]
+    # 方案編輯器要改的是 §6.2 的**每一個**欄位，公開檢視刻意沒帶的那幾個補回來——
+    # 少一個欄位，承辦人員就得回去請工程師改資料庫，那正是決策 D6 要避免的事。
+    view.update({name: getattr(scheme, name) for name in _EDITOR_ONLY_FIELDS})
     return view
 
 

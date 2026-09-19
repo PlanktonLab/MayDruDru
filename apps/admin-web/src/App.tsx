@@ -18,6 +18,8 @@ import LineKnowledgePage from './pages/line/KnowledgePage'
 import LineRichMenuPage from './pages/line/RichMenuPage'
 import LineNotificationsPage from './pages/line/NotificationsPage'
 import LineUnmatchedPage from './pages/line/UnmatchedPage'
+import SchemesPage from './pages/schemes/SchemesPage'
+import SchemeEditorPage from './pages/schemes/SchemeEditorPage'
 
 export default function App() {
   return (
@@ -46,6 +48,9 @@ export default function App() {
           <Route path="/line/richmenu" element={<LineRichMenuPage />} />
           <Route path="/line/notifications" element={<LineNotificationsPage />} />
           <Route path="/line/unmatched" element={<LineUnmatchedPage />} />
+          {/* 方案管理（SPEC §8.2）：讀取開放給登入的承辦人，寫入由頁面內部問 admin。 */}
+          <Route path="/schemes" element={<SchemesPage />} />
+          <Route path="/schemes/:code" element={<SchemeEditorPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/canvas" replace />} />
       </Routes>
