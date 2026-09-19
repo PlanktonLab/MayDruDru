@@ -1,4 +1,4 @@
-/** 右下角的取件小幫手（第 4、5 步）。
+/** 右下角的申請文件準備助手（第 4、5 步）。
  *
  * 「找不到扣款證明」是話務量最高的問題之一，而教學只講得了通例——各家銀行的
  * App 長得不一樣，選單名稱也不同。這個對話補的是「我家的 App 不長這樣」那一段。
@@ -86,7 +86,7 @@ export function HelpChat() {
   return (
     <div
       role="dialog"
-      aria-label="取件小幫手"
+      aria-label="申請文件準備助手"
       className={cx(
         'fixed right-0 bottom-0 z-30 flex w-full flex-col overflow-hidden bg-canvas',
         'h-[70vh] rounded-t-2xl',
@@ -95,7 +95,7 @@ export function HelpChat() {
       style={{ boxShadow: 'var(--shadow-popover)' }}
     >
       <header className="flex shrink-0 items-center justify-between gap-2 border-b border-border px-4 py-3">
-        <span className="text-[15px] font-semibold text-primary">取件小幫手</span>
+        <span className="text-[15px] font-semibold text-primary">申請文件準備助手</span>
         <button
           type="button"
           onClick={() => setOpen(false)}

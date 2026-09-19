@@ -65,8 +65,14 @@ export function SummaryAside({ scheme, state, requiredCodes }: SummaryAsideProps
         <Row label="申請身分" value={tier?.label ?? PENDING} />
         <Row
           label="繳費制度"
+          // `billing_cycle` 的預設值是月費，但那是欄位的初始值、不是市民選的。
+          // 還沒走到購買明細那一步就先秀「月費（1 期）」，等於幫他做了決定。
           value={
-            state.channel.billing_cycle === 'ANNUAL' ? '年費' : `月費（${state.channel.billing_periods} 期）`
+            state.channel.payment_channel_code
+              ? state.channel.billing_cycle === 'ANNUAL'
+                ? '年費'
+                : `月費（${state.channel.billing_periods} 期）`
+              : PENDING
           }
         />
         <Row label="繳費方式" value={channel?.label ?? PENDING} />

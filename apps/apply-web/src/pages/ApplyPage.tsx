@@ -362,7 +362,7 @@ export default function ApplyPage() {
         </div>
       </div>
 
-      {/* 取件小幫手只掛在準備與上傳這兩步——那是人真的去翻銀行 App 的時刻。
+      {/* 申請文件準備助手只掛在準備與上傳這兩步——那是人真的去翻銀行 App 的時刻。
           填欄位與送出的步驟它幫不上忙，掛著只會跟主要動作搶注意力。 */}
       {helpChatEnabled && (stepKey === 'guide' || stepKey === 'docs') && <HelpChat />}
     </section>

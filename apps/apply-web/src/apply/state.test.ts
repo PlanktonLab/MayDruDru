@@ -2,6 +2,7 @@
 
 import { describe, expect, it } from 'vitest'
 import { expandSlots } from './docGroups'
+import { toolGroups } from './toolGroups'
 import {
   canLeave,
   channelErrors,
@@ -210,6 +211,29 @@ describe('第 5 步 上傳', () => {
 
   it('準備指引那一步永遠可以往前', () => {
     expect(canLeave('guide', initialState('HCAI115'), SCHEME, required)).toBe(true)
+  })
+})
+
+describe('工具選單的分組', () => {
+  /** 伺服器的 `eligible_tools.id` 是隨機的（`new_id`），不是 `tool-chatgpt`。 */
+  const withRandomIds = SCHEME.eligible_tools.map((tool, index) => ({ ...tool, id: `x9f2a${index}` }))
+
+  it('id 換成伺服器那種隨機值時，分組仍然有東西——不能靠 id 比對', () => {
+    const groups = toolGroups(withRandomIds)
+    expect(groups.length).toBeGreaterThan(0)
+    expect(groups.flatMap((group) => group.tools).length).toBeGreaterThan(0)
+  })
+
+  it('不予補助的工具不列在選單上', () => {
+    const names = toolGroups(withRandomIds).flatMap((group) => group.tools.map((tool) => tool.name))
+    expect(names.join('|')).not.toContain('DeepSeek')
+    expect(names.join('|')).not.toContain('Poe.com')
+  })
+
+  it('關鍵字表沒收錄的可補助工具落到「其他」，不會安靜消失', () => {
+    const extra = [...withRandomIds, { ...withRandomIds[0], id: 'zz1', name: '某個新收錄的工具', status: 'APPROVED' as const }]
+    const names = toolGroups(extra).flatMap((group) => group.tools.map((tool) => tool.name))
+    expect(names).toContain('某個新收錄的工具')
   })
 })
 

@@ -16,29 +16,50 @@ export interface ToolGroup {
   tools: EligibleTool[]
 }
 
-/** 分組 → 該組收錄的工具 id。順序不重要，顯示前一律依名稱排序。 */
-const GROUP_MEMBERS: readonly { label: string; ids: readonly string[] }[] = [
+/**
+ * 分組 → 該組收錄的工具**名稱關鍵字**。
+ *
+ * 用名稱而不是 id：`eligible_tools.id` 在伺服器上是隨機產生的（`new_id`），
+ * 只有 mock 資料才叫 `tool-chatgpt`。拿 id 比對的話，接上真後端就一個都對不到，
+ * 整個選單只剩「其他（自行填寫）」——這正是部署後選單空掉的原因。
+ *
+ * 比對方式是「名稱包含這個關鍵字」（忽略大小寫與空白），所以
+ * 「Microsoft Copilot（Pro/M365）」用 `copilot` 就對得到，承辦人在後台把名稱
+ * 改成「Microsoft 365 Copilot」也仍然分得進同一組。
+ */
+const GROUP_MEMBERS: readonly { label: string; keywords: readonly string[] }[] = [
   {
     label: '通用型 AI',
-    ids: ['tool-chatgpt', 'tool-claude', 'tool-google-ai', 'tool-grok', 'tool-perplexity'],
+    keywords: ['chatgpt', 'claude', 'gemini', 'google ai', 'grok', 'perplexity'],
   },
   {
     label: '影像／設計類 AI',
-    ids: ['tool-adobe-firefly', 'tool-adobe-other', 'tool-canva', 'tool-figma-ai', 'tool-midjourney'],
+    keywords: ['firefly', 'adobe', 'canva', 'figma', 'midjourney'],
   },
   {
     label: '辦公／生產力類 AI',
-    ids: ['tool-m365-copilot', 'tool-notion', 'tool-copyai', 'tool-jasper'],
+    keywords: ['copilot', 'notion', 'copy.ai', 'copyai', 'jasper'],
   },
   {
     label: '學習／語言類 AI',
-    ids: ['tool-grammarly', 'tool-speak', 'tool-elicit'],
+    keywords: ['grammarly', 'speak', 'elicit'],
   },
   {
     label: '其他',
-    ids: ['tool-cursor'],
+    keywords: ['cursor'],
   },
 ]
+
+const normalize = (value: string) => value.toLowerCase().replace(/\s+/g, '')
+
+/** 這個工具屬於哪一組；都不符合就回 null（不列在選單上）。 */
+function groupLabelOf(tool: EligibleTool): string | null {
+  const name = normalize(tool.name)
+  for (const group of GROUP_MEMBERS) {
+    if (group.keywords.some((keyword) => name.includes(normalize(keyword)))) return group.label
+  }
+  return null
+}
 
 /**
  * 依英文字母排序。
@@ -58,17 +79,21 @@ export function compareToolName(a: string, b: string): number {
 /**
  * 把 scheme 的 `eligible_tools` 攤成選單要的分組。
  *
- * 清單上沒有的工具不會出現在選單（但仍可由「其他（自行填寫）」比對到）；
- * 反過來，清單列了但這個 scheme 沒有的 id 會被安靜略過，
- * 不會在畫面上留下一個點不動的空選項。
+ * 不予補助的工具不列（它們仍留在 `eligible_tools` 裡，供自行填寫時比對）。
+ * 分不進任何一組的可補助工具收到最後的「其他」——承辦人在後台新增了一個
+ * 關鍵字表沒收錄的工具時，它仍然選得到，而不是安靜消失。
  */
 export function toolGroups(tools: readonly EligibleTool[]): ToolGroup[] {
-  const byId = new Map(tools.map((tool) => [tool.id, tool]))
-  return GROUP_MEMBERS.map(({ label, ids }) => ({
+  const listed = tools.filter((tool) => tool.status !== 'REJECTED')
+  const buckets = new Map<string, EligibleTool[]>()
+  for (const tool of listed) {
+    const label = groupLabelOf(tool) ?? '其他'
+    const bucket = buckets.get(label)
+    if (bucket) bucket.push(tool)
+    else buckets.set(label, [tool])
+  }
+  return GROUP_MEMBERS.map(({ label }) => ({
     label,
-    tools: ids
-      .map((id) => byId.get(id))
-      .filter((tool): tool is EligibleTool => Boolean(tool))
-      .sort((a, b) => compareToolName(a.name, b.name)),
+    tools: (buckets.get(label) ?? []).sort((a, b) => compareToolName(a.name, b.name)),
   })).filter((group) => group.tools.length > 0)
 }
