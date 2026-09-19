@@ -128,7 +128,8 @@ export default function ApplyPage() {
           email: state.identity.email.trim() || undefined,
           tool_name: state.tool.name.trim(),
           tool_id: state.tool.tool_id,
-          purchase_amount: Number(state.channel.purchase_amount),
+          // 後端的 purchase_amount 是整數，小數點會被 422 擋下來。
+          purchase_amount: Math.round(Number(state.channel.purchase_amount)),
           purchase_date: state.channel.purchase_date,
           paid_by_proxy: state.channel.paid_by_proxy,
           note: state.manualAssist ? '申請人勾選「請人工協助審核」。' : undefined,
@@ -141,13 +142,8 @@ export default function ApplyPage() {
         replace: true,
       })
     } catch (cause) {
-      setSubmitError(
-        cause instanceof ApiError
-          ? cause.code === 'SCHEME_CLOSED'
-            ? '這個方案的申請期間已經結束，無法再送件。'
-            : cause.message
-          : '送出時發生問題，請再試一次。',
-      )
+      // `lib/api.ts` 已經把機器代碼翻成「怎麼修」，這裡直接用那句話。
+      setSubmitError(cause instanceof ApiError ? cause.message : '送出時發生問題，請再試一次。')
     } finally {
       setSubmitting(false)
     }

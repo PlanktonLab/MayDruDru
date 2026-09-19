@@ -24,7 +24,46 @@ export class ApiError extends Error {
 /** 網路斷線、伺服器 500 時也要說「怎麼辦」，不能只丟 stack（SPEC §15.5）。 */
 export const NETWORK_ERROR_MESSAGE = '連線不穩，資料沒有送出去。請確認網路後再按一次。'
 
+/**
+ * 機器代碼可能在頂層（`{code}`），也可能被包在 `detail` 裡（限流就是）。
+ */
+function codeOf(body: unknown): string | null {
+  if (body && typeof body === 'object') {
+    const code = (body as { code?: unknown }).code
+    if (typeof code === 'string') return code
+    const detail = (body as { detail?: unknown }).detail
+    if (detail && typeof detail === 'object') {
+      const nested = (detail as { code?: unknown }).code
+      if (typeof nested === 'string') return nested
+    }
+  }
+  return null
+}
+
+/**
+ * 後端的機器代碼 → 一句「怎麼修」（SPEC §15.5）。
+ *
+ * 上傳被擋下來時整批送件會一起回滾，所以訊息要講清楚「修好再按一次就好」——
+ * 草稿與已經處理過的照片都還在記憶體裡，不必從頭再來一遍。
+ */
+export const CODE_MESSAGE: Record<string, string> = {
+  SCHEME_NOT_FOUND: '找不到這個補助方案，連結可能過期了。請回首頁重新選一個開放中的方案。',
+  SCHEME_CLOSED: '這個方案的申請期間已經結束，無法再送件。',
+  CASE_NOT_FOUND: '查不到這件案子。請對照送件後的截圖確認案件編號。',
+  UNKNOWN_DOCUMENT_TYPE: '有一份文件不屬於這個方案。請回上一步重新選擇要上傳的文件。',
+  MIME_NOT_ACCEPTED: '有一份檔案的格式不支援。請改用 JPG、PNG 或 PDF，然後再送出一次。',
+  TOO_MANY_PAGES: '有一份 PDF 的頁數超過上限。請只保留需要的那幾頁，再上傳一次。',
+  EMPTY_FILE: '有一份檔案是空的。請重新拍一次或重新選擇檔案，再送出一次。',
+  FILE_TOO_LARGE: '有一份檔案太大。請改用解析度低一點的照片，或把 PDF 拆成單頁，再送出一次。',
+  RATE_LIMITED: '操作太頻繁，請稍等一下再試一次。',
+  NOT_IN_SUPPLEMENT: '這件案子目前不在補件階段，不需要再上傳文件。',
+  UNEXPECTED_DOCUMENT_TYPE: '這份文件不在承辦要求補件的清單裡。請只上傳被標示的那幾份。',
+  VERIFICATION_FAILED: '案件編號或末四碼不正確。請對照送件後的截圖再輸入一次。',
+}
+
 function messageOf(status: number, body: unknown): string {
+  const code = codeOf(body)
+  if (code && CODE_MESSAGE[code]) return CODE_MESSAGE[code]
   if (body && typeof body === 'object') {
     const record = body as Record<string, unknown>
     if (typeof record.message === 'string') return record.message
@@ -40,19 +79,6 @@ function messageOf(status: number, body: unknown): string {
   if (status === 413) return '檔案太大了。請改用解析度低一點的照片，或把 PDF 拆成單頁再上傳。'
   if (status >= 500) return '系統暫時無法處理。請稍後再試一次，或洽承辦單位。'
   return `發生錯誤（${status}）。請稍後再試一次。`
-}
-
-function codeOf(body: unknown): string | null {
-  if (body && typeof body === 'object') {
-    const code = (body as { code?: unknown }).code
-    if (typeof code === 'string') return code
-    const detail = (body as { detail?: unknown }).detail
-    if (detail && typeof detail === 'object') {
-      const nested = (detail as { code?: unknown }).code
-      if (typeof nested === 'string') return nested
-    }
-  }
-  return null
 }
 
 let memoryToken: string | null = null

@@ -55,16 +55,16 @@ export interface SchemeDocumentType {
   required_when: string | null
   /**
    * 「請保留清楚可見」的欄位，例如「持卡人姓名、卡號末四碼」。
-   *
-   * seed 有這個欄位、P3 契約還沒有，所以先當成可選；沒有時退回 `hint`。
    * 遮罩編輯器少了它，市民就只知道要遮、不知道不能遮掉什麼（SPEC §8.1 第 2 步）。
    */
-  keep_visible?: string | null
+  keep_visible: string | null
 }
 
 export interface SchemePaymentChannel {
   code: string
   label: string
+  /** 這個管道要準備什麼的一句話。 */
+  hint: string
   required_document_type_codes: string[]
   guide_content_key: string | null
 }
@@ -88,7 +88,10 @@ export interface EligibleTool {
   vendor: string
   aliases: string[]
   status: ToolStatus
-  /** 判定理由；不予補助時一定要讓市民看得到為什麼。 */
+  /**
+   * 判定理由。`GET /api/apply/schemes/{code}` 目前**沒有**回這個欄位，
+   * 所以不予補助的工具現在只說「不予補助」說不出為什麼（見 README「契約缺口」）。
+   */
   verdict_note?: string
 }
 

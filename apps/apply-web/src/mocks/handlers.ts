@@ -42,7 +42,7 @@ export function createHandlers(options: MockOptions = {}): HttpHandler[] {
     http.get('/api/apply/schemes/:code', ({ params }) =>
       params.code === SCHEME.code
         ? HttpResponse.json(SCHEME)
-        : HttpResponse.json({ detail: '找不到這個方案' }, { status: 404 }),
+        : HttpResponse.json({ code: 'SCHEME_NOT_FOUND' }, { status: 404 }),
     ),
 
     http.post('/api/apply/schemes/:code/required-documents', async ({ request }) => {
@@ -58,7 +58,7 @@ export function createHandlers(options: MockOptions = {}): HttpHandler[] {
       const form = await request.formData()
       const application = JSON.parse(String(form.get('application') ?? '{}')) as { scheme_code?: string }
       if (application.scheme_code !== SCHEME.code)
-        return HttpResponse.json({ code: 'SCHEME_CLOSED' }, { status: 400 })
+        return HttpResponse.json({ code: 'SCHEME_NOT_FOUND' }, { status: 404 })
       const caseNo = `HC-2026-${nextCaseSerial++}`
       cases[caseNo] = {
         ...structuredClone(CASES['HC-2026-900002']),
@@ -97,41 +97,58 @@ export function createHandlers(options: MockOptions = {}): HttpHandler[] {
       if (!authorised || authorised !== caseNo)
         return HttpResponse.json({ code: 'UNAUTHORISED' }, { status: 401 })
       const found = cases[caseNo]
-      return found ? HttpResponse.json(found) : HttpResponse.json({ detail: '找不到案件' }, { status: 404 })
+      return found ? HttpResponse.json(found) : HttpResponse.json({ code: 'CASE_NOT_FOUND' }, { status: 404 })
     }),
 
     http.post('/api/apply/applications/:case_no/documents', async ({ request, params }) => {
       const caseNo = String(params.case_no)
       if (caseOfToken(request) !== caseNo) return HttpResponse.json({ code: 'UNAUTHORISED' }, { status: 401 })
       const found = cases[caseNo]
-      if (!found) return HttpResponse.json({ detail: '找不到案件' }, { status: 404 })
+      if (!found) return HttpResponse.json({ code: 'CASE_NOT_FOUND' }, { status: 404 })
       if (!found.can_supplement) return HttpResponse.json({ code: 'NOT_IN_SUPPLEMENT' }, { status: 400 })
       const form = await request.formData()
       const documents = JSON.parse(String(form.get('documents') ?? '[]')) as { document_type_code: string }[]
       const allowed = new Set(found.supplement_items.map((item) => item.document_type_code))
       if (documents.some((doc) => !allowed.has(doc.document_type_code)))
         return HttpResponse.json({ code: 'UNEXPECTED_DOCUMENT_TYPE' }, { status: 400 })
-      found.status = 'REVISION_SUBMITTED'
+      // 伺服器跑 T4 之後立刻跑 T5，所以回來時已經是 UNDER_REVIEW，不會停在 REVISION_SUBMITTED。
+      const stamp = new Date().toISOString()
       found.revision_count += 1
-      found.last_submitted_at = new Date().toISOString()
+      found.last_submitted_at = stamp
       found.supplement_items = []
       found.can_supplement = false
-      found.events.push({
-        transition_code: 'T4',
-        from_status: 'NEEDS_REVISION',
-        to_status: 'REVISION_SUBMITTED',
-        actor_type: 'APPLICANT',
-        created_at: new Date().toISOString(),
-        rejection_codes: [],
+      found.events.push(
+        {
+          transition_code: 'T4',
+          from_status: 'NEEDS_REVISION',
+          to_status: 'REVISION_SUBMITTED',
+          actor_type: 'APPLICANT',
+          created_at: stamp,
+          rejection_codes: [],
+        },
+        {
+          transition_code: 'T5',
+          from_status: 'REVISION_SUBMITTED',
+          to_status: 'UNDER_REVIEW',
+          actor_type: 'SYSTEM',
+          created_at: stamp,
+          rejection_codes: [],
+        },
+      )
+      found.status = 'UNDER_REVIEW'
+      return HttpResponse.json({
+        case_no: found.case_no,
+        status: found.status,
+        verdict: 'INDETERMINATE',
+        findings: [],
       })
-      return HttpResponse.json({ status: found.status, verdict: 'INDETERMINATE', findings: [] })
     }),
 
     http.post('/api/apply/applications/:case_no/withdraw', ({ request, params }) => {
       const caseNo = String(params.case_no)
       if (caseOfToken(request) !== caseNo) return HttpResponse.json({ code: 'UNAUTHORISED' }, { status: 401 })
       const found = cases[caseNo]
-      if (!found) return HttpResponse.json({ detail: '找不到案件' }, { status: 404 })
+      if (!found) return HttpResponse.json({ code: 'CASE_NOT_FOUND' }, { status: 404 })
       const from = found.status
       found.status = 'WITHDRAWN'
       found.can_withdraw = false

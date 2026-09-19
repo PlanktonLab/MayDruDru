@@ -115,24 +115,28 @@ export const PAYMENT_CHANNELS: SchemePaymentChannel[] = [
   {
     code: 'CREDIT_CARD',
     label: '信用卡繳費',
+    hint: '信用卡圖片與信用卡帳單扣款紀錄，兩份都要。',
     required_document_type_codes: ['CARD_LAST4_PHOTO', 'BILLING_STATEMENT'],
     guide_content_key: 'channel.CREDIT_CARD.guide',
   },
   {
     code: 'TELECOM',
     label: '電信繳費',
+    hint: '電信帳單須含繳款人、電話末三碼、購買品項名稱、臺幣金額。',
     required_document_type_codes: ['TELECOM_BILL'],
     guide_content_key: 'channel.TELECOM.guide',
   },
   {
     code: 'E_PAYMENT',
     label: '電子支付工具繳費',
+    hint: '支付帳戶須為申請人本人，並附交易明細。兩份都要。',
     required_document_type_codes: ['PAYER_ACCOUNT_PROOF', 'TRANSACTION_DETAIL'],
     guide_content_key: 'channel.E_PAYMENT.guide',
   },
   {
     code: 'OTHER',
     label: '其他繳費',
+    hint: '須可證明支付帳戶為申請人本人，並附付款明細。兩份都要。',
     required_document_type_codes: ['PAYER_ACCOUNT_PROOF', 'TRANSACTION_DETAIL'],
     guide_content_key: 'channel.OTHER.guide',
   },
@@ -300,7 +304,8 @@ export const REVIEW_RULES: ReviewRule[] = [
     config: {
       source_rule_code: 'BILLING_TWD_AMOUNT',
       compare_to: 'purchase_amount',
-      tolerance_pct: 0.05,
+      // 百分比（5 = 5%），與 apps/api/scripts/seed_data.py 一致。
+      tolerance_pct: 5,
       tolerance_abs: 150,
       rejection_code: 'BILLING_AMOUNT_MISMATCH',
     },

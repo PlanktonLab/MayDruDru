@@ -7,6 +7,7 @@
 
 import { evaluate, precheck, type ApplicationFacts, type Finding, type OcrDocument } from '@maydru/review-rules'
 import type { SchemePublic, SchemeRejectionCode, Verdict } from '../lib/types'
+import { renderNote } from '../lib/reviewNotes'
 import type { DocProblem } from './DocField'
 import type { UploadedDoc } from './state'
 
@@ -42,7 +43,9 @@ export function toProblem(scheme: SchemePublic, finding: Finding): DocProblem {
   return {
     rule_code: finding.rule_code,
     what_wrong: rejection?.public_what_wrong ?? rule?.label ?? '這份文件還缺一項必要資訊',
-    how_to_fix: rejection?.public_how_to_fix ?? finding.note ?? '請依文件說明重新取得一份，再上傳一次。',
+    // 伺服器回的 note 是文案 key（`review.note.*`）；TS 版規則引擎回的是句子。
+    how_to_fix:
+      rejection?.public_how_to_fix ?? renderNote(finding.note) ?? '請依文件說明重新取得一份，再上傳一次。',
     sop_href: sopHref(finding.document_type_code ?? rule?.document_type_code ?? null),
   }
 }
