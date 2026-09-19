@@ -11,7 +11,7 @@ import { Button, EmptyState, Spinner, Stepper } from '@maydru/ui'
 import type { ApplicationFacts } from '@maydru/review-rules'
 import { ChannelStep } from '../apply/ChannelStep'
 import { ConfirmStep } from '../apply/ConfirmStep'
-import { DocsStep } from '../apply/DocsStep'
+import { DocsStep, type DocsNav } from '../apply/DocsStep'
 import { GuideStep } from '../apply/GuideStep'
 import { IdentityStep } from '../apply/IdentityStep'
 import { ToolStep } from '../apply/ToolStep'
@@ -50,6 +50,8 @@ export default function ApplyPage() {
   const scheme = schemeQuery.data
 
   const [state, dispatch] = useReducer(reducer, schemeCode, initialState)
+  // 上傳步驟自己分段，所以它的「下一步」要按哪一段走由 `DocsStep` 算好回報。
+  const [docsNav, setDocsNav] = useState<DocsNav | null>(null)
   const [showErrors, setShowErrors] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
@@ -281,7 +283,7 @@ export default function ApplyPage() {
               onDoc={(code, doc) => dispatch({ type: 'doc', code, doc })}
               onClear={(code) => dispatch({ type: 'dropDoc', code })}
               periods={periods}
-              onDone={goNext}
+              onNavChange={setDocsNav}
             />
           )}
           {stepKey === 'confirm' && (
@@ -311,14 +313,29 @@ export default function ApplyPage() {
                 <ArrowLeft size={16} aria-hidden />
               </Button>
             )}
-            {/* `docs` 那一步的「下一步」由 `DocsStep` 自己出（它要按分段走，
-                而且要依當段是否填齊 disable），這裡就不再出第二顆。 */}
-            {stepKey !== 'confirm' && stepKey !== 'docs' && (
+            {stepKey !== 'confirm' && (
               // `flex-1` 而不是 `block`：`block` 是 `w-full`，會算成「整列的寬度」，
               // 旁邊還有一顆上一步時就會把自己推出卡片外。
-              <Button variant="primary" size="lg" onClick={goNext} className="min-w-0 flex-1">
+              <Button
+                variant="primary"
+                size="lg"
+                className="min-w-0 flex-1"
+                // 上傳步驟分段：還沒走到最後一段時，這顆按鈕先跳下一段而不是跳下一步。
+                disabled={stepKey === 'docs' && (docsNav?.disabled ?? false)}
+                onClick={() => {
+                  if (stepKey === 'docs' && docsNav && !docsNav.onLastGroup) {
+                    docsNav.advance()
+                    return
+                  }
+                  goNext()
+                }}
+              >
                 {/* 準備指引那一步的下一步是「去開相機」，講明白比「下一步」更像一個決定。 */}
-                {stepKey === 'guide' ? '我準備好了，開始上傳' : '下一步'}
+                {stepKey === 'guide'
+                  ? '我準備好了，開始上傳'
+                  : stepKey === 'docs'
+                    ? (docsNav?.label ?? '下一步')
+                    : '下一步'}
                 <ArrowRight size={16} aria-hidden />
               </Button>
             )}

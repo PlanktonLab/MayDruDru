@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400" width="600" height="400" role="img"><rect width="600" height="400" fill="#eef2f7"/>
+  <rect x="40" y="36" width="520" height="328" rx="8" fill="#1e4620"/>
+  <rect x="40" y="36" width="520" height="60" rx="8" fill="#15361a"/>
+  <text x="300" y="74" text-anchor="middle" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="18" font-weight="700" fill="#e8f0e9" letter-spacing="3">竹光商業銀行</text>
+  <text x="300" y="132" text-anchor="middle" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="14" fill="#bcd4be" letter-spacing="6">綜合存款存摺</text>
+  <text x="80" y="196" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12" fill="#9cb89e">戶名</text>
+  <text x="80" y="222" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="18" font-weight="600" fill="#fff">陳宜君</text>
+  <rect x="74" y="202" width="130" height="28" fill="none" stroke="#22c55e" stroke-width="2.5" rx="4"/>
+  <text x="80" y="266" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12" fill="#9cb89e">帳號</text>
+  <text x="80" y="292" font-family="ui-monospace, 'Cascadia Mono', Consolas, monospace" font-size="19" fill="#fff" letter-spacing="2">013-20-451872-9</text>
+  <rect x="74" y="272" width="230" height="30" fill="none" stroke="#22c55e" stroke-width="2.5" rx="4"/>
+  <text x="380" y="266" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12" fill="#9cb89e">分行</text>
+  <text x="380" y="292" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="15" fill="#fff">新竹分行</text>
+  <rect x="374" y="272" width="120" height="30" fill="none" stroke="#22c55e" stroke-width="2.5" rx="4"/>
+  <text x="80" y="342" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="11" fill="#7d9980">撥款用。戶名、帳號、分行須清楚可辨識。</text>
+  
+  <defs>
+    <pattern id="wm" width="260" height="150" patternUnits="userSpaceOnUse" patternTransform="rotate(-24)">
+      <text x="0" y="40" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="30" font-weight="700"
+            fill="#dc2626" fill-opacity="0.16" letter-spacing="3">範例 SAMPLE</text>
+    </pattern>
+  </defs>
+  <rect x="0" y="0" width="600" height="400" fill="url(#wm)"/></svg>

@@ -9,8 +9,8 @@
  */
 
 import { useEffect, useState } from 'react'
-import { ArrowRight, Check } from 'lucide-react'
-import { Button, cx } from '@maydru/ui'
+import { Check } from 'lucide-react'
+import { cx } from '@maydru/ui'
 import { DocField, type DocProblem } from './DocField'
 import { documentTypesFor } from './GuideStep'
 import { expandSlots, groupDocuments } from './docGroups'
@@ -26,8 +26,20 @@ export interface DocsStepProps {
   problemsByDoc: Record<string, DocProblem[]>
   /** 申請補助的期數；多期時收據與繳款憑證每期各要一份。 */
   periods?: number
-  /** 最後一段填齊、按下「下一步」時離開整個上傳步驟。 */
-  onDone: () => void
+  /** 目前這一段的狀態；上層用它決定「下一步」的字與能不能按。 */
+  onNavChange?: (nav: DocsNav) => void
+}
+
+/** 上傳步驟的導覽狀態。按鈕由上層與「上一步」排在同一列，這裡只負責算內容。 */
+export interface DocsNav {
+  /** 按鈕上的字；還有下一段時帶著段落名。 */
+  label: string
+  /** 當段沒填齊就不能走。 */
+  disabled: boolean
+  /** 按下去要做的事：走到下一段，或走完整個步驟（上層接手）。 */
+  advance: () => void
+  /** 已經在最後一段——上層據此知道這次 advance 會離開這一步。 */
+  onLastGroup: boolean
 }
 
 export function DocsStep({
@@ -38,7 +50,7 @@ export function DocsStep({
   onClear,
   problemsByDoc,
   periods = 1,
-  onDone,
+  onNavChange,
 }: DocsStepProps) {
   const types = documentTypesFor(scheme, requiredCodes)
   // 申請多期時，收據與繳款憑證會展開成每期一份。
@@ -55,6 +67,23 @@ export function DocsStep({
   const nextGroup = groups[active + 1]
   // 這一段還有沒傳的就不讓走——一次只檢查眼前這幾份，而不是把八份的缺漏一起丟出來。
   const currentIncomplete = (current?.done ?? 0) < (current?.slots.length ?? 0)
+
+  /**
+   * 把「下一步」的內容交給上層，讓它與「上一步」排在同一列——按鈕畫在這裡的話
+   * 會卡在面板內容中間，跟其他步驟的位置對不齊。
+   */
+  useEffect(() => {
+    onNavChange?.({
+      label: nextGroup ? `下一步：${nextGroup.label}` : '下一步',
+      disabled: currentIncomplete,
+      onLastGroup: !nextGroup,
+      advance: () => {
+        if (!nextGroup) return
+        setActive((index) => index + 1)
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+      },
+    })
+  }, [onNavChange, nextGroup, currentIncomplete])
 
   return (
     <div className="space-y-4">
@@ -121,26 +150,6 @@ export function DocsStep({
         ))}
       </div>
 
-      {/* 整個上傳步驟只有這一顆「下一步」：在段落之間時它走到下一段，
-          在最後一段時它離開上傳步驟。這一段沒填齊就 disable——
-          按不下去比按了才被擋更誠實。 */}
-      <Button
-        variant="primary"
-        size="lg"
-        block
-        disabled={currentIncomplete}
-        onClick={() => {
-          if (nextGroup) {
-            setActive(active + 1)
-            window.scrollTo({ top: 0, behavior: 'smooth' })
-            return
-          }
-          onDone()
-        }}
-      >
-        {nextGroup ? `下一步：${nextGroup.label}` : '下一步'}
-        <ArrowRight size={16} aria-hidden />
-      </Button>
     </div>
   )
 }

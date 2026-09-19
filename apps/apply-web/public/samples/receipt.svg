@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400" width="600" height="400" role="img"><rect width="600" height="400" fill="#fff"/>
+  <rect x="50" y="30" width="500" height="340" fill="#fffef9" stroke="#e5e7eb"/>
+  <text x="300" y="76" text-anchor="middle" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="17" font-weight="700" fill="#111827">OpenAI, L.L.C.</text>
+  <text x="300" y="100" text-anchor="middle" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12" fill="#6b7280">Receipt · 收據</text>
+  <line x1="80" y1="122" x2="520" y2="122" stroke="#e5e7eb"/>
+  <text x="80" y="156" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12" fill="#6b7280">Receipt number</text>
+  <text x="520" y="156" text-anchor="end" font-family="ui-monospace, 'Cascadia Mono', Consolas, monospace" font-size="12" fill="#111827">2841-0093</text>
+  <text x="80" y="186" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12" fill="#6b7280">Date paid</text>
+  <text x="520" y="186" text-anchor="end" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12.5" fill="#111827">August 14, 2026</text>
+  <text x="80" y="216" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12" fill="#6b7280">Description</text>
+  <text x="520" y="216" text-anchor="end" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12.5" fill="#111827">ChatGPT Plus subscription</text>
+  <text x="80" y="246" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12" fill="#6b7280">Billed to</text>
+  <text x="520" y="246" text-anchor="end" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12.5" fill="#111827">CHEN, YI-CHUN</text>
+  <line x1="80" y1="272" x2="520" y2="272" stroke="#e5e7eb"/>
+  <text x="80" y="306" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="13" font-weight="700" fill="#111827">Amount paid</text>
+  <text x="520" y="306" text-anchor="end" font-family="ui-monospace, 'Cascadia Mono', Consolas, monospace" font-size="16" font-weight="700" fill="#111827">USD 20.00</text>
+  <text x="80" y="346" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="11.5" fill="#9ca3af">官方收據為外幣計價，因此另需出帳帳單證明臺幣換算金額。</text>
+  
+  <defs>
+    <pattern id="wm" width="260" height="150" patternUnits="userSpaceOnUse" patternTransform="rotate(-24)">
+      <text x="0" y="40" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="30" font-weight="700"
+            fill="#dc2626" fill-opacity="0.16" letter-spacing="3">範例 SAMPLE</text>
+    </pattern>
+  </defs>
+  <rect x="0" y="0" width="600" height="400" fill="url(#wm)"/></svg>

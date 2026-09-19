@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 380" width="600" height="380" role="img"><rect width="600" height="380" fill="#fff"/>
+  <rect x="40" y="30" width="520" height="320" fill="#fdfdfb" stroke="#d1d5db"/>
+  <text x="300" y="82" text-anchor="middle" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="16" font-weight="700" fill="#111827">新竹市東區公所</text>
+  <text x="300" y="110" text-anchor="middle" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="14" fill="#374151">低收入戶證明</text>
+  <line x1="80" y1="132" x2="520" y2="132" stroke="#e5e7eb"/>
+  <text x="80" y="168" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12" fill="#6b7280">戶長姓名</text>
+  <text x="240" y="168" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="13.5" fill="#111827">陳建國</text>
+  <text x="80" y="202" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12" fill="#6b7280">列冊成員</text>
+  <text x="240" y="202" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="13.5" font-weight="600" fill="#111827">陳宜君（本人）</text>
+  <text x="80" y="236" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12" fill="#6b7280">類別</text>
+  <text x="240" y="236" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="13.5" fill="#111827">低收入戶第二類</text>
+  <text x="80" y="270" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12" fill="#6b7280">有效期間</text>
+  <text x="240" y="270" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="13.5" fill="#111827">115/01/01 – 115/12/31</text>
+  <text x="80" y="324" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="11.5" fill="#9ca3af">依 D4：低收與中低收補助 90%，上限 NT$6,000。</text>
+  
+  <defs>
+    <pattern id="wm" width="260" height="150" patternUnits="userSpaceOnUse" patternTransform="rotate(-24)">
+      <text x="0" y="40" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="30" font-weight="700"
+            fill="#dc2626" fill-opacity="0.16" letter-spacing="3">範例 SAMPLE</text>
+    </pattern>
+  </defs>
+  <rect x="0" y="0" width="600" height="380" fill="url(#wm)"/></svg>

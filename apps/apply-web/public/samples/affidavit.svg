@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 420" width="600" height="420" role="img"><rect width="600" height="420" fill="#fff"/>
+  <text x="300" y="64" text-anchor="middle" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="17" font-weight="700" fill="#111827">切　結　書</text>
+  <text x="60" y="112" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12.5" fill="#374151">立切結書人 陳宜君（下稱本人）茲就申請「新竹市 AI 領航青年</text>
+  <text x="60" y="138" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12.5" fill="#374151">數位工具補助計畫」事項，切結如下：</text>
+  <text x="60" y="176" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12.5" fill="#374151">一、本人所檢附之各項文件均為真實，未有偽造或變造情事。</text>
+  <text x="60" y="204" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12.5" fill="#374151">二、本人就同一筆支出未重複領取其他政府機關之補助。</text>
+  <text x="60" y="232" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12.5" fill="#374151">三、如有不實，願負一切法律責任並繳回已領補助款。</text>
+  <text x="60" y="292" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12.5" fill="#374151">立切結書人（親筆簽名）：</text>
+  <path d="M280 300 q18 -26 34 -4 t30 -10 q14 16 32 -6 t26 8" fill="none" stroke="#1e3a8a" stroke-width="2.4" stroke-linecap="round"/>
+         <rect x="272" y="274" width="180" height="42" fill="none" stroke="#22c55e" stroke-width="2.5" rx="4"/>
+         <text x="278" y="268" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="11.5" font-weight="700" fill="#16a34a">親筆簽名（必要）</text>
+  <text x="60" y="392" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12" fill="#6b7280">中華民國　115　年　9　月　12　日</text>
+  
+  <defs>
+    <pattern id="wm" width="260" height="150" patternUnits="userSpaceOnUse" patternTransform="rotate(-24)">
+      <text x="0" y="40" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="30" font-weight="700"
+            fill="#dc2626" fill-opacity="0.16" letter-spacing="3">範例 SAMPLE</text>
+    </pattern>
+  </defs>
+  <rect x="0" y="0" width="600" height="420" fill="url(#wm)"/></svg>
