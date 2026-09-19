@@ -27,7 +27,7 @@ import {
   describeImageProblem,
   imageProblemCodes,
 } from './labels'
-import { fetchRichMenu, fetchSyncLogs, syncRichMenu } from './queries'
+import { fetchRichMenu, fetchRichMenuImage, fetchSyncLogs, syncRichMenu } from './queries'
 import { RICH_MENU_CANVAS, defaultGridBounds, tileRect } from './tiles'
 
 /** 六格的動作代碼 → 中文，和 `services/line/flex.MAIN_MENU` 同一組。 */
@@ -35,7 +35,7 @@ const TILE_ACTION_LABEL: Record<string, string> = {
   case_status: '查詢案件進度',
   my_cases: '我的案件',
   scheme_info: '補助資訊',
-  sop_start: '資格檢查',
+  sop_start: '申請小幫手',
   faq: '常見問題',
   contact: '聯絡我們',
 }
@@ -51,6 +51,7 @@ export default function LineRichMenuPage() {
   const [syncing, setSyncing] = useState(false)
 
   const menu = useQuery({ queryKey: ['line-richmenu'], queryFn: fetchRichMenu })
+  const preview = useQuery({ queryKey: ['line-richmenu-image'], queryFn: fetchRichMenuImage })
   const logs = useQuery({ queryKey: ['line-sync-logs'], queryFn: () => fetchSyncLogs(20) })
   const state = menu.data?.state ?? 'unknown'
   const tiles = menu.data?.tiles ?? []
@@ -60,7 +61,7 @@ export default function LineRichMenuPage() {
     setProblems([])
     try {
       await syncRichMenu(image)
-      await invalidate('line-richmenu', 'line-sync-logs')
+      await invalidate('line-richmenu', 'line-richmenu-image', 'line-sync-logs')
       setImage(null)
       if (filePicker.current) filePicker.current.value = ''
       toast('已同步到 LINE')
@@ -97,8 +98,10 @@ export default function LineRichMenuPage() {
         </Notice>
       )}
 
-      <Card title="版面" actions={<span className="text-[11px] text-muted">畫布 {RICH_MENU_CANVAS.width} × {RICH_MENU_CANVAS.height}</span>}>
-        <TileLayout tiles={tiles} />
+      <Card title="目前圖片與點擊區" actions={<span className="text-[11px] text-muted">畫布 {RICH_MENU_CANVAS.width} × {RICH_MENU_CANVAS.height}</span>}>
+        <TileLayout tiles={tiles} imageUrl={preview.data ?? ''} />
+        {preview.isLoading && <div className="mt-2 flex items-center gap-2 text-xs text-muted"><Spinner /> 載入預設圖片…</div>}
+        {preview.error && <Notice tone="warn">圖片預覽載入失敗：{errMsg(preview.error)}</Notice>}
       </Card>
 
       <Card title="同步到 LINE">
@@ -159,22 +162,23 @@ export default function LineRichMenuPage() {
  * 六格按畫布比例排出來。外框用 `aspect-ratio`，格子用百分比絕對定位——
  * 縮放時比例自己對，不必為了不同寬度再算一次。
  */
-function TileLayout({ tiles }: { tiles: RichMenuTile[] }) {
+function TileLayout({ tiles, imageUrl }: { tiles: RichMenuTile[]; imageUrl: string }) {
   const cells = tiles.length
     ? tiles
     : defaultGridBounds().map((bounds, i) => ({ action: '', label_key: '', label: `第 ${i + 1} 格`, bounds, data: '' }))
   return (
     <div className="relative w-full overflow-hidden rounded-xl border border-border bg-background-lite" style={{ aspectRatio: `${RICH_MENU_CANVAS.width} / ${RICH_MENU_CANVAS.height}` }}>
+      {imageUrl && <img src={imageUrl} alt="目前 LINE 圖文選單" className="absolute inset-0 h-full w-full object-cover" />}
       {cells.map((tile, index) => {
         const rect = tileRect(tile.bounds)
         return (
           <div
             key={`${tile.action || 'empty'}-${index}`}
-            className="absolute flex flex-col items-center justify-center gap-1 border border-border bg-canvas p-2 text-center"
+            className="absolute flex flex-col items-center justify-center gap-1 border border-white/70 bg-black/5 p-2 text-center"
             style={{ left: `${rect.left}%`, top: `${rect.top}%`, width: `${rect.width}%`, height: `${rect.height}%` }}
           >
-            <span className="flex items-center gap-1 text-[13px] font-medium text-primary"><ImageIcon size={12} aria-hidden className="text-secondary" />{tile.label || '（沒有標籤）'}</span>
-            {tile.action && <span className="font-mono text-[10px] text-secondary">{TILE_ACTION_LABEL[tile.action] ?? tile.action}</span>}
+            <span className="flex items-center gap-1 rounded-md bg-canvas/85 px-2 py-1 text-[13px] font-medium text-primary shadow-sm"><ImageIcon size={12} aria-hidden className="text-secondary" />{tile.label || '（沒有標籤）'}</span>
+            {tile.action && <span className="rounded bg-canvas/85 px-1.5 py-0.5 font-mono text-[10px] text-secondary">{TILE_ACTION_LABEL[tile.action] ?? tile.action}</span>}
           </div>
         )
       })}

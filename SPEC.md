@@ -596,7 +596,7 @@ Cloudflare proxied；origin cert 需涵蓋三個名稱（萬用或重簽）。DN
 | D17 | 查詢的第二因子是手機或身分證**末四碼**（不是完整號碼）；連續 5 次失敗鎖 15 分鐘，案號與來源 IP 各自計數；查無此案與末四碼錯誤的回應完全一致 | 末四碼即可驗證又不必再傳一次完整個資；雙軸計數同時擋單案猜測與整批掃號；回應一致才不會讓錯誤訊息變成查詢介面 |
 | D18 | P3 的實作決策：(a) 文件物件 key 為 `applications/{tenant}/{case_no}/{doc_type}/{revision}.{ext}`，預覽圖同目錄下的 `{revision}-preview.jpg`；(b) 同一份文件有多筆 OCR 時，承辦人重新辨識的結果（`source=reviewer`）勝過申請人上傳的，同來源取最新；(c) 規則引擎的 `note` 回**文案 key**（`review.note.*`）而不是句子，字由 contents 層渲染；(d) `/api/apply/*` 的錯誤 body 是扁平的 `{code, …}`，不包在 `detail` 裡；(e) 匿名流量歸屬 `slug="default"` 的 tenant，沒有就取建立時間最早的那一個；(f) 補件送出後系統立刻接著跑 T5，`REVISION_SUBMITTED` 是過場狀態；(g) `review_rules.config.tolerance_pct` 是百分比（`5` = 5%），Python 與 TS 兩版一致；(h) OpenAPI 提交為 `apps/api/openapi.json` 快照，CI 以它做 client 同步檢查 | (a) 案號本身就是命名空間，整案稽核與刪除只要一個前綴；(b) 申請人送上來的 OCR 依 §11 不可信，承辦人看著原圖跑出來的才算數；(c) 給市民的文字一律走 contents（§17.4），service 不得硬編中文；(d) 契約寫的就是扁平 body，多一層 `detail` 會讓前端每個錯誤都要解兩次；(e) 用網域或 header 判斷等於讓「送到哪個機關」變成可偽造的輸入；(f) 與建案後立刻跑 T1 對稱，補件完就該回到同一個審查佇列；(g) 兩版共用 fixtures，單位不同會讓同一筆設定在兩邊得到不同判定；(h) schema 一動前端型別就得動，快照讓契約變更在 PR 裡看得見
 | D19 | 內容服務叫 `services/contents.py`（複數）；`services/content.py` 是 SOP_Tutor 沿用的流程快照服務，兩者無關 | 名字撞了但責任完全不同，改名舊模組會動到 SOP 那一整條線；複數也剛好對上資料表 `contents` |
-| D20 | youth-line-bot 的六題資格問卷（`eligibility` 精靈）不移植，「申請小幫手」改為先問「你要準備哪一份文件」的文件選擇器，接到 SOP flow | 資格判斷已經資料化在 `schemes`（D6），問卷只是把同一組條件再問一次；本平台真正能幫上忙的是「這份文件怎麼拿到」，那是 SOP 的強項 |
+| D20 | youth-line-bot 的六題資格問卷（`eligibility` 精靈）不移植，「申請小幫手」改為先問使用的銀行／平台；選定後列出該平台所有已發布 SOP，亦可直接上傳截圖定位 | 資格判斷已經資料化在 `schemes`（D6），問卷只是把同一組條件再問一次；民眾通常先知道自己使用哪一家銀行，再從該平台的完整教學清單選擇要取得的資料 |
 | D21 | 12 個狀態在 LINE 上壓成 5 個公開階段（送出 → 審核 → 核定 → 撥款 → 完成）；補件、逾期、不通過不另開階段，而是把所在階段標成「卡住」 | 民眾要知道的是「卡在哪一關、我要做什麼」，不是機關內部有幾種狀態；階段數固定，之後新增狀態也不必重畫時間軸 |
 | D22 | 沒有人綁定 LINE 的案件仍然留一列 `notifications`，狀態 `skipped`、`error=no_linked_line_user` | 留白會讓後台誤以為通知都送到了；`queued` 則是在說謊——沒有收件人，它永遠不會被送出 |
 | D23 | `sop.template.*` 的預設值保留 Python `str.format` 的單大括號 `{placeholder}`，不改成 `{{var}}`，`variables` 一律留空 | 那些句子由 `services/policy.py` 以 `.format()` 代入；改寫語法等於要動 SOP 引擎，而承辦人在後台看到的仍然是同一段字 |
@@ -613,6 +613,7 @@ Cloudflare proxied；origin cert 需涵蓋三個名稱（萬用或重簽）。DN
 | D34 | `packages/api-client/src/schema.d.ts` 是 OpenAPI 的可重現生成物並提交進 git；CI 重新生成後用 `git diff --exit-code` 驗證 | PR 可以直接審契約差異，前端不必在安裝時啟動 API；漏更新 schema 會在 CI 立即失敗 |
 | D35 | P8 的可及性門檻以 axe 的 WCAG A/AA serious/critical violations 為自動化 gate；顏色對比另由 token 設計與人工檢視負責（jsdom 無法計算實際樣式）。稽核 UI 只讀 `audit_logs.diff`，不展開案件與文件 | 自動測試抓得到名稱、語意、結構等嚴重退步，又不製造 jsdom canvas 的假訊號；稽核畫面不成為第二份個資資料庫 |
 | D36 | 將既有 ProReview 能力在後台收斂為「審查作業」導覽：案件總覽與實際審核沿用單一案件／finding 資料；另提供獨立「資料重點設定」入口，但仍直接編輯方案的 `review_rules`，不建立第二份規則 | 承辦人能按工作流程找到設定與審核，不必先知道規則藏在方案管理；共用同一份 API、規則引擎與稽核紀錄可避免設定漂移 |
+| D37 | LINE rich menu 保留新 action 名稱並相容舊 youth-line-bot 的 `subsidy_info`、`eligibility` postback；後台版面直接預覽目前圖檔，沒有客製圖時顯示內建美術稿 | LINE 上已發布的舊選單不應因後端整合改名而失效；看得到實際圖檔才能讓承辦人確認預設圖片與點擊熱區一致 |
 
 ---
 

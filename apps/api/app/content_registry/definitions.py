@@ -1271,9 +1271,9 @@ _BUTTON: tuple[ContentDefinition, ...] = (
     _def(
         "button.eligibility",
         "button",
-        "快速回覆：找補助",
-        "功能固定為「資格檢查」，只有顯示文字可改。",
-        "📝 找補助",
+        "快速回覆：申請小幫手",
+        "功能固定為「申請小幫手」，只有顯示文字可改。",
+        "📝 申請小幫手",
         content_type="button",
         sort_order=5,
     ),
@@ -2320,12 +2320,38 @@ _SOP: tuple[ContentDefinition, ...] = (
         sort_order=100,
     ),
     _def(
+        "line.sop.ask_platform_general",
+        "sop",
+        "申請小幫手詢問銀行或平台",
+        "民眾開啟申請小幫手時的第一句，下方會列出目前有教學的平台。",
+        "請問你使用哪一家銀行或平台？\n"
+        "可以點下方選項、直接輸入名稱，或上傳目前畫面的截圖，我會幫你找操作方式。",
+        sort_order=100,
+    ),
+    _def(
+        "line.sop.platform_guides",
+        "sop",
+        "平台的全部操作指引",
+        "民眾選定銀行或平台後，列出該平台所有已發布的操作教學。",
+        "{{platform}}目前提供以下操作指引：\n{{guides}}\n\n請點選想看的項目，或直接輸入操作名稱。",
+        variables=("platform", "guides"),
+        sort_order=101,
+    ),
+    _def(
+        "line.sop.platform_not_found",
+        "sop",
+        "找不到銀行或平台",
+        "民眾輸入的平台名稱無法對應到已發布教學時顯示。",
+        "目前找不到這個銀行或平台的操作教學。\n請從下方選項挑一個，或上傳目前畫面的截圖。",
+        sort_order=102,
+    ),
+    _def(
         "line.sop.not_recognized",
         "sop",
         "認不出截圖時的回覆",
         "民眾傳來的截圖比對不到任何教學步驟時的回覆。",
         "抱歉，我看不出這張截圖是哪一個畫面。\n"
-        "請告訴我你正在準備哪一份文件，我再帶你一步一步做。",
+        "請告訴我你使用哪一家銀行或平台，我再列出可以查看的操作指引。",
         sort_order=101,
     ),
     _def(

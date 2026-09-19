@@ -18,6 +18,7 @@ from app.services import contents
 from app.services.line import conversation, flex, handlers
 from sqlalchemy import select
 
+from tests.sop_helpers import make_published_flow
 from tests.test_state_machine import drive, make_case
 
 USER = "Uline0000000000000000000000000001"
@@ -217,11 +218,19 @@ async def test_scheme_latest_and_closing_use_the_carousel(db, tenant, scheme):
         assert messages[0]["contents"]["type"] == "carousel"
 
 
-async def test_sop_start_asks_which_document(db, tenant, scheme):
-    """決策 D20：六題資格問卷收掉，改成直接問要準備哪一份文件。"""
+async def test_sop_start_asks_which_platform(db, tenant, scheme, fake_storage):
+    """決策 D20：先問銀行／平台，再列出該平台全部操作教學。"""
+    flow = await make_published_flow(db, tenant.id, storage=fake_storage)
     messages = await reply(db, tenant, postback_event("sop_start"))
-    assert texts(messages) == await say(db, tenant, "line.sop.ask_document")
-    assert all(d.startswith("action=sop_document") for d in quick_actions(messages[0]))
+    assert texts(messages) == await say(db, tenant, "line.sop.ask_platform_general")
+    assert quick_actions(messages[0]) == [f"action=sop_platform&platform={flow.platform_id}"]
+    assert (await conversation.get(db, tenant.id, USER)).flow == handlers.PICKER_FLOW
+
+
+@pytest.mark.parametrize("legacy_action", ["subsidy_info", "eligibility"])
+async def test_legacy_rich_menu_actions_still_route(db, tenant, scheme, legacy_action):
+    messages = await reply(db, tenant, postback_event(legacy_action))
+    assert messages
 
 
 async def test_sop_prepare_without_a_mapped_flow_says_so(db, tenant, scheme):
@@ -299,10 +308,10 @@ async def test_sop_exit_also_clears_the_conversation(db, tenant):
 
 
 async def test_sop_session_buttons_fall_back_to_the_picker(db, tenant, scheme):
-    """沒有進行中的教學時按那三顆按鈕，把人帶回文件選擇器而不是報錯。"""
+    """沒有進行中的教學時按那三顆按鈕，把人帶回平台選擇器而不是報錯。"""
     for action in ("sop_next", "sop_stuck", "sop_switch"):
         messages = await reply(db, tenant, postback_event(action))
-        assert texts(messages) == await say(db, tenant, "line.sop.ask_document")
+        assert texts(messages) == await say(db, tenant, "line.sop.ask_platform_general")
 
 
 async def test_security_check_keeps_the_hotline(db, tenant):
@@ -482,11 +491,11 @@ async def test_an_unknown_step_resets_the_flow(db, tenant):
 # --------------------------------------------------------------------- 圖片
 
 async def test_an_image_gets_the_safety_notice_then_the_question(db, tenant, scheme, line_sender):
-    """沒有任何已發布流程時，截圖定位不到東西，bot 回安全提醒 + 文件選擇器。"""
+    """沒有任何已發布流程時，截圖定位不到東西，bot 回安全提醒 + 平台選擇器。"""
     messages = await reply(db, tenant, event("message", message={"type": "image", "id": "1"}))
     assert texts(messages).startswith(await say(db, tenant, "security.screenshot_notice"))
     assert await say(db, tenant, "line.sop.not_recognized") in texts(messages)
-    assert all(d.startswith("action=sop_document") for d in quick_actions(messages[-1]))
+    assert all(d.startswith("action=sop_platform") for d in quick_actions(messages[-1]))
     assert line_sender.fetched == ["1"]     # 圖檔真的去 blob API 取了
 
 

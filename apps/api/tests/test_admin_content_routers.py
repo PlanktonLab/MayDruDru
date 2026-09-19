@@ -228,6 +228,13 @@ async def test_rich_menu_status_is_readable_by_staff(client, tenant, auth_header
     assert len(r.json()["tiles"]) == 6
 
 
+async def test_rich_menu_image_falls_back_to_the_shipped_artwork(client, tenant, auth_headers):
+    r = await client.get("/api/admin/line/richmenu/image", headers=auth_headers("case_reviewer"))
+    assert r.status_code == 200
+    assert r.headers["content-type"] == "image/jpeg"
+    assert r.content.startswith(b"\xff\xd8")
+
+
 @pytest.mark.parametrize("role", NON_ADMINS)
 async def test_only_admin_may_sync_the_rich_menu(client, tenant, auth_headers, role):
     r = await client.post("/api/admin/line/richmenu/sync", headers=auth_headers(role))

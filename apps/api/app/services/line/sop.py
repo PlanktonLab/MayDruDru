@@ -39,22 +39,30 @@ log = logging.getLogger("maydru.line.sop")
 
 __all__ = [
     "SESSION_FLOW",
+    "PICKER_FLOW",
     "SopTurn",
     "choose_option",
     "close",
+    "begin_platform_picker",
     "document_picker",
+    "flow_picker_for_platform",
     "handle_action",
     "handle_image",
     "handle_text",
     "open_for_document",
     "open_for_flow",
     "open_from_screenshot",
+    "platform_picker",
+    "platform_from_text",
+    "flow_from_text",
     "render",
 ]
 
 SESSION_FLOW = "sop_session"
+PICKER_FLOW = "sop_picker"
 #: 一份文件最多列幾個平台讓人選。超過這個數字的選擇題本身就是個問題。
 PLATFORM_CHOICE_LIMIT = 10
+FLOW_CHOICE_LIMIT = 12
 THEME = "light"
 
 
@@ -112,6 +120,112 @@ async def open_for_document(
     if len(flows) == 1:
         return await open_for_flow(ctx, flows[0], document_code=document_code, document_label=label)
     return [await _platform_choice(ctx, flows, document_code, label)]
+
+
+async def platform_picker(db: AsyncSession, tenant_id: str) -> dict[str, Any]:
+    """只列出至少有一條已發布流程的平台。"""
+    rows = (
+        await db.execute(
+            select(Platform)
+            .join(Flow, Flow.platform_id == Platform.id)
+            .where(Platform.tenant_id == tenant_id, Flow.status == "published")
+            .order_by(Platform.display_name)
+        )
+    ).scalars().unique().all()
+    items = [
+        (row.display_name, flex.postback("sop_platform", platform=row.id))
+        for row in rows[:PLATFORM_CHOICE_LIMIT]
+    ]
+    return flex.quick_reply(items) if items else {}
+
+
+async def begin_platform_picker(ctx: SopTurn, *, key: str = "line.sop.ask_platform_general") -> list[dict[str, Any]]:
+    """進入平台選擇狀態；後續可按 quick reply、直接打平台名或傳截圖。"""
+    await conversation.set_state(
+        ctx.db, ctx.tenant_id, ctx.user_id, PICKER_FLOW, "platform", {}, now=ctx.now
+    )
+    return [
+        flex.text_message(
+            await ctx.t(key), await platform_picker(ctx.db, ctx.tenant_id) or None
+        )
+    ]
+
+
+async def flow_picker_for_platform(ctx: SopTurn, platform_id: str) -> list[dict[str, Any]]:
+    """選定平台後列出它的全部已發布操作指引。"""
+    platform = await ctx.db.get(Platform, platform_id)
+    if platform is None or platform.tenant_id != ctx.tenant_id:
+        return await begin_platform_picker(ctx, key="line.sop.platform_not_found")
+    flows = (
+        await ctx.db.execute(
+            select(Flow)
+            .where(
+                Flow.tenant_id == ctx.tenant_id,
+                Flow.platform_id == platform.id,
+                Flow.status == "published",
+            )
+            .order_by(Flow.name)
+        )
+    ).scalars().all()
+    if not flows:
+        return await begin_platform_picker(ctx, key="line.sop.platform_not_found")
+    await conversation.set_state(
+        ctx.db, ctx.tenant_id, ctx.user_id, PICKER_FLOW, "flow",
+        {"platform": platform.id}, now=ctx.now,
+    )
+    guide_list = "\n".join(f"{index + 1}. {flow.name}" for index, flow in enumerate(flows))
+    quick = flex.quick_reply([
+        (flow.name, flex.postback("sop_open", flow=flow.id))
+        for flow in flows[:FLOW_CHOICE_LIMIT]
+    ])
+    return [
+        flex.text_message(
+            await ctx.t("line.sop.platform_guides", platform=platform.display_name, guides=guide_list),
+            quick or None,
+        )
+    ]
+
+
+async def platform_from_text(db: AsyncSession, tenant_id: str, text: str) -> Platform | None:
+    """以名稱、品牌或別名比對民眾直接輸入的平台。"""
+    needle = text.strip().casefold()
+    if not needle:
+        return None
+    rows = (
+        await db.execute(
+            select(Platform)
+            .join(Flow, Flow.platform_id == Platform.id)
+            .where(Platform.tenant_id == tenant_id, Flow.status == "published")
+            .order_by(Platform.display_name)
+        )
+    ).scalars().unique().all()
+    for row in rows:
+        names = [row.display_name, row.brand, *(row.aliases or [])]
+        if any(name and (name.casefold() in needle or needle in name.casefold()) for name in names):
+            return row
+    return None
+
+
+async def flow_from_text(db: AsyncSession, tenant_id: str, platform_id: str, text: str) -> Flow | None:
+    """平台已選定時，以操作名稱或序號選一條流程。"""
+    rows = (
+        await db.execute(
+            select(Flow)
+            .where(
+                Flow.tenant_id == tenant_id,
+                Flow.platform_id == platform_id,
+                Flow.status == "published",
+            )
+            .order_by(Flow.name)
+        )
+    ).scalars().all()
+    needle = text.strip().casefold()
+    if needle.isdigit() and 1 <= int(needle) <= len(rows):
+        return rows[int(needle) - 1]
+    return next(
+        (row for row in rows if row.name.casefold() in needle or needle in row.name.casefold()),
+        None,
+    )
 
 
 async def _platform_choice(
@@ -246,12 +360,7 @@ async def handle_action(
         return await ctx.say_with_menu("line.sop.ended")
     if action == "sop_switch":
         await close(ctx, state)
-        return [
-            flex.text_message(
-                await ctx.t("line.sop.switch"),
-                await document_picker(ctx.db, ctx.tenant_id) or None,
-            )
-        ]
+        return await begin_platform_picker(ctx, key="line.sop.switch")
     if action == "sop_stuck":
         return await ctx.say("line.sop.stuck_ask_screenshot")
     return await _turn(ctx, state, {"kind": "action", "action": "next"})

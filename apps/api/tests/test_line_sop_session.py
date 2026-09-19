@@ -15,7 +15,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 from app.ai.session_graph import SessionStore
-from app.models import DocumentType
+from app.models import DocumentType, Platform
 from app.services import contents
 from app.services.line import conversation, flex, handlers, sop
 from PIL import Image
@@ -93,6 +93,33 @@ async def mapped_flow(db, tenant, scheme, fake_storage, screenshot):
 
 # ------------------------------------------------------------------ 開場
 
+async def test_application_helper_lists_every_published_guide_for_the_selected_platform(
+    db, tenant, mapped_flow, fake_storage
+):
+    second = await make_published_flow(
+        db, tenant.id, platform=await db.get(Platform, mapped_flow.platform_id),
+        name="下載存款明細", storage=fake_storage,
+    )
+    opened = await reply(db, tenant, postback_event("sop_start"))
+    platform_action = quick_actions(opened[0])[0]
+    assert platform_action == f"action=sop_platform&platform={mapped_flow.platform_id}"
+
+    listed = await reply(db, tenant, postback_event("sop_platform", platform=mapped_flow.platform_id))
+    body = texts(listed)
+    assert mapped_flow.name in body and second.name in body
+    actions = quick_actions(listed[0])
+    assert f"action=sop_open&flow={mapped_flow.id}" in actions
+    assert f"action=sop_open&flow={second.id}" in actions
+
+
+async def test_application_helper_accepts_a_typed_platform_name(db, tenant, mapped_flow):
+    await reply(db, tenant, postback_event("sop_start"))
+    platform = await db.get(Platform, mapped_flow.platform_id)
+    listed = await reply(db, tenant, text_event(platform.display_name))
+    assert mapped_flow.name in texts(listed)
+    assert (await state_of(db, tenant)).step == "flow"
+
+
 async def test_picking_a_document_with_one_flow_starts_the_session(db, tenant, mapped_flow, line_sender):
     messages = await reply(db, tenant, postback_event("sop_document", doc=DOC))
 
@@ -144,7 +171,7 @@ async def test_a_document_without_a_mapping_says_so_and_stays_idle(db, tenant, s
 
 async def test_sop_open_with_an_unknown_flow_returns_to_the_picker(db, tenant, mapped_flow):
     messages = await reply(db, tenant, postback_event("sop_open", flow="nope", doc=DOC))
-    assert texts(messages) == await say(db, tenant, "line.sop.ask_document")
+    assert texts(messages) == await say(db, tenant, "line.sop.ask_platform_general")
 
 
 async def test_the_picker_uses_the_document_label_when_the_scheme_sets_one(db, tenant, scheme, mapped_flow):
@@ -200,8 +227,8 @@ async def test_switch_ends_the_session_and_asks_again(db, tenant, mapped_flow):
 
     messages = await reply(db, tenant, postback_event("sop_switch"))
     assert await say(db, tenant, "line.sop.switch") in texts(messages)
-    assert all(a.startswith("action=sop_document") for a in quick_actions(messages[0]))
-    assert (await state_of(db, tenant)).is_idle
+    assert all(a.startswith("action=sop_platform") for a in quick_actions(messages[0]))
+    assert (await state_of(db, tenant)).flow == sop.PICKER_FLOW
     assert await SessionStore.load(tenant.id, session_id) is None
 
 
@@ -320,15 +347,15 @@ async def test_an_idle_screenshot_that_misses_offers_the_picker(db, tenant, sche
     """一條已發布的流程都沒有，所以一定定位不到。"""
     messages = await reply(db, tenant, image_event())
     assert await say(db, tenant, "line.sop.not_recognized") in texts(messages)
-    assert all(a.startswith("action=sop_document") for a in quick_actions(messages[-1]))
-    assert (await state_of(db, tenant)).is_idle
+    assert all(a.startswith("action=sop_platform") for a in quick_actions(messages[-1]))
+    assert (await state_of(db, tenant)).flow == sop.PICKER_FLOW
 
 
 async def test_an_image_we_cannot_fetch_still_gets_an_answer(db, tenant, mapped_flow, line_sender):
     line_sender.fail_with = RuntimeError("blob API 掛了")
     messages = await reply(db, tenant, image_event())
     assert await say(db, tenant, "line.sop.not_recognized") in texts(messages)
-    assert (await state_of(db, tenant)).is_idle
+    assert (await state_of(db, tenant)).flow == sop.PICKER_FLOW
 
 
 async def test_an_image_event_without_an_id_is_not_fetched(db, tenant, scheme, line_sender):
