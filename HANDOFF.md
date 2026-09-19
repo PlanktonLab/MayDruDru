@@ -13,13 +13,13 @@
 | P1 資料層 | ✅ 已完成並合併 |
 | P2 內容與 LINE | ✅ 已完成並合併 |
 | P3 送件與審核 | ✅ 已完成並合併（前後端都有，含實機 smoke） |
-| **P4 SOP 串接** | 🔶 **後端骨幹已提交（`8a8582b`），測試檔未提交，前端與 e2e 未做** |
-| **P5 方案管理與內容助理** | 🔶 **後端已提交在獨立 branch，前端已寫但未提交、未驗證** |
+| **P4 SOP 串接** | 🔶 **後端骨幹＋測試已提交（`be0f1a4`），apply-web /sop 頁面、admin-web 對照頁、e2e 劇本仍未做** |
+| **P5 方案管理與內容助理** | 🔶 **後端＋前端都已提交在獨立 branch（`ab67356`），尚未合併回 main** |
 | P6 `/v1` 與 webhook | ⬜ 未開始 |
 | P7 部署 | ⬜ 未開始 |
 | P8 打磨 | ⬜ 未開始 |
 
-目前測試數（`main` 含未提交的 P4 工作）：**後端 1130 passed / 1 failed**（唯一失敗是 OpenAPI 快照過期，重新產生即可），前端 288 passed。
+目前測試數：main 分支後端 **1131 passed**（含 P4 的 sop_helpers/test_sop_*/test_intent_classify/test_faq_search/test_line_sop_session，OpenAPI 快照已重新產生），前端 288 passed；P5 branch（`worktree-agent-a9dac84b8568275d8`，尚未合併）後端 1151 passed、admin-web 119 passed（含方案管理頁）。
 
 ---
 
@@ -69,64 +69,42 @@ docker compose up -d postgres redis minio renderer
 
 ---
 
-## 2. 立刻要做的三件事（接手第一步）
+## 2. 已完成的收尾動作（本輪交接前做的）
 
-### 2.1 保住 P5 的未提交前端（**最優先，有遺失風險**）
+- P4 的測試檔與修正已提交在 main：`be0f1a4`（1512 行測試 + retrieval.py 的 mypy 修正）。OpenAPI 快照已重新產生並隨 commit 一起提交。四道品質門檻（pytest / ruff+mypy+lint-imports / typecheck+lint+test+build）在提交前都跑過，全綠。
+- P5 的前端（`apps/admin-web/src/pages/schemes/` 全部檔案、LINE 內容區的 FAQ 建議卡）已在 worktree 分支 `worktree-agent-a9dac84b8568275d8` 提交（`ab67356`）。過程中修掉一個測試自身的 bug（`user.type` 遇到 regex 裡的 `[` `]` 會被解讀成鍵盤描述符，改用 `user.paste`）。admin-web 119 個測試全過。
 
-P5 的後端已經提交在 branch `worktree-agent-a9dac84b8568275d8`，但**前端檔案只存在於一個 git worktree 的工作目錄裡，尚未提交**，而那個目錄位在未被追蹤的 `.claude/` 底下：
+**下一步只剩一件事：把 P5 branch 合併回 main。**
 
-```
-/Users/sam/Documents/MyProject/mixProject/MayDru/.claude/worktrees/agent-a9dac84b8568275d8
-```
+### 2.1 合併 P5 branch 回 main
 
-未提交的內容：
-
-| 檔案 | 說明 |
-|---|---|
-| `apps/admin-web/src/pages/schemes/` | 新目錄，10 個檔案：`SchemesPage.tsx`、`SchemeEditorPage.tsx`、`ChildTab.tsx`、`RulesTab.tsx`（審核規則編輯器）、`ToolsTab.tsx`、`CopilotPanel.tsx`、`fields.tsx`、`queries.ts`、`types.ts`、`schemes.test.tsx` |
-| `apps/admin-web/src/pages/line/SuggestionCards.tsx` | 新檔，內容助理 (b) 的 FAQ 建議卡 |
-| `apps/admin-web/src/pages/line/UnmatchedPage.tsx` | 改動，加上「產生 FAQ 建議」 |
-| `apps/admin-web/src/{App.tsx,layout/AppShell.tsx}` | 改動，加上「方案管理」導航與路由 |
-| `apps/api/app/routers/admin/{schemas,schemes}.py` | 小改動（15 行） |
-
-**第一個動作**：進到那個 worktree，跑一次前端測試，然後提交。
+P5 branch 從 `82b9825` 分出，main 已經前進到 `be0f1a4`（P4 骨幹＋測試）。合併指令：
 
 ```bash
-cd /Users/sam/Documents/MyProject/mixProject/MayDru/.claude/worktrees/agent-a9dac84b8568275d8
-npm install && npm run typecheck && npm run lint && npm test && npm run build
-git add apps/admin-web apps/api && git commit -m "feat(admin-web): 方案管理區與內容助理面板（SPEC §8.2 / §8.6）"
+git checkout main
+git merge --no-ff worktree-agent-a9dac84b8568275d8
 ```
 
-若不想用 worktree，也可以直接在主目錄 `git checkout worktree-agent-a9dac84b8568275d8`，但**未提交的檔案不會跟著過去**（它們在 worktree 的工作目錄裡），所以請務必先在 worktree 內提交。
+預期衝突（**保留雙方功能，逐一手動合併**）：
 
-### 2.2 提交 P4 未提交的測試與修正
+`apps/api/app/main.py`、`app/routers/admin/__init__.py`、`app/ai/{fake,prompts,schemas}.py`、`app/content_registry/definitions.py`、`app/services/{contents,review,scheme}.py`、`app/routers/admin/{schemas,schemes}.py`、`apps/admin-web/src/{App.tsx,layout/AppShell.tsx}`、`apps/api/openapi.json`（衝突了就別手動合，直接重新產生：見下）。
 
-`main` 的工作目錄有 P4 未提交的內容（測試全綠，只差 OpenAPI 快照）：
+合併後：
 
+```bash
+cd apps/api && uv run --package maydru-api pytest -q -p no:warnings
+cd .. && uv run ruff check && uv run mypy && uv run lint-imports --config pyproject.toml
+npm run typecheck && npm run lint && npm test && npm run build
+cd apps/api && UPDATE_OPENAPI=1 uv run --package maydru-api pytest tests/test_openapi_snapshot.py -q
 ```
-已改：apps/api/app/ai/retrieval.py, app/ai/session_graph.py, app/deps.py,
-      app/services/line/sop.py, tests/conftest.py
-新增：apps/api/tests/{sop_helpers.py, test_sop_api.py, test_sop_links.py,
-      test_intent_classify.py, test_faq_search.py, test_line_sop_session.py}   （共 1512 行）
-```
 
-跑一次測試確認，重新產生 OpenAPI 快照，然後提交。
-
-### 2.3 合併 P5 branch 回 main
-
-P5 branch 從 `82b9825` 分出，main 已經前進到 `8a8582b`（P4 骨幹）。兩邊都碰的檔案（預期會衝突，**保留雙方功能**）：
-
-`apps/api/app/main.py`、`app/routers/admin/__init__.py`、`app/ai/{fake,prompts,schemas}.py`、`app/content_registry/definitions.py`、`app/services/{contents,review,scheme}.py`、`app/routers/admin/{schemas,schemes}.py`、`apps/admin-web/src/{App.tsx,layout/AppShell.tsx}`、`apps/api/openapi.json`（衝突就重新產生，別手動合）。
-
-合併後跑完整四道門檻，並重新產生 OpenAPI 快照。
-
----
+四道都綠、OpenAPI 快照重新產生並提交，這一步才算完成。SPEC §18 記得補 P5 的決策編號（main 目前到 D27，P4 留了 D28/D29 給自己但還沒寫，P5 用 D30 起）。
 
 ## 3. 剩餘任務
 
 ### P4 SOP 串接（**未完成**，SPEC §8.4 / §8.5 / §9.1 / §9.2 / §9.7）
 
-**已經做好的（`8a8582b` + 未提交測試）**：
+**已經做好的（`be0f1a4`，已含測試）**：
 - `app/services/sop_links.py`：`document_type ↔ flow` 對照解析；`app/routers/admin/sop_flows.py`：後台 CRUD 端點。
 - `app/routers/sop.py`（`/api/sop/*`，匿名 + 限流）與 `app/services/sop_public.py`；`public_api.py` 對應的 `/v1/sop/*`。
 - `app/services/line/sop.py`：LINE `sop_session` 生命週期（開始、下一步、我卡住了、換流程、結束、逾時）。
@@ -140,11 +118,11 @@ P5 branch 從 `82b9825` 分出，main 已經前進到 `8a8582b`（P4 骨幹）�
 4. **CI 的 `e2e` job**（`.github/workflows/ci.yml` 目前是 stub）。
 5. SPEC §18 補 D28、D29（P4 的實作決策），README 補 SOP 章節，重新產生 OpenAPI 快照。
 
-### P5 方案管理與內容助理（**後端完成、前端待驗證**，SPEC §8.2 / §8.6 / §9.6）
+### P5 方案管理與內容助理（**已完成，待合併**，SPEC §8.2 / §8.6 / §9.6）
 
-**已提交（branch `worktree-agent-a9dac84b8568275d8` 的 `3df7619`）**：`app/ai/copilot.py`、`app/services/copilot.py`、`app/routers/admin/copilot.py`（內容助理 a/b/c）、方案管理後端（排序、待審工具 resolve、規則試算）、alembic `0015_copilot_suggestions`、三個測試檔（`test_copilot.py`、`test_scheme_admin_p5.py`、`test_new_scheme_acceptance.py`，含「新增方案不改 code 即可送件」驗收測試）。
+**已提交（branch `worktree-agent-a9dac84b8568275d8`，commits `3df7619` + `ab67356`）**：後端 `app/ai/copilot.py`、`app/services/copilot.py`、`app/routers/admin/copilot.py`（內容助理 a/b/c）、方案管理後端（排序、待審工具 resolve、規則試算）、alembic `0015_copilot_suggestions`、三個測試檔（`test_copilot.py`、`test_scheme_admin_p5.py`、`test_new_scheme_acceptance.py`，含「新增方案不改 code 即可送件」驗收測試）；前端 `apps/admin-web/src/pages/schemes/*`（方案清單、編輯器、tabs、規則編輯器、試算面板、待審工具、內容助理面板）與 LINE 內容區的 FAQ 建議卡。
 
-**待辦**：§2.1 的前端提交與驗證、§2.3 的合併、SPEC §18 補 D30+。
+**待辦**：只剩 §2.1 的合併。合併後前端測試會從 288（main）變成合併後的總數（P5 branch 單獨跑是 admin-web 119 + apply-web 88 + 其餘 packages 81 = 288，因為 admin-web 從 69 漲到 119）。
 
 ### P6 `/v1` 與 outbound webhook（SPEC §10）
 
@@ -217,9 +195,10 @@ Commit 用 Conventional Commits、中文摘要，scope 例如 `api`、`line`、`
 ## 7. Git 現況速查
 
 ```
-main            8a8582b  feat(api): SOP 串接的後端骨幹        ← 有未提交的 P4 測試
-branch          3df7619  feat(api): 方案管理…與內容助理        ← worktree-agent-a9dac84b8568275d8
-                         worktree 目錄內另有未提交的 P5 前端
+main            be0f1a4  test(sop): P4 的 SOP 測試與 retrieval/session 修正
+                docs     b10790d  docs: 新增 HANDOFF.md（交接文件，這份）
+branch          ab67356  feat(admin-web): 方案管理區與內容助理面板
+                         worktree-agent-a9dac84b8568275d8，只差 §2.1 合併回 main
 ```
 
-從 `3aff953`（只有 SPEC）到現在共約 40 個 commit。沒有任何 commit 被 push 過，遠端尚未設定。
+從 `3aff953`（只有 SPEC）到現在共約 42 個 commit。沒有任何 commit 被 push 過，遠端尚未設定。
