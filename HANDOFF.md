@@ -16,10 +16,10 @@
 | **P4 SOP 串接** | ✅ 已完成並合併（含 apply-web 教學／遮罩定位、admin 對照、完整 E2E 與 CI） |
 | **P5 方案管理與內容助理** | ✅ 已完成並合併（merge `83a13b9`） |
 | **P6 `/v1` 與 webhook** | ✅ 已完成（完整資源契約、scopes、outbox webhook、生成 client） |
-| P7 部署 | 🟡 OracleCloud VM、Compose 與 Nginx 已完成；等待 DNS、舊資料搬遷與 LINE 正式切換 |
+| P7 部署 | 🟡 OracleCloud VM、Compose、資料搬遷與 Nginx 已完成；等待 DNS 與 LINE 正式切換 |
 | **P8 打磨** | ✅ 已完成（Dashboard、稽核 UI、axe gate、LINE QR、文件） |
 
-目前測試數：後端 **1281 passed、5 skipped**，admin-web 122、apply-web 92、packages 131；OpenAPI 與生成 client 已同步。程式面已完成，P7 剩 DNS、舊資料搬遷與 LINE 正式切換。
+目前測試數：後端 **1282 passed、5 skipped**，admin-web 122、apply-web 92、packages 131；OpenAPI 與生成 client 已同步。程式面已完成，P7 剩 DNS 與 LINE 正式切換。
 
 ---
 
@@ -111,11 +111,12 @@ docker compose up -d postgres redis minio renderer
 
 2026-09-19 已部署到 SSH host `OracleCloud` 的 `/home/ubuntu/MayDru`：五個應用映像在 ARM64 VM 原機建置，Compose project `maydru` 的九個服務均正常；Alembic 在 `0016 (head)`，seed 與 owner 登入驗收通過。主機 Nginx 已安裝三個 server block，沿用涵蓋 `*.xamjiang.com` 的 Cloudflare origin cert；以本機 SNI 驗證 apply、admin 與 API 均回 200。初始 owner 憑證只存在 VM 的 `/home/ubuntu/MayDru/OWNER_CREDENTIALS`（mode 600）。
 
+舊資料也已完成搬遷：SOP_Tutor Postgres 經一致性 dump 還原後由 `0010` 升到 `0016`；MinIO `sop-private` 202 個與 `sop-public` 204 個物件的數量和 bytes 均與來源一致；youth SQLite 匯入後重跑一次為 `0 inserted / 0 updated / 179 skipped / 0 failed`。雲端的 youth 暫存快照已刪除，本機原始檔保留。搬遷前、舊 SOP 與搬遷後三份 Postgres 備份都在 VM 的 `/home/ubuntu/MayDru/backups/`（mode 600），舊 `sop-tutor` stack 仍保持運行以供回退。
+
 尚未完成：
 
-- 三個 `maydru*.xamjiang.com` DNS 尚無記錄，因此外網還不能解析。
+- 三個 `maydru*.xamjiang.com` DNS 尚無記錄，因此外網還不能解析；Oracle VM 公網 IP 是 `161.33.23.146`。
 - LINE channel 憑證與 `VITE_LINE_OA_ID` 未提供，目前 `LINE_SENDER=noop`，不能切 webhook 或真機收發。
-- 舊 SOP_Tutor Postgres／MinIO 與本機 youth SQLite 尚未搬遷；涉及舊服務短暫停止寫入與含個資資料上傳，必須取得明確授權後再執行。舊 `sop-tutor` stack 目前完全保留。
 - 多架構映像尚未推 GHCR；本次 VM 使用目前 commit 的 ARM64 原機建置映像。
 - §19 的 O3（對外暴露的獨立 Redis）與 O4（使用條款）仍由產品負責人決定。
 
