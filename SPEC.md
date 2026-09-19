@@ -594,13 +594,13 @@ Cloudflare proxied；origin cert 需涵蓋三個名稱（萬用或重簽）。DN
 | D15 | 測試用 aiosqlite in-memory；新表的清單欄位一律 JSON 而非 ARRAY；事件不可變同時以 Postgres trigger 與 SQLAlchemy event listener 落實 | 測試不需要真的資料庫也能涵蓋整個 schema；同一條不變式在兩種引擎上都成立 |
 | D16 | 案件編號 `HC-YYYY-NNNNNN`，流水號依 tenant 與年度各自累加（`case_no_counters` 一列一年，Postgres 取號時列鎖）；舊系統的 8 位數編號照舊 | 對民眾好唸、對承辦好查；跨年度自動歸零，跨機關不互相干擾 |
 | D17 | 查詢的第二因子是手機或身分證**末四碼**（不是完整號碼）；連續 5 次失敗鎖 15 分鐘，案號與來源 IP 各自計數；查無此案與末四碼錯誤的回應完全一致 | 末四碼即可驗證又不必再傳一次完整個資；雙軸計數同時擋單案猜測與整批掃號；回應一致才不會讓錯誤訊息變成查詢介面 |
-| D18 | LINE channel 是後端的一個模組（`services/line/` + `routers/line.py`），不是獨立服務；訊息在程式內一律是 LINE 的 JSON dict，只有真的要送出去時才轉成 SDK 型別 | 罐頭訊息、案件狀態、方案設定都在同一個程序裡，拆出去只會多一層 API 與一份不同步的設定；dict 讓 builder 不必認識 SDK，測試也能直接斷言 |
 | D19 | 內容服務叫 `services/contents.py`（複數）；`services/content.py` 是 SOP_Tutor 沿用的流程快照服務，兩者無關 | 名字撞了但責任完全不同，改名舊模組會動到 SOP 那一整條線；複數也剛好對上資料表 `contents` |
 | D20 | youth-line-bot 的六題資格問卷（`eligibility` 精靈）不移植，「申請小幫手」改為先問「你要準備哪一份文件」的文件選擇器，接到 SOP flow | 資格判斷已經資料化在 `schemes`（D6），問卷只是把同一組條件再問一次；本平台真正能幫上忙的是「這份文件怎麼拿到」，那是 SOP 的強項 |
 | D21 | 12 個狀態在 LINE 上壓成 5 個公開階段（送出 → 審核 → 核定 → 撥款 → 完成）；補件、逾期、不通過不另開階段，而是把所在階段標成「卡住」 | 民眾要知道的是「卡在哪一關、我要做什麼」，不是機關內部有幾種狀態；階段數固定，之後新增狀態也不必重畫時間軸 |
 | D22 | 沒有人綁定 LINE 的案件仍然留一列 `notifications`，狀態 `skipped`、`error=no_linked_line_user` | 留白會讓後台誤以為通知都送到了；`queued` 則是在說謊——沒有收件人，它永遠不會被送出 |
 | D23 | `sop.template.*` 的預設值保留 Python `str.format` 的單大括號 `{placeholder}`，不改成 `{{var}}`，`variables` 一律留空 | 那些句子由 `services/policy.py` 以 `.format()` 代入；改寫語法等於要動 SOP 引擎，而承辦人在後台看到的仍然是同一段字 |
 | D24 | 「程式碼中不得硬編中文」的檢查以 AST 檢查**字串常數**，排除 docstring 與 `log.*()` 的訊息 | 規則要擋的是民眾會看到的文字；註解與日誌用團隊的語言寫，值班的人才不必先翻譯再除錯。grep 分不出這件事，AST 分得出來 |
+| D25 | LINE channel 是後端的一個模組（`services/line/` + `routers/line.py`），不是獨立服務；訊息在程式內一律是 LINE 的 JSON dict，只有真的要送出去時才轉成 SDK 型別 | 罐頭訊息、案件狀態、方案設定都在同一個程序裡，拆出去只會多一層 API 與一份不同步的設定；dict 讓 builder 不必認識 SDK，測試也能直接斷言 |
 
 ---
 
