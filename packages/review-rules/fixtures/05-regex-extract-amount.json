@@ -1,0 +1,116 @@
+{
+  "name": "regex 全文抽金額",
+  "description": "regex_extract 吃的是整份 OCR 的 text（含換行），取 group 1 後走 amount normalizer。",
+  "rules": [
+    {
+      "code": "AMOUNT",
+      "label": "臺幣金額",
+      "document_type_code": "BILLING_STATEMENT",
+      "rule_type": "regex_extract",
+      "config": {
+        "pattern": "(?:NT\\$|TWD)\\s*([\\d,]+(?:\\.\\d{2})?)",
+        "group": 1,
+        "normalize": "amount"
+      },
+      "required": true,
+      "severity": "error",
+      "sort_order": 10,
+      "active": true
+    }
+  ],
+  "documents": [
+    {
+      "document_type_code": "BILLING_STATEMENT",
+      "ocr": {
+        "text": "交易明細\n入帳金額 NT$ 1,200.00",
+        "confidence": 86,
+        "lines": [
+          {
+            "text": "交易明細",
+            "confidence": 80,
+            "bbox": {
+              "x0": 20,
+              "y0": 100,
+              "x1": 116,
+              "y1": 140
+            },
+            "words": [
+              {
+                "text": "交易明細",
+                "bbox": {
+                  "x0": 20,
+                  "y0": 100,
+                  "x1": 116,
+                  "y1": 140
+                },
+                "confidence": 80
+              }
+            ]
+          },
+          {
+            "text": "入帳金額 NT$ 1,200.00",
+            "confidence": 93,
+            "bbox": {
+              "x0": 20,
+              "y0": 160,
+              "x1": 428,
+              "y1": 200
+            },
+            "words": [
+              {
+                "text": "入帳金額",
+                "bbox": {
+                  "x0": 20,
+                  "y0": 160,
+                  "x1": 116,
+                  "y1": 200
+                },
+                "confidence": 93
+              },
+              {
+                "text": "NT$",
+                "bbox": {
+                  "x0": 128,
+                  "y0": 160,
+                  "x1": 200,
+                  "y1": 200
+                },
+                "confidence": 93
+              },
+              {
+                "text": "1,200.00",
+                "bbox": {
+                  "x0": 212,
+                  "y0": 160,
+                  "x1": 404,
+                  "y1": 200
+                },
+                "confidence": 93
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "facts": {
+    "purchase_amount": 1200,
+    "purchase_date": null,
+    "tier_code": "GENERAL",
+    "payment_channel_code": "CREDIT_CARD",
+    "paid_by_proxy": false,
+    "required_document_type_codes": []
+  },
+  "expected": {
+    "findings": [
+      {
+        "rule_code": "AMOUNT",
+        "status": "MATCH",
+        "extracted_value": "1200",
+        "document_type_code": "BILLING_STATEMENT",
+        "note": null
+      }
+    ],
+    "verdict": "PASS"
+  }
+}

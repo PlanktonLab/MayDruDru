@@ -1,0 +1,201 @@
+{
+  "name": "斜線民國年、ISO 與八碼日期",
+  "description": "三種寫法都要收斂成 ISO：115/09/01、2026-09-01、20260901。",
+  "rules": [
+    {
+      "code": "D_SLASH",
+      "label": "斜線民國年",
+      "document_type_code": "BILLING_STATEMENT",
+      "rule_type": "keyword_extract",
+      "config": {
+        "keywords": [
+          "扣款日"
+        ],
+        "value_after_keyword": true,
+        "normalize": "date"
+      },
+      "required": true,
+      "severity": "error",
+      "sort_order": 10,
+      "active": true
+    },
+    {
+      "code": "D_ISO",
+      "label": "ISO 日期",
+      "document_type_code": "BILLING_STATEMENT",
+      "rule_type": "keyword_extract",
+      "config": {
+        "keywords": [
+          "交易日"
+        ],
+        "value_after_keyword": true,
+        "normalize": "date"
+      },
+      "required": true,
+      "severity": "error",
+      "sort_order": 20,
+      "active": true
+    },
+    {
+      "code": "D_COMPACT",
+      "label": "八碼日期",
+      "document_type_code": "BILLING_STATEMENT",
+      "rule_type": "keyword_extract",
+      "config": {
+        "keywords": [
+          "入帳日"
+        ],
+        "value_after_keyword": true,
+        "normalize": "date"
+      },
+      "required": true,
+      "severity": "error",
+      "sort_order": 30,
+      "active": true
+    }
+  ],
+  "documents": [
+    {
+      "document_type_code": "BILLING_STATEMENT",
+      "ocr": {
+        "text": "扣款日 115/09/01\n交易日 2026-09-01\n入帳日 20260901",
+        "confidence": 91,
+        "lines": [
+          {
+            "text": "扣款日 115/09/01",
+            "confidence": 90,
+            "bbox": {
+              "x0": 20,
+              "y0": 100,
+              "x1": 332,
+              "y1": 140
+            },
+            "words": [
+              {
+                "text": "扣款日",
+                "bbox": {
+                  "x0": 20,
+                  "y0": 100,
+                  "x1": 92,
+                  "y1": 140
+                },
+                "confidence": 90
+              },
+              {
+                "text": "115/09/01",
+                "bbox": {
+                  "x0": 104,
+                  "y0": 100,
+                  "x1": 320,
+                  "y1": 140
+                },
+                "confidence": 90
+              }
+            ]
+          },
+          {
+            "text": "交易日 2026-09-01",
+            "confidence": 91,
+            "bbox": {
+              "x0": 20,
+              "y0": 160,
+              "x1": 356,
+              "y1": 200
+            },
+            "words": [
+              {
+                "text": "交易日",
+                "bbox": {
+                  "x0": 20,
+                  "y0": 160,
+                  "x1": 92,
+                  "y1": 200
+                },
+                "confidence": 91
+              },
+              {
+                "text": "2026-09-01",
+                "bbox": {
+                  "x0": 104,
+                  "y0": 160,
+                  "x1": 344,
+                  "y1": 200
+                },
+                "confidence": 91
+              }
+            ]
+          },
+          {
+            "text": "入帳日 20260901",
+            "confidence": 92,
+            "bbox": {
+              "x0": 20,
+              "y0": 220,
+              "x1": 308,
+              "y1": 260
+            },
+            "words": [
+              {
+                "text": "入帳日",
+                "bbox": {
+                  "x0": 20,
+                  "y0": 220,
+                  "x1": 92,
+                  "y1": 260
+                },
+                "confidence": 92
+              },
+              {
+                "text": "20260901",
+                "bbox": {
+                  "x0": 104,
+                  "y0": 220,
+                  "x1": 296,
+                  "y1": 260
+                },
+                "confidence": 92
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "facts": {
+    "purchase_amount": 1200,
+    "purchase_date": null,
+    "tier_code": "GENERAL",
+    "payment_channel_code": "CREDIT_CARD",
+    "paid_by_proxy": false,
+    "required_document_type_codes": []
+  },
+  "expected": {
+    "findings": [
+      {
+        "rule_code": "D_SLASH",
+        "status": "MATCH",
+        "extracted_value": "2026-09-01",
+        "document_type_code": "BILLING_STATEMENT",
+        "confidence": 90,
+        "note": null
+      },
+      {
+        "rule_code": "D_ISO",
+        "status": "MATCH",
+        "extracted_value": "2026-09-01",
+        "document_type_code": "BILLING_STATEMENT",
+        "confidence": 91,
+        "note": null
+      },
+      {
+        "rule_code": "D_COMPACT",
+        "status": "MATCH",
+        "extracted_value": "2026-09-01",
+        "document_type_code": "BILLING_STATEMENT",
+        "confidence": 92,
+        "note": null
+      }
+    ],
+    "verdict": "PASS"
+  }
+}

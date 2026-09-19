@@ -1,0 +1,88 @@
+{
+  "name": "缺件",
+  "description": "信用卡管道要卡片照片 + 帳單，只上傳了帳單 → MISMATCH，並在 suggested_supplement 列出缺的代碼。",
+  "rules": [
+    {
+      "code": "DOCS",
+      "label": "必要文件",
+      "document_type_code": null,
+      "rule_type": "required_doc",
+      "config": {
+        "document_type_codes": [
+          "ID_CARD_FRONT",
+          "CARD_LAST4_PHOTO",
+          "BILLING_STATEMENT"
+        ]
+      },
+      "required": true,
+      "severity": "error",
+      "sort_order": 10,
+      "active": true
+    }
+  ],
+  "documents": [
+    {
+      "document_type_code": "BILLING_STATEMENT",
+      "ocr": {
+        "text": "臺幣金額 NT$1,200",
+        "confidence": 90,
+        "lines": [
+          {
+            "text": "臺幣金額 NT$1,200",
+            "confidence": 90,
+            "bbox": {
+              "x0": 20,
+              "y0": 100,
+              "x1": 332,
+              "y1": 140
+            },
+            "words": [
+              {
+                "text": "臺幣金額",
+                "bbox": {
+                  "x0": 20,
+                  "y0": 100,
+                  "x1": 116,
+                  "y1": 140
+                },
+                "confidence": 90
+              },
+              {
+                "text": "NT$1,200",
+                "bbox": {
+                  "x0": 128,
+                  "y0": 100,
+                  "x1": 320,
+                  "y1": 140
+                },
+                "confidence": 90
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "facts": {
+    "purchase_amount": 1200,
+    "purchase_date": null,
+    "tier_code": "GENERAL",
+    "payment_channel_code": "CREDIT_CARD",
+    "paid_by_proxy": false,
+    "required_document_type_codes": []
+  },
+  "expected": {
+    "findings": [
+      {
+        "rule_code": "DOCS",
+        "status": "MISMATCH",
+        "expected_value": "ID_CARD_FRONT,CARD_LAST4_PHOTO,BILLING_STATEMENT",
+        "suggested_supplement": [
+          "ID_CARD_FRONT",
+          "CARD_LAST4_PHOTO"
+        ]
+      }
+    ],
+    "verdict": "FAIL"
+  }
+}

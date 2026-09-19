@@ -1,0 +1,65 @@
+{
+  "name": "還沒上傳任何文件",
+  "description": "缺件判 MISMATCH（FAIL），抽值規則判 UNREADABLE。FAIL 優先於 INDETERMINATE。",
+  "rules": [
+    {
+      "code": "DOCS",
+      "label": "必要文件",
+      "document_type_code": null,
+      "rule_type": "required_doc",
+      "config": {
+        "document_type_codes": []
+      },
+      "required": true,
+      "severity": "error",
+      "sort_order": 10,
+      "active": true
+    },
+    {
+      "code": "AMOUNT",
+      "label": "臺幣金額",
+      "document_type_code": "BILLING_STATEMENT",
+      "rule_type": "keyword_extract",
+      "config": {
+        "keywords": [
+          "臺幣金額"
+        ],
+        "value_after_keyword": true,
+        "normalize": "amount"
+      },
+      "required": true,
+      "severity": "error",
+      "sort_order": 20,
+      "active": true
+    }
+  ],
+  "documents": [],
+  "facts": {
+    "purchase_amount": 1200,
+    "purchase_date": null,
+    "tier_code": "GENERAL",
+    "payment_channel_code": "CREDIT_CARD",
+    "paid_by_proxy": false,
+    "required_document_type_codes": [
+      "BILLING_STATEMENT"
+    ]
+  },
+  "expected": {
+    "findings": [
+      {
+        "rule_code": "DOCS",
+        "status": "MISMATCH",
+        "expected_value": "BILLING_STATEMENT",
+        "suggested_supplement": [
+          "BILLING_STATEMENT"
+        ]
+      },
+      {
+        "rule_code": "AMOUNT",
+        "status": "UNREADABLE",
+        "extracted_value": null
+      }
+    ],
+    "verdict": "FAIL"
+  }
+}

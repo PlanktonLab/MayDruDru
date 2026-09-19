@@ -1,0 +1,97 @@
+{
+  "name": "關鍵字拉丁優先",
+  "description": "同一行同時有中文與拉丁關鍵字時，一律先取含拉丁字母的那個（proreview detected() 的順序）。這裡若改成「子字串優先」會抽到「NT$1,200」，因此值本身就是回歸測試。",
+  "rules": [
+    {
+      "code": "AMOUNT_RAW",
+      "label": "金額（原字串）",
+      "document_type_code": "BILLING_STATEMENT",
+      "rule_type": "keyword_extract",
+      "config": {
+        "keywords": [
+          "金額",
+          "amount"
+        ],
+        "value_after_keyword": true
+      },
+      "required": true,
+      "severity": "error",
+      "sort_order": 10,
+      "active": true
+    }
+  ],
+  "documents": [
+    {
+      "document_type_code": "BILLING_STATEMENT",
+      "ocr": {
+        "text": "Amount 金額 NT$1,200",
+        "confidence": 90,
+        "lines": [
+          {
+            "text": "Amount 金額 NT$1,200",
+            "confidence": 90,
+            "bbox": {
+              "x0": 20,
+              "y0": 100,
+              "x1": 452,
+              "y1": 140
+            },
+            "words": [
+              {
+                "text": "Amount",
+                "bbox": {
+                  "x0": 20,
+                  "y0": 100,
+                  "x1": 164,
+                  "y1": 140
+                },
+                "confidence": 90
+              },
+              {
+                "text": "金額",
+                "bbox": {
+                  "x0": 176,
+                  "y0": 100,
+                  "x1": 224,
+                  "y1": 140
+                },
+                "confidence": 90
+              },
+              {
+                "text": "NT$1,200",
+                "bbox": {
+                  "x0": 236,
+                  "y0": 100,
+                  "x1": 428,
+                  "y1": 140
+                },
+                "confidence": 90
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "facts": {
+    "purchase_amount": 1200,
+    "purchase_date": null,
+    "tier_code": "GENERAL",
+    "payment_channel_code": "CREDIT_CARD",
+    "paid_by_proxy": false,
+    "required_document_type_codes": []
+  },
+  "expected": {
+    "findings": [
+      {
+        "rule_code": "AMOUNT_RAW",
+        "status": "MATCH",
+        "extracted_value": "金額 NT$1,200",
+        "document_type_code": "BILLING_STATEMENT",
+        "confidence": 90,
+        "note": null
+      }
+    ],
+    "verdict": "PASS"
+  }
+}

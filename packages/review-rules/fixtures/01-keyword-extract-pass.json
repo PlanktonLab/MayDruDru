@@ -1,0 +1,230 @@
+{
+  "name": "關鍵字抽值全部命中",
+  "description": "三條 keyword_extract 都在帳單上找到值，沒有缺件 → PASS。",
+  "rules": [
+    {
+      "code": "PRODUCT",
+      "label": "購買品項",
+      "document_type_code": "BILLING_STATEMENT",
+      "rule_type": "keyword_extract",
+      "config": {
+        "keywords": [
+          "品項",
+          "product"
+        ],
+        "value_after_keyword": true
+      },
+      "required": true,
+      "severity": "error",
+      "sort_order": 10,
+      "active": true
+    },
+    {
+      "code": "AMOUNT",
+      "label": "臺幣金額",
+      "document_type_code": "BILLING_STATEMENT",
+      "rule_type": "keyword_extract",
+      "config": {
+        "keywords": [
+          "臺幣金額",
+          "金額"
+        ],
+        "value_after_keyword": true,
+        "normalize": "amount"
+      },
+      "required": true,
+      "severity": "error",
+      "sort_order": 20,
+      "active": true
+    },
+    {
+      "code": "DOCS",
+      "label": "必要文件",
+      "document_type_code": null,
+      "rule_type": "required_doc",
+      "config": {
+        "document_type_codes": [
+          "BILLING_STATEMENT"
+        ]
+      },
+      "required": true,
+      "severity": "error",
+      "sort_order": 30,
+      "active": true
+    }
+  ],
+  "documents": [
+    {
+      "document_type_code": "BILLING_STATEMENT",
+      "ocr": {
+        "text": "NORTHSTAR AI 信用卡帳單\n品項：Northstar AI Pro Plan\n臺幣金額 NT$1,200",
+        "confidence": 92,
+        "lines": [
+          {
+            "text": "NORTHSTAR AI 信用卡帳單",
+            "confidence": 88,
+            "bbox": {
+              "x0": 20,
+              "y0": 100,
+              "x1": 452,
+              "y1": 140
+            },
+            "words": [
+              {
+                "text": "NORTHSTAR",
+                "bbox": {
+                  "x0": 20,
+                  "y0": 100,
+                  "x1": 236,
+                  "y1": 140
+                },
+                "confidence": 88
+              },
+              {
+                "text": "AI",
+                "bbox": {
+                  "x0": 248,
+                  "y0": 100,
+                  "x1": 296,
+                  "y1": 140
+                },
+                "confidence": 88
+              },
+              {
+                "text": "信用卡帳單",
+                "bbox": {
+                  "x0": 308,
+                  "y0": 100,
+                  "x1": 428,
+                  "y1": 140
+                },
+                "confidence": 88
+              }
+            ]
+          },
+          {
+            "text": "品項：Northstar AI Pro Plan",
+            "confidence": 92,
+            "bbox": {
+              "x0": 20,
+              "y0": 160,
+              "x1": 596,
+              "y1": 200
+            },
+            "words": [
+              {
+                "text": "品項：Northstar",
+                "bbox": {
+                  "x0": 20,
+                  "y0": 160,
+                  "x1": 308,
+                  "y1": 200
+                },
+                "confidence": 92
+              },
+              {
+                "text": "AI",
+                "bbox": {
+                  "x0": 320,
+                  "y0": 160,
+                  "x1": 368,
+                  "y1": 200
+                },
+                "confidence": 92
+              },
+              {
+                "text": "Pro",
+                "bbox": {
+                  "x0": 380,
+                  "y0": 160,
+                  "x1": 452,
+                  "y1": 200
+                },
+                "confidence": 92
+              },
+              {
+                "text": "Plan",
+                "bbox": {
+                  "x0": 464,
+                  "y0": 160,
+                  "x1": 560,
+                  "y1": 200
+                },
+                "confidence": 92
+              }
+            ]
+          },
+          {
+            "text": "臺幣金額 NT$1,200",
+            "confidence": 95,
+            "bbox": {
+              "x0": 20,
+              "y0": 220,
+              "x1": 332,
+              "y1": 260
+            },
+            "words": [
+              {
+                "text": "臺幣金額",
+                "bbox": {
+                  "x0": 20,
+                  "y0": 220,
+                  "x1": 116,
+                  "y1": 260
+                },
+                "confidence": 95
+              },
+              {
+                "text": "NT$1,200",
+                "bbox": {
+                  "x0": 128,
+                  "y0": 220,
+                  "x1": 320,
+                  "y1": 260
+                },
+                "confidence": 95
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "facts": {
+    "purchase_amount": 1200,
+    "purchase_date": null,
+    "tier_code": "GENERAL",
+    "payment_channel_code": "CREDIT_CARD",
+    "paid_by_proxy": false,
+    "required_document_type_codes": [
+      "BILLING_STATEMENT"
+    ]
+  },
+  "expected": {
+    "findings": [
+      {
+        "rule_code": "PRODUCT",
+        "status": "MATCH",
+        "extracted_value": "Northstar AI Pro Plan",
+        "document_type_code": "BILLING_STATEMENT",
+        "confidence": 92,
+        "note": null
+      },
+      {
+        "rule_code": "AMOUNT",
+        "status": "MATCH",
+        "extracted_value": "1200",
+        "document_type_code": "BILLING_STATEMENT",
+        "confidence": 95,
+        "note": null
+      },
+      {
+        "rule_code": "DOCS",
+        "status": "MATCH",
+        "expected_value": "BILLING_STATEMENT",
+        "note": null
+      }
+    ],
+    "verdict": "PASS"
+  }
+}

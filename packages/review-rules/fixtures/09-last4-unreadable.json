@@ -1,0 +1,96 @@
+{
+  "name": "末四碼轉不成標準格式",
+  "description": "抽到了值但 normalizer 回 null → UNREADABLE，且 extracted_value 保留原字串供人工判讀。",
+  "rules": [
+    {
+      "code": "LAST4",
+      "label": "卡號末四碼",
+      "document_type_code": "BILLING_STATEMENT",
+      "rule_type": "keyword_extract",
+      "config": {
+        "keywords": [
+          "卡號"
+        ],
+        "value_after_keyword": true,
+        "normalize": "last4"
+      },
+      "required": true,
+      "severity": "error",
+      "sort_order": 10,
+      "active": true
+    }
+  ],
+  "documents": [
+    {
+      "document_type_code": "BILLING_STATEMENT",
+      "ocr": {
+        "text": "卡號 Visa ending",
+        "confidence": 71,
+        "lines": [
+          {
+            "text": "卡號 Visa ending",
+            "confidence": 71,
+            "bbox": {
+              "x0": 20,
+              "y0": 100,
+              "x1": 356,
+              "y1": 140
+            },
+            "words": [
+              {
+                "text": "卡號",
+                "bbox": {
+                  "x0": 20,
+                  "y0": 100,
+                  "x1": 68,
+                  "y1": 140
+                },
+                "confidence": 71
+              },
+              {
+                "text": "Visa",
+                "bbox": {
+                  "x0": 80,
+                  "y0": 100,
+                  "x1": 176,
+                  "y1": 140
+                },
+                "confidence": 71
+              },
+              {
+                "text": "ending",
+                "bbox": {
+                  "x0": 188,
+                  "y0": 100,
+                  "x1": 332,
+                  "y1": 140
+                },
+                "confidence": 71
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "facts": {
+    "purchase_amount": 1200,
+    "purchase_date": null,
+    "tier_code": "GENERAL",
+    "payment_channel_code": "CREDIT_CARD",
+    "paid_by_proxy": false,
+    "required_document_type_codes": []
+  },
+  "expected": {
+    "findings": [
+      {
+        "rule_code": "LAST4",
+        "status": "UNREADABLE",
+        "extracted_value": "Visa ending",
+        "document_type_code": "BILLING_STATEMENT",
+        "confidence": 71
+      }
+    ],
+    "verdict": "INDETERMINATE"
+  }
+}

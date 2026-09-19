@@ -1,0 +1,170 @@
+{
+  "name": "遮罩過的卡號抽末四碼",
+  "description": "帳單上的卡號多半印成 **** **** **** 4826；先去空白與連字號，再取遮罩字元後面的四碼。",
+  "rules": [
+    {
+      "code": "LAST4_BILL",
+      "label": "帳單卡號末四碼",
+      "document_type_code": "BILLING_STATEMENT",
+      "rule_type": "keyword_extract",
+      "config": {
+        "keywords": [
+          "卡號"
+        ],
+        "value_after_keyword": true,
+        "normalize": "last4"
+      },
+      "required": true,
+      "severity": "error",
+      "sort_order": 10,
+      "active": true
+    },
+    {
+      "code": "LAST4_CARD",
+      "label": "卡片末四碼",
+      "document_type_code": "CARD_LAST4_PHOTO",
+      "rule_type": "regex_extract",
+      "config": {
+        "pattern": "[•*xX\\-\\s]{4,}\\d{4}",
+        "group": 0,
+        "normalize": "last4"
+      },
+      "required": true,
+      "severity": "error",
+      "sort_order": 20,
+      "active": true
+    }
+  ],
+  "documents": [
+    {
+      "document_type_code": "BILLING_STATEMENT",
+      "ocr": {
+        "text": "卡號 **** **** **** 4826",
+        "confidence": 84,
+        "lines": [
+          {
+            "text": "卡號 **** **** **** 4826",
+            "confidence": 84,
+            "bbox": {
+              "x0": 20,
+              "y0": 100,
+              "x1": 548,
+              "y1": 140
+            },
+            "words": [
+              {
+                "text": "卡號",
+                "bbox": {
+                  "x0": 20,
+                  "y0": 100,
+                  "x1": 68,
+                  "y1": 140
+                },
+                "confidence": 84
+              },
+              {
+                "text": "****",
+                "bbox": {
+                  "x0": 80,
+                  "y0": 100,
+                  "x1": 176,
+                  "y1": 140
+                },
+                "confidence": 84
+              },
+              {
+                "text": "****",
+                "bbox": {
+                  "x0": 188,
+                  "y0": 100,
+                  "x1": 284,
+                  "y1": 140
+                },
+                "confidence": 84
+              },
+              {
+                "text": "****",
+                "bbox": {
+                  "x0": 296,
+                  "y0": 100,
+                  "x1": 392,
+                  "y1": 140
+                },
+                "confidence": 84
+              },
+              {
+                "text": "4826",
+                "bbox": {
+                  "x0": 404,
+                  "y0": 100,
+                  "x1": 500,
+                  "y1": 140
+                },
+                "confidence": 84
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "document_type_code": "CARD_LAST4_PHOTO",
+      "ocr": {
+        "text": "xxxx-xxxx-xxxx-4826",
+        "confidence": 79,
+        "lines": [
+          {
+            "text": "xxxx-xxxx-xxxx-4826",
+            "confidence": 79,
+            "bbox": {
+              "x0": 20,
+              "y0": 100,
+              "x1": 476,
+              "y1": 140
+            },
+            "words": [
+              {
+                "text": "xxxx-xxxx-xxxx-4826",
+                "bbox": {
+                  "x0": 20,
+                  "y0": 100,
+                  "x1": 476,
+                  "y1": 140
+                },
+                "confidence": 79
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "facts": {
+    "purchase_amount": 1200,
+    "purchase_date": null,
+    "tier_code": "GENERAL",
+    "payment_channel_code": "CREDIT_CARD",
+    "paid_by_proxy": false,
+    "required_document_type_codes": []
+  },
+  "expected": {
+    "findings": [
+      {
+        "rule_code": "LAST4_BILL",
+        "status": "MATCH",
+        "extracted_value": "4826",
+        "document_type_code": "BILLING_STATEMENT",
+        "confidence": 84,
+        "note": null
+      },
+      {
+        "rule_code": "LAST4_CARD",
+        "status": "MATCH",
+        "extracted_value": "4826",
+        "document_type_code": "CARD_LAST4_PHOTO",
+        "note": null
+      }
+    ],
+    "verdict": "PASS"
+  }
+}

@@ -1,0 +1,163 @@
+{
+  "name": "warning 級的不符只降級不擋",
+  "description": "商家名稱對不上很常見（透過第三方平台付款），所以設成 severity=warning：結論是 INDETERMINATE，市民照樣送得出去，由承辦人判斷。",
+  "rules": [
+    {
+      "code": "MERCHANT",
+      "label": "商家名稱",
+      "document_type_code": "BILLING_STATEMENT",
+      "rule_type": "keyword_extract",
+      "config": {
+        "keywords": [
+          "商家"
+        ],
+        "value_after_keyword": true
+      },
+      "required": false,
+      "severity": "warning",
+      "sort_order": 10,
+      "active": true
+    },
+    {
+      "code": "AMOUNT",
+      "label": "臺幣金額",
+      "document_type_code": "BILLING_STATEMENT",
+      "rule_type": "keyword_extract",
+      "config": {
+        "keywords": [
+          "臺幣金額"
+        ],
+        "value_after_keyword": true,
+        "normalize": "amount"
+      },
+      "required": true,
+      "severity": "error",
+      "sort_order": 20,
+      "active": true
+    },
+    {
+      "code": "AMOUNT_CHECK",
+      "label": "金額比對",
+      "document_type_code": null,
+      "rule_type": "amount_tolerance",
+      "config": {
+        "source_rule_code": "AMOUNT",
+        "compare_to": "purchase_amount",
+        "tolerance_pct": 5,
+        "tolerance_abs": 150
+      },
+      "required": true,
+      "severity": "warning",
+      "sort_order": 30,
+      "active": true
+    }
+  ],
+  "documents": [
+    {
+      "document_type_code": "BILLING_STATEMENT",
+      "ocr": {
+        "text": "商家 APPLE.COM/BILL\n臺幣金額 NT$2,000",
+        "confidence": 90,
+        "lines": [
+          {
+            "text": "商家 APPLE.COM/BILL",
+            "confidence": 87,
+            "bbox": {
+              "x0": 20,
+              "y0": 100,
+              "x1": 428,
+              "y1": 140
+            },
+            "words": [
+              {
+                "text": "商家",
+                "bbox": {
+                  "x0": 20,
+                  "y0": 100,
+                  "x1": 68,
+                  "y1": 140
+                },
+                "confidence": 87
+              },
+              {
+                "text": "APPLE.COM/BILL",
+                "bbox": {
+                  "x0": 80,
+                  "y0": 100,
+                  "x1": 416,
+                  "y1": 140
+                },
+                "confidence": 87
+              }
+            ]
+          },
+          {
+            "text": "臺幣金額 NT$2,000",
+            "confidence": 93,
+            "bbox": {
+              "x0": 20,
+              "y0": 160,
+              "x1": 332,
+              "y1": 200
+            },
+            "words": [
+              {
+                "text": "臺幣金額",
+                "bbox": {
+                  "x0": 20,
+                  "y0": 160,
+                  "x1": 116,
+                  "y1": 200
+                },
+                "confidence": 93
+              },
+              {
+                "text": "NT$2,000",
+                "bbox": {
+                  "x0": 128,
+                  "y0": 160,
+                  "x1": 320,
+                  "y1": 200
+                },
+                "confidence": 93
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "facts": {
+    "purchase_amount": 1200,
+    "purchase_date": null,
+    "tier_code": "GENERAL",
+    "payment_channel_code": "CREDIT_CARD",
+    "paid_by_proxy": false,
+    "required_document_type_codes": []
+  },
+  "expected": {
+    "findings": [
+      {
+        "rule_code": "MERCHANT",
+        "status": "MATCH",
+        "extracted_value": "APPLE.COM/BILL",
+        "confidence": 87,
+        "note": null
+      },
+      {
+        "rule_code": "AMOUNT",
+        "status": "MATCH",
+        "extracted_value": "2000",
+        "confidence": 93,
+        "note": null
+      },
+      {
+        "rule_code": "AMOUNT_CHECK",
+        "status": "MISMATCH",
+        "extracted_value": "2000",
+        "expected_value": "1200"
+      }
+    ],
+    "verdict": "INDETERMINATE"
+  }
+}

@@ -1,0 +1,108 @@
+{
+  "name": "金額只超出一元就不符",
+  "description": "10,151 對 10,000：百分比過得了（1.51%），但差 151 > 150 → MISMATCH。這條規則 required + error，所以結論是 FAIL，擋住送出。",
+  "rules": [
+    {
+      "code": "AMOUNT",
+      "label": "臺幣金額",
+      "document_type_code": "BILLING_STATEMENT",
+      "rule_type": "keyword_extract",
+      "config": {
+        "keywords": [
+          "臺幣金額"
+        ],
+        "value_after_keyword": true,
+        "normalize": "amount"
+      },
+      "required": true,
+      "severity": "error",
+      "sort_order": 10,
+      "active": true
+    },
+    {
+      "code": "AMOUNT_CHECK",
+      "label": "金額比對",
+      "document_type_code": null,
+      "rule_type": "amount_tolerance",
+      "config": {
+        "source_rule_code": "AMOUNT",
+        "compare_to": "purchase_amount",
+        "tolerance_pct": 5,
+        "tolerance_abs": 150
+      },
+      "required": true,
+      "severity": "error",
+      "sort_order": 20,
+      "active": true
+    }
+  ],
+  "documents": [
+    {
+      "document_type_code": "BILLING_STATEMENT",
+      "ocr": {
+        "text": "臺幣金額 NT$10,151",
+        "confidence": 90,
+        "lines": [
+          {
+            "text": "臺幣金額 NT$10,151",
+            "confidence": 90,
+            "bbox": {
+              "x0": 20,
+              "y0": 100,
+              "x1": 356,
+              "y1": 140
+            },
+            "words": [
+              {
+                "text": "臺幣金額",
+                "bbox": {
+                  "x0": 20,
+                  "y0": 100,
+                  "x1": 116,
+                  "y1": 140
+                },
+                "confidence": 90
+              },
+              {
+                "text": "NT$10,151",
+                "bbox": {
+                  "x0": 128,
+                  "y0": 100,
+                  "x1": 344,
+                  "y1": 140
+                },
+                "confidence": 90
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "facts": {
+    "purchase_amount": 10000,
+    "purchase_date": null,
+    "tier_code": "GENERAL",
+    "payment_channel_code": "CREDIT_CARD",
+    "paid_by_proxy": false,
+    "required_document_type_codes": []
+  },
+  "expected": {
+    "findings": [
+      {
+        "rule_code": "AMOUNT",
+        "status": "MATCH",
+        "extracted_value": "10151",
+        "confidence": 90,
+        "note": null
+      },
+      {
+        "rule_code": "AMOUNT_CHECK",
+        "status": "MISMATCH",
+        "extracted_value": "10151",
+        "expected_value": "10000"
+      }
+    ],
+    "verdict": "FAIL"
+  }
+}

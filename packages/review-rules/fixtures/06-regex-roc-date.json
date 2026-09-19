@@ -1,0 +1,74 @@
+{
+  "name": "民國年日期正規化",
+  "description": "「民國115年9月1日」→ 2026-09-01。年份小於 1911 一律 +1911。",
+  "rules": [
+    {
+      "code": "CHARGE_DATE",
+      "label": "扣款日期",
+      "document_type_code": "BILLING_STATEMENT",
+      "rule_type": "regex_extract",
+      "config": {
+        "pattern": "民國\\s*\\d{2,3}\\s*年\\s*\\d{1,2}\\s*月\\s*\\d{1,2}\\s*日",
+        "group": 0,
+        "normalize": "date"
+      },
+      "required": true,
+      "severity": "error",
+      "sort_order": 10,
+      "active": true
+    }
+  ],
+  "documents": [
+    {
+      "document_type_code": "BILLING_STATEMENT",
+      "ocr": {
+        "text": "扣款日期：民國115年9月1日",
+        "confidence": 89,
+        "lines": [
+          {
+            "text": "扣款日期：民國115年9月1日",
+            "confidence": 89,
+            "bbox": {
+              "x0": 20,
+              "y0": 100,
+              "x1": 380,
+              "y1": 140
+            },
+            "words": [
+              {
+                "text": "扣款日期：民國115年9月1日",
+                "bbox": {
+                  "x0": 20,
+                  "y0": 100,
+                  "x1": 380,
+                  "y1": 140
+                },
+                "confidence": 89
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "facts": {
+    "purchase_amount": 1200,
+    "purchase_date": "2026-09-01",
+    "tier_code": "GENERAL",
+    "payment_channel_code": "CREDIT_CARD",
+    "paid_by_proxy": false,
+    "required_document_type_codes": []
+  },
+  "expected": {
+    "findings": [
+      {
+        "rule_code": "CHARGE_DATE",
+        "status": "MATCH",
+        "extracted_value": "2026-09-01",
+        "document_type_code": "BILLING_STATEMENT",
+        "note": null
+      }
+    ],
+    "verdict": "PASS"
+  }
+}

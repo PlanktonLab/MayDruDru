@@ -1,0 +1,151 @@
+{
+  "name": "去空白才對上關鍵字時取整行",
+  "description": "OCR 把「卡號末四碼」讀成一個一個字。關鍵字要去掉空白才對得上，此時 indexOf 為 -1，取值退回整行——這是刻意保留的 proreview 行為。第二條規則示範 last4 normalizer 仍救得回來。",
+  "rules": [
+    {
+      "code": "LAST4_RAW",
+      "label": "末四碼（原字串）",
+      "document_type_code": "BILLING_STATEMENT",
+      "rule_type": "keyword_extract",
+      "config": {
+        "keywords": [
+          "卡號末四碼"
+        ],
+        "value_after_keyword": true
+      },
+      "required": true,
+      "severity": "error",
+      "sort_order": 10,
+      "active": true
+    },
+    {
+      "code": "LAST4",
+      "label": "卡號末四碼",
+      "document_type_code": "BILLING_STATEMENT",
+      "rule_type": "keyword_extract",
+      "config": {
+        "keywords": [
+          "卡號末四碼"
+        ],
+        "value_after_keyword": true,
+        "normalize": "last4"
+      },
+      "required": true,
+      "severity": "error",
+      "sort_order": 20,
+      "active": true
+    }
+  ],
+  "documents": [
+    {
+      "document_type_code": "BILLING_STATEMENT",
+      "ocr": {
+        "text": "卡 號 末 四 碼 4826",
+        "confidence": 86,
+        "lines": [
+          {
+            "text": "卡 號 末 四 碼 4826",
+            "confidence": 86,
+            "bbox": {
+              "x0": 20,
+              "y0": 100,
+              "x1": 356,
+              "y1": 140
+            },
+            "words": [
+              {
+                "text": "卡",
+                "bbox": {
+                  "x0": 20,
+                  "y0": 100,
+                  "x1": 44,
+                  "y1": 140
+                },
+                "confidence": 86
+              },
+              {
+                "text": "號",
+                "bbox": {
+                  "x0": 56,
+                  "y0": 100,
+                  "x1": 80,
+                  "y1": 140
+                },
+                "confidence": 86
+              },
+              {
+                "text": "末",
+                "bbox": {
+                  "x0": 92,
+                  "y0": 100,
+                  "x1": 116,
+                  "y1": 140
+                },
+                "confidence": 86
+              },
+              {
+                "text": "四",
+                "bbox": {
+                  "x0": 128,
+                  "y0": 100,
+                  "x1": 152,
+                  "y1": 140
+                },
+                "confidence": 86
+              },
+              {
+                "text": "碼",
+                "bbox": {
+                  "x0": 164,
+                  "y0": 100,
+                  "x1": 188,
+                  "y1": 140
+                },
+                "confidence": 86
+              },
+              {
+                "text": "4826",
+                "bbox": {
+                  "x0": 200,
+                  "y0": 100,
+                  "x1": 296,
+                  "y1": 140
+                },
+                "confidence": 86
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "facts": {
+    "purchase_amount": 1200,
+    "purchase_date": null,
+    "tier_code": "GENERAL",
+    "payment_channel_code": "CREDIT_CARD",
+    "paid_by_proxy": false,
+    "required_document_type_codes": []
+  },
+  "expected": {
+    "findings": [
+      {
+        "rule_code": "LAST4_RAW",
+        "status": "MATCH",
+        "extracted_value": "卡 號 末 四 碼 4826",
+        "document_type_code": "BILLING_STATEMENT",
+        "confidence": 86,
+        "note": null
+      },
+      {
+        "rule_code": "LAST4",
+        "status": "MATCH",
+        "extracted_value": "4826",
+        "document_type_code": "BILLING_STATEMENT",
+        "confidence": 86,
+        "note": null
+      }
+    ],
+    "verdict": "PASS"
+  }
+}

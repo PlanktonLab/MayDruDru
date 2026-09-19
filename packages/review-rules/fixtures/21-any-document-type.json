@@ -1,0 +1,128 @@
+{
+  "name": "不限文件類型的規則",
+  "description": "document_type_code 為 null 時所有文件一起找；同分時先出現的贏（比較用嚴格大於），這裡以 OCR 信心值分出高下：95 的那份文件勝出。",
+  "rules": [
+    {
+      "code": "AMOUNT",
+      "label": "臺幣金額",
+      "document_type_code": null,
+      "rule_type": "keyword_extract",
+      "config": {
+        "keywords": [
+          "金額"
+        ],
+        "value_after_keyword": true,
+        "normalize": "amount"
+      },
+      "required": true,
+      "severity": "error",
+      "sort_order": 10,
+      "active": true
+    }
+  ],
+  "documents": [
+    {
+      "document_type_code": "TRANSACTION_DETAIL",
+      "ocr": {
+        "text": "金額 NT$1,180",
+        "confidence": 80,
+        "lines": [
+          {
+            "text": "金額 NT$1,180",
+            "confidence": 80,
+            "bbox": {
+              "x0": 20,
+              "y0": 100,
+              "x1": 284,
+              "y1": 140
+            },
+            "words": [
+              {
+                "text": "金額",
+                "bbox": {
+                  "x0": 20,
+                  "y0": 100,
+                  "x1": 68,
+                  "y1": 140
+                },
+                "confidence": 80
+              },
+              {
+                "text": "NT$1,180",
+                "bbox": {
+                  "x0": 80,
+                  "y0": 100,
+                  "x1": 272,
+                  "y1": 140
+                },
+                "confidence": 80
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "document_type_code": "BILLING_STATEMENT",
+      "ocr": {
+        "text": "金額 NT$1,200",
+        "confidence": 95,
+        "lines": [
+          {
+            "text": "金額 NT$1,200",
+            "confidence": 95,
+            "bbox": {
+              "x0": 20,
+              "y0": 100,
+              "x1": 284,
+              "y1": 140
+            },
+            "words": [
+              {
+                "text": "金額",
+                "bbox": {
+                  "x0": 20,
+                  "y0": 100,
+                  "x1": 68,
+                  "y1": 140
+                },
+                "confidence": 95
+              },
+              {
+                "text": "NT$1,200",
+                "bbox": {
+                  "x0": 80,
+                  "y0": 100,
+                  "x1": 272,
+                  "y1": 140
+                },
+                "confidence": 95
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "facts": {
+    "purchase_amount": 1200,
+    "purchase_date": null,
+    "tier_code": "GENERAL",
+    "payment_channel_code": "CREDIT_CARD",
+    "paid_by_proxy": false,
+    "required_document_type_codes": []
+  },
+  "expected": {
+    "findings": [
+      {
+        "rule_code": "AMOUNT",
+        "status": "MATCH",
+        "extracted_value": "1200",
+        "document_type_code": "BILLING_STATEMENT",
+        "confidence": 95,
+        "note": null
+      }
+    ],
+    "verdict": "PASS"
+  }
+}
