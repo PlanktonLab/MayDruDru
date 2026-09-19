@@ -1,6 +1,6 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import { clsx } from 'clsx'
-import { BarChart3, ClipboardCheck, FileSearch, FlaskConical, KeyRound, LogOut, MessageSquare, Moon, PanelLeftClose, PanelLeftOpen, Sun, Users, Workflow } from 'lucide-react'
+import { BarChart3, Bell, BookOpen, ClipboardCheck, FileSearch, FlaskConical, HelpCircle, KeyRound, LayoutGrid, LogOut, MessageSquare, MessageSquareText, Moon, PanelLeftClose, PanelLeftOpen, SearchX, Sun, Users, Workflow } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useAuth } from '../lib/auth'
 import { ROLE_LABEL, type Capability } from '../lib/types'
@@ -19,6 +19,24 @@ const NAV: { to: string; label: string; icon: typeof Workflow; cap?: Capability 
   { to: '/members', label: '成員', icon: Users, cap: 'admin' },
   { to: '/api-keys', label: 'API Key', icon: KeyRound, cap: 'admin' },
 ]
+
+/**
+ * LINE 內容（SPEC §8.2）。整組沒有 capability 閘門：要審案件就得先知道民眾在
+ * LINE 上看到什麼，所以每個登入的承辦人都讀得到；能不能改，由頁面裡的按鈕各自
+ * 問 `can('admin')`——把人擋在門外，他就只能改去問別人「那句話到底怎麼寫的」。
+ */
+const LINE_NAV: { to: string; label: string; icon: typeof Workflow }[] = [
+  { to: '/line/contents', label: '罐頭訊息', icon: MessageSquareText },
+  { to: '/line/faqs', label: '常見問題', icon: HelpCircle },
+  { to: '/line/knowledge', label: '知識文件', icon: BookOpen },
+  { to: '/line/richmenu', label: '圖文選單', icon: LayoutGrid },
+  { to: '/line/notifications', label: '推播紀錄', icon: Bell },
+  { to: '/line/unmatched', label: '未命中訊息', icon: SearchX },
+]
+
+const navLinkClass = (collapsed: boolean) => ({ isActive }: { isActive: boolean }) =>
+  clsx('flex items-center gap-2 rounded-lg py-1.5 text-sm', collapsed ? 'justify-center px-0' : 'px-2.5',
+    isActive ? 'bg-accent-bg text-accent font-medium' : 'text-muted hover:bg-background-lite hover:text-primary')
 
 export default function AppShell() {
   const { user, logout, can } = useAuth()
@@ -50,6 +68,14 @@ export default function AppShell() {
               <n.icon size={15} className="shrink-0" />{!collapsed && <span className="truncate">{n.label}</span>}
             </NavLink>
           ))}
+          <div className="mt-3 space-y-0.5 border-t border-border pt-3">
+            {!collapsed && <div className="px-2.5 pb-1 text-[11px] font-medium uppercase tracking-wide text-secondary">LINE 內容</div>}
+            {LINE_NAV.map((n) => (
+              <NavLink key={n.to} to={n.to} title={collapsed ? n.label : undefined} aria-label={n.label} className={navLinkClass(collapsed)}>
+                <n.icon size={15} className="shrink-0" />{!collapsed && <span className="truncate">{n.label}</span>}
+              </NavLink>
+            ))}
+          </div>
         </nav>
         <div className="border-t border-border p-3 text-xs">
           {collapsed ? (

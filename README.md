@@ -4,7 +4,7 @@
 
 完整規格在 [`SPEC.md`](SPEC.md)（v1.0，唯一規格來源）；工作規則在 [`CLAUDE.md`](CLAUDE.md)。
 
-目前階段：**P3 送件與審核**（SPEC §16）。§6 的資料層、案件狀態機、規則引擎、`/api/apply/*` 與 `/api/admin/applications/*` 都已就緒；LINE channel 在 P2，SOP 串接在 P4。
+目前階段：**P2 內容與 LINE** 與 **P3 送件與審核**都已併入（SPEC §16）。§6 的資料表、案件狀態機、方案服務、seed 與舊資料搬遷（P1），罐頭訊息、LINE channel 與狀態推播（P2），以及規則引擎、`/api/apply/*` 與 `/api/admin/applications/*`（P3）都已就緒；SOP 串接在 P4。
 
 ## 版面
 
@@ -112,6 +112,35 @@ MATCH，否則回 `409 {code:"TRANSITION_NOT_ALLOWED", blockers:[…]}`。承辦
 `applications/{tenant}/{case_no}/{doc_type}/{revision}.{ext}`；影像永不經過 API 本體，
 只給 presigned URL。
 
+## LINE 開發（SPEC §8.4、§8.6、§8.7）
+
+市民在 LINE 看到的每一個字都來自 `contents`，程式碼裡沒有任何硬編文案（測試會逐一
+檢查 `app/services/line/` 的字串常數）。出廠文案在 `app/content_registry/`，每次啟動
+與每次 `seed.py` 都會把缺的 key 補進資料庫，**但永遠不覆蓋承辦人改過的字**。
+
+**離線開發**：`LINE_SENDER=noop`（`.env.example` 的預設值）不會連任何網路，送出的
+訊息只記在記憶體裡。這時候可以用測試端點直接餵一個 LINE 事件進來，拿回 bot 會回
+什麼：
+
+```bash
+curl -s localhost:8000/__test__/line/inbound \
+  -H 'content-type: application/json' \
+  -d '{"event":{"type":"message","replyToken":"t",
+       "source":{"userId":"Udemo"},"message":{"type":"text","text":"我的案件到哪了"}}}'
+```
+
+這個端點只在 `ENV != production` 且 `LINE_SENDER != line` 時存在，其餘情況一律 404；
+SPEC §14 的 E2E 劇本走的就是它。
+
+**接上真的 LINE**：設 `LINE_SENDER=line`、`LINE_CHANNEL_SECRET` 與
+`LINE_CHANNEL_ACCESS_TOKEN`，webhook 指到 `POST /line/webhook`。簽章一定要驗，
+**憑證缺失時請求會被拒絕**（401），不會像舊系統那樣跳過驗證。圖文選單在後台
+「LINE 內容 → Rich menu」按同步；圖檔限 PNG/JPEG、2500×1686（或 2500×843、
+1200×810）、1 MB 以內，不合規只會被回報，系統不會自己改圖。
+
+推播由 worker 送出：狀態轉移寫一列 `notifications` 並排一個工作，失敗重試三次，
+三次都失敗就留在 `failed` 讓承辦人看得到。
+
 ### OpenAPI 快照
 
 `apps/api/openapi.json` 是提交進 git 的契約快照，CI 用它做「client 同步檢查」。
@@ -121,6 +150,8 @@ MATCH，否則回 `409 {code:"TRANSITION_NOT_ALLOWED", blockers:[…]}`。承辦
 cd apps/api
 UPDATE_OPENAPI=1 uv run --package maydru-api pytest tests/test_openapi_snapshot.py
 ```
+
+只在開發環境存在的 `__test__` 路由刻意不進快照。
 
 ## 品質門檻（SPEC §14）
 

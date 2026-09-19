@@ -168,8 +168,10 @@ async def _upsert(db: AsyncSession, model: Any, where: list[Any], fields: dict[s
 async def migrate_contents(db: AsyncSession, src: sqlite3.Connection, tenant: Tenant, report: Report) -> None:
     """罐頭訊息：key 原名搬入，`content` 與 `draft` 都帶。
 
-    內容 registry 的預設值在 P2 才會進來，所以現在完全照舊系統的字面搬，
-    category / title / content / draft 一字不改。
+    舊系統的字一字不改地覆蓋 registry 預設值——承辦人在舊後台改過的每一句話都要
+    活過搬遷。反過來的保護在 `services/contents.sync_defaults()`：它只補缺的列、
+    只刷新中繼資料，永遠不碰 `content` 與 `draft`，所以搬遷完再啟動一次服務，
+    這裡搬進來的文字不會被預設值蓋回去。
     """
     for row in src.execute("SELECT * FROM contents"):
         try:

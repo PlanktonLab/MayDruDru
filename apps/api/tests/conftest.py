@@ -262,3 +262,37 @@ async def default_tenant(db: AsyncSession) -> Tenant:
     db.add(t)
     await db.commit()
     return t
+
+
+# ------------------------------------------------------------------- LINE
+
+@pytest.fixture(autouse=True)
+def reset_contents_cache():
+    """罐頭訊息快取是程序層的，而且每個測試的 tenant id 都一樣——不清就會串味。"""
+    from app.services import contents
+
+    contents.invalidate()
+    yield
+    contents.invalidate()
+
+
+@pytest.fixture
+def line_sender():
+    """不連網路的 sender。`.sent` 裡是 bot 這次送出的每一則訊息。"""
+    from app.services.line import sender
+
+    fake = sender.NoopLineSender()
+    sender.set_sender_for_testing(fake)
+    yield fake
+    sender.reset_sender()
+
+
+@pytest.fixture
+def rich_menu_client():
+    """記憶體版的 LINE rich menu API，`calls` 看得到呼叫順序。"""
+    from app.services.line import richmenu
+
+    client = richmenu.NoopRichMenuClient()
+    richmenu.set_client_for_testing(client)
+    yield client
+    richmenu.set_client_for_testing(None)

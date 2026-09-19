@@ -414,7 +414,10 @@ async def test_notifying_transitions_enqueue_a_notification(db, tenant, scheme, 
     await drive(db, app, *codes)
     rows = (await db.execute(select(Notification).where(Notification.application_id == app.id))).scalars().all()
     assert [r.payload["transition_code"] for r in rows] == [transition]
-    assert rows[0].status == "queued"
+    # 這件案子沒有人綁 LINE，所以那一列一建立就是 skipped（決策 D22）；有綁定才會是
+    # queued 並排進 worker（見 tests/test_line_notify.py）。重點是轉移留下了通知。
+    assert rows[0].status == "skipped"
+    assert rows[0].error == "no_linked_line_user"
 
 
 async def test_the_disbursement_chain_notifies_on_t7_only(db, tenant, scheme):

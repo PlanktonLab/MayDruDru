@@ -12,6 +12,12 @@ import EvalsPage from './pages/EvalsPage'
 import DashboardPage from './pages/DashboardPage'
 import MembersPage from './pages/MembersPage'
 import ApiKeysPage from './pages/ApiKeysPage'
+import LineContentsPage from './pages/line/ContentsPage'
+import LineFaqsPage from './pages/line/FaqsPage'
+import LineKnowledgePage from './pages/line/KnowledgePage'
+import LineRichMenuPage from './pages/line/RichMenuPage'
+import LineNotificationsPage from './pages/line/NotificationsPage'
+import LineUnmatchedPage from './pages/line/UnmatchedPage'
 
 export default function App() {
   return (
@@ -33,6 +39,13 @@ export default function App() {
           <Route path="/goals" element={<Navigate to="/canvas" replace />} />
           <Route path="/members" element={<MembersPage />} />
           <Route path="/api-keys" element={<ApiKeysPage />} />
+          {/* LINE 內容（SPEC §8.2）：讀取開放給所有登入的承辦人，寫入由頁面內部擋。 */}
+          <Route path="/line/contents" element={<LineContentsPage />} />
+          <Route path="/line/faqs" element={<LineFaqsPage />} />
+          <Route path="/line/knowledge" element={<LineKnowledgePage />} />
+          <Route path="/line/richmenu" element={<LineRichMenuPage />} />
+          <Route path="/line/notifications" element={<LineNotificationsPage />} />
+          <Route path="/line/unmatched" element={<LineUnmatchedPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/canvas" replace />} />
       </Routes>

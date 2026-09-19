@@ -28,7 +28,9 @@ from ..db import sessionmaker
 from ..models import EvalCase, EvalRun, Goal, Platform, Variant
 from ..renderer_client import render_html
 from ..services import application as case_service
+from ..services import notify
 from ..services.card_context import load_card_context
+from ..services.line import conversation as line_conversation
 from ..services.numbered_card import LINE_PREVIEW_EDGE, html_key_for
 from ..services.stepcard import build_card_html
 
@@ -394,3 +396,24 @@ async def purge_documents(ctx: dict) -> dict:
     """
     async with sessionmaker()() as db:
         return await case_service.purge_due(db, datetime.now(UTC))
+
+
+# ----------------------------------------------------------------- LINE 推播
+
+NOTIFY_MAX_TRIES = 3
+
+
+async def send_notification(ctx: dict, notification_id: str) -> str:
+    """把一筆 `notifications` 真的推到 LINE（SPEC §8.7）。
+
+    例外往外丟，arq 才會依 `max_tries` 退避重試；最後一次仍失敗時那一列已經是
+    `failed` 並留著錯誤訊息，承辦人在後台看得到誰沒收到。
+    """
+    async with sessionmaker()() as db:
+        return await notify.deliver(db, notification_id)
+
+
+async def sweep_conversations(ctx: dict) -> dict:
+    """LINE 對話狀態逾時（SPEC §8.4：30 分鐘無互動就退出）。每 5 分鐘掃一次。"""
+    async with sessionmaker()() as db:
+        return {"expired": await line_conversation.sweep_expired(db)}

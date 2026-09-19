@@ -490,7 +490,7 @@ async def list_faqs(
     db: AsyncSession = Depends(get_db),
 ) -> list[dict[str, Any]]:
     """關鍵字搜尋（問題、答案與 keywords）。語意搜尋在 P4 接上 embedding。"""
-    rows = await faq_service.search(db, await _tenant(db), q=q, scheme_code=scheme)
+    rows = await faq_service.browse(db, await _tenant(db), q=q, scheme_code=scheme)
     return [
         {"id": f.id, "category": f.category, "question": f.question, "answer": f.answer, "priority": f.priority}
         for f in rows
