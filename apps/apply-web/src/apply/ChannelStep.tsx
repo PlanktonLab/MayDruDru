@@ -23,7 +23,8 @@ export function ChannelStep({ scheme, value, onChange, errors }: ChannelStepProp
   return (
     <div className="space-y-4">
       <Card title="繳費方式" subtitle="選你實際刷卡／扣款的方式，選錯會要求補件。">
-        <fieldset className="space-y-2">
+        {/* 與申請身分同一種單選樣式：左邊圓圈，選中是實心 accent 打勾。 */}
+        <fieldset role="radiogroup" aria-label="繳費方式" className="space-y-2">
           <legend className="sr-only">繳費方式</legend>
           {scheme.payment_channels.map((channel) => {
             const selected = value.payment_channel_code === channel.code
@@ -31,30 +32,34 @@ export function ChannelStep({ scheme, value, onChange, errors }: ChannelStepProp
               <button
                 key={channel.code}
                 type="button"
-                aria-pressed={selected}
+                role="radio"
+                aria-checked={selected}
                 onClick={() => onChange({ payment_channel_code: channel.code })}
                 className={cx(
-                  'relative flex min-h-11 w-full flex-col items-start rounded-xl border p-3.5 pr-10 text-left transition-colors',
+                  'flex min-h-11 w-full items-start gap-3 rounded-xl border p-3.5 text-left transition-colors',
                   selected
                     ? 'border-accent bg-accent-bg'
                     : 'border-border bg-canvas hover:border-accent/40 hover:bg-background-lite',
                 )}
               >
-                {selected && (
-                  <span
-                    aria-hidden
-                    className="absolute right-3.5 top-3.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-accent text-on-accent"
-                  >
-                    <Check size={12} strokeWidth={3} />
-                  </span>
-                )}
-                <span className="text-[15px] font-medium text-primary">{channel.label}</span>
-                <span className="mt-0.5 text-[13px] leading-5 text-muted">
-                  需要：{channel.required_document_type_codes.map(labelOf).join('、') || '依方案規定'}
+                <span
+                  aria-hidden
+                  className={cx(
+                    'mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border',
+                    selected ? 'border-accent bg-accent text-on-accent' : 'border-tertiary bg-canvas text-transparent',
+                  )}
+                >
+                  <Check size={12} strokeWidth={3} />
                 </span>
-                {channel.hint && (
-                  <span className="mt-0.5 text-[13px] leading-5 text-muted">{channel.hint}</span>
-                )}
+                <span className="min-w-0">
+                  <span className="block text-[15px] font-medium text-primary">{channel.label}</span>
+                  <span className="mt-0.5 block text-[13px] leading-5 text-muted">
+                    需要：{channel.required_document_type_codes.map(labelOf).join('、') || '依方案規定'}
+                  </span>
+                  {channel.hint && (
+                    <span className="mt-0.5 block text-[13px] leading-5 text-muted">{channel.hint}</span>
+                  )}
+                </span>
               </button>
             )
           })}

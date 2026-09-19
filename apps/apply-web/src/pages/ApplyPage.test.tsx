@@ -32,11 +32,11 @@ async function pickTool(name = 'Claude Pro') {
 function fillIdentity() {
   fireEvent.change(screen.getByLabelText(/姓名/), { target: { value: '測試用小明' } })
   fireEvent.change(screen.getByLabelText(/手機號碼/), { target: { value: '0912345678' } })
-  fireEvent.click(screen.getByRole('button', { name: /一般青年/ }))
+  fireEvent.click(screen.getByRole('radio', { name: /一般青年/ }))
 }
 
 function fillChannel() {
-  fireEvent.click(screen.getByRole('button', { name: /電信繳費/ }))
+  fireEvent.click(screen.getByRole('radio', { name: /電信繳費/ }))
   fireEvent.change(screen.getByLabelText(/購買（扣款）日期/), { target: { value: '2026-08-01' } })
   fireEvent.change(screen.getByLabelText(/實際扣款臺幣金額/), { target: { value: '6000' } })
 }
@@ -92,7 +92,7 @@ describe('ApplyPage', () => {
     await screen.findByLabelText(/手機號碼/)
     fireEvent.change(screen.getByLabelText(/姓名/), { target: { value: '測試用小明' } })
     fireEvent.change(screen.getByLabelText(/手機號碼/), { target: { value: '0912' } })
-    fireEvent.click(screen.getByRole('button', { name: /一般青年/ }))
+    fireEvent.click(screen.getByRole('radio', { name: /一般青年/ }))
     next()
     expect(screen.getByText(/請填寫 10 碼手機號碼/)).toBeTruthy()
   })

@@ -280,15 +280,18 @@ export default function ApplyPage() {
             </p>
           )}
 
-          <div className="flex gap-2 pt-2">
+          {/* 一個畫面一個主要動作：「下一步」佔滿剩下的寬度，「上一步」縮成一顆
+              只有箭頭的方鈕——回得去，但不跟主要動作搶注意力。 */}
+          <div className="flex gap-3 pt-2">
             {state.stepIndex > 0 && (
-              <Button size="lg" icon={<ArrowLeft size={16} />} onClick={goBack}>
-                上一步
+              <Button size="lg" aria-label="上一步" onClick={goBack} className="w-13 px-0">
+                <ArrowLeft size={16} aria-hidden />
               </Button>
             )}
             {stepKey !== 'confirm' && (
-              <Button variant="primary" size="lg" block icon={<ArrowRight size={16} />} onClick={goNext}>
+              <Button variant="primary" size="lg" block onClick={goNext}>
                 下一步
+                <ArrowRight size={16} aria-hidden />
               </Button>
             )}
           </div>

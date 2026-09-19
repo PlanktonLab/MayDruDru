@@ -21,7 +21,9 @@ export function IdentityStep({ scheme, value, onChange, errors }: IdentityStepPr
   return (
     <div className="space-y-4">
       <Card title="基本資料" subtitle="請填寫與身分證相同的姓名，方便承辦核對。">
-        <div className="space-y-4">
+        {/* 桌面兩欄：這幾個欄位都短，一欄排下來會拉得很長，中間留一大片空白。
+            手機仍是一欄——窄螢幕上兩欄會把每格擠到放不下一個完整的值。 */}
+        <div className="grid gap-4 sm:grid-cols-2">
           <Field label="姓名" required error={errors.applicant_name}>
             {(props) => (
               <Input
@@ -80,7 +82,10 @@ export function IdentityStep({ scheme, value, onChange, errors }: IdentityStepPr
       </Card>
 
       <Card title="申請身分" subtitle={scheme.amount_note}>
-        <fieldset className="space-y-2">
+        {/* 單選題：左邊一個圓，選中是實心 accent 打勾、沒選是空心圈。
+            圓圈畫在左邊而不是右邊，因為視線是從左往右讀，狀態要先於內容。
+            兩個並排——身分別只有兩三個選項，排成一長串反而要多掃一次。 */}
+        <fieldset role="radiogroup" aria-label="申請身分" className="grid gap-2 sm:grid-cols-2">
           <legend className="sr-only">申請身分</legend>
           {scheme.tiers.map((tier) => {
             const selected = value.tier_code === tier.code
@@ -88,27 +93,31 @@ export function IdentityStep({ scheme, value, onChange, errors }: IdentityStepPr
               <button
                 key={tier.code}
                 type="button"
-                aria-pressed={selected}
+                role="radio"
+                aria-checked={selected}
                 onClick={() => onChange({ tier_code: tier.code })}
                 className={cx(
-                  'relative flex min-h-11 w-full flex-col items-start rounded-xl border p-3.5 pr-10 text-left transition-colors',
+                  'flex min-h-11 w-full items-center gap-3 rounded-xl border p-3.5 text-left transition-colors',
                   selected
                     ? 'border-accent bg-accent-bg'
                     : 'border-border bg-canvas hover:border-accent/40 hover:bg-background-lite',
                 )}
               >
-                {selected && (
-                  <span
-                    aria-hidden
-                    className="absolute right-3.5 top-3.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-accent text-on-accent"
-                  >
-                    <Check size={12} strokeWidth={3} />
+                <span
+                  aria-hidden
+                  className={cx(
+                    'flex size-5 shrink-0 items-center justify-center rounded-full border',
+                    selected ? 'border-accent bg-accent text-on-accent' : 'border-tertiary bg-canvas text-transparent',
+                  )}
+                >
+                  <Check size={12} strokeWidth={3} />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-[15px] font-medium text-primary">{tier.label}</span>
+                  <span className="mt-0.5 block text-[13px] leading-5 text-muted">
+                    補助 {Math.round(tier.subsidy_rate * 100)}%，上限 {money(tier.cap_amount)}
+                    {tier.required_proof_doc_types.length > 0 && '（需另附證明文件）'}
                   </span>
-                )}
-                <span className="text-[15px] font-medium text-primary">{tier.label}</span>
-                <span className="mt-0.5 text-[13px] text-muted">
-                  補助 {Math.round(tier.subsidy_rate * 100)}%，上限 {money(tier.cap_amount)}
-                  {tier.required_proof_doc_types.length > 0 && '（需另附證明文件）'}
                 </span>
               </button>
             )

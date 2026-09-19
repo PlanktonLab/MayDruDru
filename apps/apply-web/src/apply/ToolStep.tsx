@@ -9,7 +9,7 @@
  */
 
 import { useMemo, useState } from 'react'
-import { AlertTriangle, Check, Info } from 'lucide-react'
+import { AlertTriangle, Info } from 'lucide-react'
 import { Badge, Card, Field, FlatSelect, Input, cx } from '@maydru/ui'
 import type { FlatSelectOption } from '@maydru/ui'
 import type { EligibleTool, SchemePublic, ToolStatus } from '../lib/types'
@@ -93,8 +93,9 @@ export function ToolStep({ scheme, value, onChange, error }: ToolStepProps) {
         )}
       </Field>
 
-      {/* 選了之後才講這個工具能不能補助。講在選之前沒人看，講在送出時才擋太晚。 */}
-      {selected && (
+      {/* 選到不能補助或需人工認定的工具時才出聲。可補助是預期結果，
+          再跳一張綠卡只是把「一切正常」講成一件事，佔掉畫面也讓人多讀一次。 */}
+      {selected && selected.status !== 'APPROVED' && (
         <div
           className={cx(
             'rounded-xl border p-4',
@@ -102,26 +103,16 @@ export function ToolStep({ scheme, value, onChange, error }: ToolStepProps) {
           )}
         >
           <div className="flex items-start gap-2.5">
-            {selected.status === 'APPROVED' ? (
-              <span
-                aria-hidden
-                className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-accent text-on-accent"
-              >
-                <Check size={13} strokeWidth={3} />
-              </span>
-            ) : (
-              <AlertTriangle
-                size={17}
-                aria-hidden
-                className={cx('mt-0.5 shrink-0', selected.status === 'REJECTED' ? 'text-danger' : 'text-warn')}
-              />
-            )}
+            <AlertTriangle
+              size={17}
+              aria-hidden
+              className={cx('mt-0.5 shrink-0', selected.status === 'REJECTED' ? 'text-danger' : 'text-warn')}
+            />
             <div className="min-w-0">
               <p className="flex flex-wrap items-center gap-2">
                 <span className="text-[15px] font-semibold text-primary">{selected.name}</span>
                 <Badge tone={STATUS_TONE[selected.status]}>{STATUS_LABEL[selected.status]}</Badge>
               </p>
-              {selected.vendor && <p className="mt-0.5 text-[13px] text-muted">{selected.vendor}</p>}
               {selected.verdict_note && (
                 <p className="mt-1 text-[13px] leading-relaxed text-muted">{selected.verdict_note}</p>
               )}

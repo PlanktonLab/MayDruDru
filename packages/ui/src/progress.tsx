@@ -44,6 +44,7 @@ export function Stepper({
                 aria-hidden
                 className={cx(
                   'flex size-7 shrink-0 items-center justify-center rounded-full border text-[11px] font-medium tabular-nums',
+                  // 完成：淡底 + accent 勾。目前：實心 accent + 白字。之後：安靜的灰圈。
                   done && 'border-transparent bg-accent-bg text-accent',
                   active && 'border-accent bg-accent text-on-accent',
                   !done && !active && 'border-border bg-canvas text-secondary',
@@ -60,11 +61,10 @@ export function Stepper({
               >
                 {step.label}
               </span>
+              {/* 連接線把六步串成一條路：沒有線，六個圈看起來是六個獨立的按鈕。
+                  手機排不下（序號與標籤已經上下疊），所以只在桌面畫。 */}
               {index < steps.length - 1 && (
-                <span
-                  aria-hidden
-                  className={cx('hidden h-px min-w-2 flex-1 lg:block', done ? 'bg-accent' : 'bg-border')}
-                />
+                <span aria-hidden className="hidden h-px min-w-4 flex-1 bg-border lg:block" />
               )}
             </li>
           )
