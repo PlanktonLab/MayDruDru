@@ -36,6 +36,7 @@ from app.models import (  # noqa: E402
     Tenant,
 )
 from app.services import application as case_service  # noqa: E402
+from app.services import contents as contents_service  # noqa: E402
 from app.services.actors import Actor  # noqa: E402
 from sqlalchemy import select  # noqa: E402
 from sqlalchemy.ext.asyncio import AsyncSession  # noqa: E402
@@ -174,6 +175,18 @@ async def seed_children(db: AsyncSession, scheme: Scheme, report: Report) -> Non
                       report, "pending_tool")
 
 
+async def seed_contents(db: AsyncSession, tenant: Tenant, report: Report) -> None:
+    """罐頭訊息：registry 缺的 key 補上，既有的只刷新中繼資料（SPEC §8.6）。
+
+    承辦人改過的字與搬遷進來的舊文案都不會被蓋掉，所以這支腳本重跑幾次都安全。
+    """
+    result = await contents_service.sync_defaults(db, tenant.id)
+    unchanged = result["total"] - result["inserted"] - result["updated"]
+    for kind, n in (("inserted", result["inserted"]), ("updated", result["updated"]), ("skipped", unchanged)):
+        report[f"content:{kind}"] += n
+        report[kind] += n
+
+
 async def seed_faqs(db: AsyncSession, tenant: Tenant, scheme: Scheme, report: Report) -> None:
     for spec in data.FAQS:
         await _upsert(db, Faq, [Faq.tenant_id == tenant.id, Faq.code == spec["code"]],
@@ -243,6 +256,7 @@ async def run() -> Report:
     report = Report()
     async with sessionmaker()() as db:
         tenant = await ensure_tenant(db, report)
+        await seed_contents(db, tenant, report)
         scheme = await seed_scheme(db, tenant, data.SCHEME, report)
         await seed_children(db, scheme, report)
         await seed_faqs(db, tenant, scheme, report)
