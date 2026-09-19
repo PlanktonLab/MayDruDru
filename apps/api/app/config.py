@@ -23,6 +23,13 @@ class Settings(BaseSettings):
 
     # object storage (S3 compatible)
     s3_endpoint: str = "localhost:9000"
+    # Browser-facing endpoint used only when creating presigned download URLs.
+    # Docker services talk to `minio:9000`, but a clerk's browser cannot resolve
+    # that internal hostname.
+    s3_public_endpoint: str = ""
+    # MinIO's default bucket region. Supplying it lets a client sign URLs for
+    # the browser-facing endpoint without attempting to connect to that host.
+    s3_region: str = "us-east-1"
     s3_access_key: str = "minioadmin"
     s3_secret_key: str = "minioadmin"
     s3_secure: bool = False

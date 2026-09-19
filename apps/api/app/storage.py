@@ -26,6 +26,19 @@ def client() -> Minio:
 
 
 @lru_cache
+def presign_client() -> Minio:
+    """Client used to sign browser-facing private-file URLs.
+
+    S3 signatures include the host. Keep normal storage calls on the internal
+    endpoint, while signing downloads against an endpoint a browser can reach.
+    """
+    s = get_settings()
+    endpoint = s.s3_public_endpoint or s.s3_endpoint
+    return Minio(endpoint, access_key=s.s3_access_key, secret_key=s.s3_secret_key,
+                 secure=s.s3_secure, region=s.s3_region)
+
+
+@lru_cache
 def fernet() -> Fernet:
     s = get_settings()
     key = s.original_encryption_key

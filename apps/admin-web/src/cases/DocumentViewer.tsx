@@ -8,13 +8,14 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { History, Maximize2, RotateCw, ScanText, ZoomIn, ZoomOut } from 'lucide-react'
+import { History, Highlighter, Maximize2, RotateCw, ScanLine, ZoomIn, ZoomOut } from 'lucide-react'
 import { Badge, Button, Spinner, cx } from '@maydru/ui'
+import { disposeCanvas, pdfToPageCanvases, toBlob } from '@maydru/ocr'
 import type { BoundingBox } from '@maydru/review-rules'
 import { dateTime } from './labels'
-import type { CaseDocument } from './types'
+import type { CaseDocument, CaseFinding } from './types'
 
-export const MIN_ZOOM = 0.5
+export const MIN_ZOOM = 0.2
 export const MAX_ZOOM = 3
 
 export function clampZoom(value: number): number {
@@ -29,6 +30,7 @@ export interface HighlightBox {
   width: number
   height: number
   emphasis: boolean
+  label: string
 }
 
 /**
@@ -39,7 +41,7 @@ export function toPercentBox(
   bbox: BoundingBox | null | undefined,
   width: number,
   height: number,
-): Omit<HighlightBox, 'key' | 'emphasis'> | null {
+): Omit<HighlightBox, 'key' | 'emphasis' | 'label'> | null {
   if (!bbox || !width || !height) return null
   return {
     left: (bbox.x0 / width) * 100,
@@ -58,6 +60,8 @@ export interface DocumentViewerProps {
   loadUrl: (documentId: string) => Promise<string>
   /** 由選到的 finding 傳進來，畫成強調框。 */
   focusBbox?: BoundingBox | null
+  /** 規則引擎找到的證據；ProReview 會把這些位置全部畫成螢光筆重點。 */
+  findings?: Pick<CaseFinding, 'id' | 'rule_code' | 'document_id' | 'bbox' | 'superseded'>[]
   /** 在承辦的瀏覽器重跑 tesseract。 */
   onReRecognise?: (document: CaseDocument) => void
   recognising?: boolean
@@ -70,6 +74,7 @@ export function DocumentViewer({
   onSelect,
   loadUrl,
   focusBbox,
+  findings = [],
   onReRecognise,
   recognising = false,
   recogniseProgress = 0,
@@ -78,16 +83,19 @@ export function DocumentViewer({
   const history = documents.filter((doc) => !doc.is_current)
   const [showHistory, setShowHistory] = useState(false)
   const [url, setUrl] = useState<string | null>(null)
+  const [renderedPdfUrl, setRenderedPdfUrl] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [zoom, setZoom] = useState(1)
   const [rotation, setRotation] = useState(0)
   const [pan, setPan] = useState({ x: 0, y: 0 })
-  const [showLines, setShowLines] = useState(true)
+  const [showHighlights, setShowHighlights] = useState(true)
   const [natural, setNatural] = useState({ width: 0, height: 0 })
   const dragRef = useRef<{ x: number; y: number } | null>(null)
+  const stageRef = useRef<HTMLDivElement | null>(null)
 
   const selected = documents.find((doc) => doc.id === selectedId) ?? current[0] ?? null
+  const isPdf = selected?.mime === 'application/pdf'
 
   useEffect(() => {
     if (!selected) return
@@ -95,6 +103,8 @@ export function DocumentViewer({
     setLoading(true)
     setError('')
     setUrl(null)
+    setRenderedPdfUrl(null)
+    setNatural({ width: 0, height: 0 })
     setZoom(1)
     setRotation(0)
     setPan({ x: 0, y: 0 })
@@ -113,19 +123,116 @@ export function DocumentViewer({
     }
   }, [loadUrl, selected])
 
+  // PDF 原件不能在瀏覽器內建 iframe 上可靠疊 DOM 標記，因此和 ProReview 一樣先轉成畫布。
+  // 多頁由上往下接成一張長圖；重新 OCR 也使用相同座標系，bbox 才能準確落在文字上。
+  useEffect(() => {
+    if (!url || !isPdf) {
+      setRenderedPdfUrl(null)
+      return
+    }
+    let cancelled = false
+    let objectUrl: string | null = null
+    const render = async () => {
+      setLoading(true)
+      setError('')
+      try {
+        const response = await fetch(url)
+        if (!response.ok) throw new Error(`PDF 下載失敗（${response.status}）`)
+        const pages = await pdfToPageCanvases(await response.blob(), { maxPages: 5 })
+        if (!pages.canvases.length) throw new Error('PDF 沒有可顯示的頁面。')
+        const width = Math.max(...pages.canvases.map((canvas) => canvas.width))
+        const height = pages.canvases.reduce((sum, canvas) => sum + canvas.height, 0)
+        const merged = document.createElement('canvas')
+        merged.width = width
+        merged.height = height
+        const context = merged.getContext('2d')
+        if (!context) throw new Error('瀏覽器無法建立 PDF 審核畫布。')
+        context.fillStyle = '#ffffff'
+        context.fillRect(0, 0, width, height)
+        let y = 0
+        for (const canvas of pages.canvases) {
+          context.drawImage(canvas, 0, y)
+          y += canvas.height
+          disposeCanvas(canvas)
+        }
+        const blob = await toBlob(merged, 'image/jpeg')
+        disposeCanvas(merged)
+        objectUrl = URL.createObjectURL(blob)
+        if (cancelled) {
+          URL.revokeObjectURL(objectUrl)
+          objectUrl = null
+        } else {
+          setRenderedPdfUrl(objectUrl)
+        }
+      } catch (cause) {
+        if (!cancelled) setError(cause instanceof Error ? cause.message : 'PDF 轉換失敗，請重新整理。')
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    void render()
+    return () => {
+      cancelled = true
+      if (objectUrl) URL.revokeObjectURL(objectUrl)
+    }
+  }, [isPdf, url])
+
   const highlights = useMemo<HighlightBox[]>(() => {
     if (!selected) return []
     const boxes: HighlightBox[] = []
-    if (showLines && selected.ocr) {
-      selected.ocr.lines.forEach((line, index) => {
-        const box = toPercentBox(line.bbox, natural.width, natural.height)
-        if (box) boxes.push({ ...box, key: `line-${index}`, emphasis: false })
-      })
+    let focusIsEvidence = false
+    if (showHighlights) {
+      const evidenceByBox = new Map<string, HighlightBox>()
+      findings
+        .filter((finding) => !finding.superseded && finding.document_id === selected.id && finding.bbox)
+        .forEach((finding) => {
+          const box = toPercentBox(finding.bbox, natural.width, natural.height)
+          const emphasis = Boolean(
+            focusBbox
+              && finding.bbox
+              && finding.bbox.x0 === focusBbox.x0
+              && finding.bbox.y0 === focusBbox.y0
+              && finding.bbox.x1 === focusBbox.x1
+              && finding.bbox.y1 === focusBbox.y1,
+          )
+          if (emphasis) focusIsEvidence = true
+          if (!box || !finding.bbox) return
+          const coordinateKey = `${finding.bbox.x0}:${finding.bbox.y0}:${finding.bbox.x1}:${finding.bbox.y1}`
+          const existing = evidenceByBox.get(coordinateKey)
+          if (existing) {
+            existing.emphasis ||= emphasis
+            existing.label = `${existing.label}、${finding.rule_code}`
+          } else {
+            evidenceByBox.set(coordinateKey, {
+              ...box,
+              key: coordinateKey,
+              emphasis,
+              label: finding.rule_code,
+            })
+          }
+        })
+      boxes.push(...evidenceByBox.values())
     }
-    const focus = toPercentBox(focusBbox, natural.width, natural.height)
-    if (focus) boxes.push({ ...focus, key: 'focus', emphasis: true })
+    // focus 通常已經是上面某個 evidence；只有舊資料沒有 finding id 時才補畫，避免兩層
+    // 半透明色疊在一起把文字蓋住。
+    if (!focusIsEvidence) {
+      const focus = toPercentBox(focusBbox, natural.width, natural.height)
+      if (focus) boxes.push({ ...focus, key: 'focus', emphasis: true, label: '目前定位的重點' })
+    }
     return boxes
-  }, [focusBbox, natural.height, natural.width, selected, showLines])
+  }, [findings, focusBbox, natural.height, natural.width, selected, showHighlights])
+
+  const evidenceCount = findings.filter(
+    (finding) => !finding.superseded && finding.document_id === selected?.id && finding.bbox,
+  ).length
+  const displayUrl = isPdf ? renderedPdfUrl : url
+
+  const fitToWidth = useCallback((width = natural.width) => {
+    const available = (stageRef.current?.clientWidth ?? 0) - 32
+    if (!width || available <= 0) return
+    setZoom(clampZoom(Math.min(1, available / width)))
+    setPan({ x: 0, y: 0 })
+  }, [natural.width])
 
   const onWheel = useCallback((event: React.WheelEvent) => {
     event.preventDefault()
@@ -207,41 +314,45 @@ export function DocumentViewer({
       )}
 
       <div className="flex flex-wrap items-center gap-1.5 border-b border-border px-3 py-2">
-        <Button size="sm" icon={<ZoomOut size={14} />} onClick={() => setZoom((z) => clampZoom(z - 0.25))} aria-label="縮小">
-          縮小
-        </Button>
-        <Button size="sm" icon={<ZoomIn size={14} />} onClick={() => setZoom((z) => clampZoom(z + 0.25))} aria-label="放大">
-          放大
-        </Button>
-        <Button size="sm" icon={<RotateCw size={14} />} onClick={() => setRotation((r) => (r + 90) % 360)}>
-          旋轉
-        </Button>
-        <Button
-          size="sm"
-          icon={<Maximize2 size={14} />}
-          onClick={() => {
-            setZoom(1)
-            setPan({ x: 0, y: 0 })
-            setRotation(0)
-          }}
-        >
-          重設
-        </Button>
-        <Button
-          size="sm"
-          variant={showLines ? 'primary' : 'secondary'}
-          icon={<ScanText size={14} />}
-          aria-pressed={showLines}
-          onClick={() => setShowLines((value) => !value)}
-        >
-          OCR 高亮
-        </Button>
-        {selected && onReRecognise && (
-          <Button size="sm" loading={recognising} onClick={() => onReRecognise(selected)}>
-            重新辨識
-          </Button>
-        )}
-        <span className="ml-auto text-[12px] tabular-nums text-muted">{Math.round(zoom * 100)}%</span>
+        <>
+            <Button size="sm" icon={<ZoomOut size={14} />} onClick={() => setZoom((z) => clampZoom(z - 0.25))} aria-label="縮小">
+              縮小
+            </Button>
+            <Button size="sm" icon={<ZoomIn size={14} />} onClick={() => setZoom((z) => clampZoom(z + 0.25))} aria-label="放大">
+              放大
+            </Button>
+            <Button size="sm" icon={<RotateCw size={14} />} onClick={() => setRotation((r) => (r + 90) % 360)}>
+              旋轉
+            </Button>
+            <Button size="sm" icon={<ScanLine size={14} />} onClick={() => fitToWidth()}>
+              適合寬度
+            </Button>
+            <Button
+              size="sm"
+              icon={<Maximize2 size={14} />}
+              onClick={() => {
+                setRotation(0)
+                fitToWidth()
+              }}
+            >
+              回到開頭
+            </Button>
+            <Button
+              size="sm"
+              variant={showHighlights ? 'primary' : 'secondary'}
+              icon={<Highlighter size={14} />}
+              aria-pressed={showHighlights}
+              onClick={() => setShowHighlights((value) => !value)}
+            >
+              重點標記{evidenceCount ? `（${evidenceCount}）` : ''}
+            </Button>
+            {selected && onReRecognise && (
+              <Button size="sm" loading={recognising} onClick={() => onReRecognise(selected)}>
+                重新辨識
+              </Button>
+            )}
+            <span className="ml-auto text-[12px] tabular-nums text-muted">{Math.round(zoom * 100)}%</span>
+        </>
       </div>
 
       {selected && (
@@ -255,6 +366,7 @@ export function DocumentViewer({
           ) : (
             <Badge tone="warn">沒有 OCR 結果</Badge>
           )}
+          {isPdf && <Badge tone="neutral">PDF 審核畫布</Badge>}
           <span>上傳於 {dateTime(selected.uploaded_at)}</span>
         </div>
       )}
@@ -275,6 +387,7 @@ export function DocumentViewer({
       )}
 
       <div
+        ref={stageRef}
         className="relative min-h-0 flex-1 overflow-hidden bg-background"
         onWheel={onWheel}
         onPointerDown={onPointerDown}
@@ -293,40 +406,44 @@ export function DocumentViewer({
             {error}
           </p>
         )}
-        {url && (
+        {displayUrl && (
           <div
             data-testid="document-stage"
-            className="absolute left-1/2 top-1/2 origin-center"
+            className="absolute left-1/2 top-4 origin-top"
             style={{
-              transform: `translate(-50%, -50%) translate(${pan.x}px, ${pan.y}px) scale(${zoom}) rotate(${rotation}deg)`,
+              transform: `translateX(-50%) translate(${pan.x}px, ${pan.y}px) scale(${zoom}) rotate(${rotation}deg)`,
             }}
           >
             <img
-              src={url}
+              src={displayUrl}
               alt={selected ? `${selected.document_type_label}（第 ${selected.revision} 版）` : '文件'}
               draggable={false}
               onLoad={(event) =>
-                setNatural({
-                  width: event.currentTarget.naturalWidth,
-                  height: event.currentTarget.naturalHeight,
-                })
+                {
+                  const width = event.currentTarget.naturalWidth
+                  const height = event.currentTarget.naturalHeight
+                  setNatural({ width, height })
+                  fitToWidth(width)
+                }
               }
-              className="max-h-[70vh] max-w-full select-none"
+              className="max-w-none select-none"
             />
             {highlights.map((box) => (
               <span
                 key={box.key}
                 data-testid={box.emphasis ? 'highlight-focus' : 'highlight-line'}
                 aria-hidden
+                title={box.label}
                 className={cx(
-                  'pointer-events-none absolute rounded-[2px] border',
-                  box.emphasis ? 'border-2 border-accent bg-accent-bg' : 'border-warn/70',
+                  'pointer-events-none absolute rounded-[1px] transition-all',
+                  box.emphasis ? 'z-10 animate-pulse ring-2 ring-amber-500' : 'z-[1]',
                 )}
                 style={{
                   left: `${box.left}%`,
                   top: `${box.top}%`,
                   width: `${box.width}%`,
                   height: `${box.height}%`,
+                  background: box.emphasis ? 'rgba(255, 224, 0, 0.48)' : 'rgba(255, 232, 75, 0.26)',
                 }}
               />
             ))}

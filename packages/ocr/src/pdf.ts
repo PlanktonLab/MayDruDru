@@ -6,7 +6,7 @@
  * （例如 `apps/apply-web/src/main.tsx`）設定一次即可：
  *
  * ```ts
- * import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
+ * import pdfWorkerUrl from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url'
  * import { setPdfWorkerSrc } from '@maydru/ocr'
  *
  * setPdfWorkerSrc(pdfWorkerUrl)
@@ -46,8 +46,8 @@ export interface PdfPages {
 /**
  * 把 PDF 的前 N 頁轉成 canvas，之後可以直接餵給 `recognize()` 或遮罩編輯器。
  *
- * 縮放比例以「頁面長邊縮到 `maxLongEdge`」回推，因此不論原稿是 A4 還是收據長條，
- * OCR 拿到的解析度都一致。
+ * 縮放比例以「頁面長邊轉成 `maxLongEdge`」回推，因此不論原稿是 A4 向量檔還是
+ * 收據長條，OCR 都拿到足夠且一致的解析度。放大最多 3 倍，避免異常小頁面耗盡記憶體。
  */
 export async function pdfToPageCanvases(
   file: Blob,
@@ -56,7 +56,9 @@ export async function pdfToPageCanvases(
   const maxPages = options.maxPages ?? 5
   const maxLongEdge = options.maxLongEdge ?? MAX_LONG_EDGE
 
-  const pdfjs = await import('pdfjs-dist')
+  // `pdfjs-dist` 的現代版要求非常新的 Uint8Array.toHex；不少仍在支援期內的瀏覽器
+  // 尚未提供。legacy build 自帶相容層，否則 ReportLab 等正常 PDF 會被誤判成損毀。
+  const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs')
   if (workerSrc) pdfjs.GlobalWorkerOptions.workerSrc = workerSrc
 
   const buffer = await file.arrayBuffer()
@@ -64,9 +66,10 @@ export async function pdfToPageCanvases(
   let document
   try {
     document = await task.promise
-  } catch {
+  } catch (cause) {
     await task.destroy()
-    throw new Error(PDF_UNREADABLE_MESSAGE)
+    const detail = cause instanceof Error ? cause.message : String(cause)
+    throw new Error(`${PDF_UNREADABLE_MESSAGE}${detail ? `（${detail}）` : ''}`)
   }
 
   try {
@@ -76,7 +79,7 @@ export async function pdfToPageCanvases(
     for (let index = 1; index <= wanted; index++) {
       const page = await document.getPage(index)
       const base = page.getViewport({ scale: 1 })
-      const scale = Math.min(1, maxLongEdge / Math.max(base.width, base.height))
+      const scale = Math.min(3, maxLongEdge / Math.max(base.width, base.height))
       const viewport = page.getViewport({ scale })
       const canvas = window.document.createElement('canvas')
       canvas.width = Math.round(viewport.width)

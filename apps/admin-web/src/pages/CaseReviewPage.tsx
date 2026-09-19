@@ -9,9 +9,9 @@
 import { useCallback, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, ShieldAlert } from 'lucide-react'
+import { ArrowLeft, ListChecks, ShieldAlert } from 'lucide-react'
 import { Badge, Card, Select, Spinner, Timeline, type TimelineEvent } from '@maydru/ui'
-import { createOcrWorker, recognize } from '@maydru/ocr'
+import { createOcrWorker, disposeCanvas, pdfToPageCanvases, recognize, type OcrLine, type OcrResult } from '@maydru/ocr'
 import { ComparePanel } from '../cases/ComparePanel'
 import { DecisionBar } from '../cases/DecisionBar'
 import { DocumentViewer } from '../cases/DocumentViewer'
@@ -33,6 +33,34 @@ import { errMsg, useToast } from '../components/ui'
 import { PageHeader } from '../components/admin/shared'
 import type { BoundingBox } from '@maydru/review-rules'
 import type { CaseDocument, DocumentTypeOption } from '../cases/types'
+
+function shiftLines(lines: OcrLine[], dy: number): OcrLine[] {
+  return lines.map((line) => ({
+    ...line,
+    bbox: { ...line.bbox, y0: line.bbox.y0 + dy, y1: line.bbox.y1 + dy },
+    words: line.words.map((word) => ({
+      ...word,
+      bbox: { ...word.bbox, y0: word.bbox.y0 + dy, y1: word.bbox.y1 + dy },
+    })),
+  }))
+}
+
+export function mergePageOcr(results: OcrResult[], pageHeights: number[]): OcrResult {
+  let offset = 0
+  const lines: OcrLine[] = []
+  results.forEach((result, index) => {
+    lines.push(...shiftLines(result.lines, offset))
+    offset += pageHeights[index] ?? 0
+  })
+  const confidences = results.map((result) => result.confidence).filter((value) => value > 0)
+  return {
+    text: results.map((result) => result.text).join('\n'),
+    confidence: confidences.length
+      ? Math.round(confidences.reduce((sum, value) => sum + value, 0) / confidences.length)
+      : 0,
+    lines,
+  }
+}
 
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -81,16 +109,37 @@ export default function CaseReviewPage() {
       setRecognising(true)
       setRecogniseProgress(0)
       let worker: Awaited<ReturnType<typeof createOcrWorker>> | null = null
+      let pdfCanvases: HTMLCanvasElement[] = []
       try {
         const { url } = await documentUrl(caseNo, document.id)
-        worker = await createOcrWorker({ onProgress: setRecogniseProgress })
-        const result = await recognize(worker, url)
+        let currentPage = 0
+        let pageCount = 1
+        worker = await createOcrWorker({
+          onProgress: (progress) => setRecogniseProgress((currentPage + progress) / pageCount),
+        })
+        let result: OcrResult
+        if (document.mime === 'application/pdf') {
+          const response = await fetch(url)
+          if (!response.ok) throw new Error(`PDF 下載失敗（${response.status}）`)
+          const pages = await pdfToPageCanvases(await response.blob(), { maxPages: 5 })
+          pdfCanvases = pages.canvases
+          pageCount = pdfCanvases.length
+          const results: OcrResult[] = []
+          for (let index = 0; index < pdfCanvases.length; index++) {
+            currentPage = index
+            results.push(await recognize(worker, pdfCanvases[index]))
+          }
+          result = mergePageOcr(results, pdfCanvases.map((canvas) => canvas.height))
+        } else {
+          result = await recognize(worker, url)
+        }
         await putDocumentOcr(caseNo, document.id, result)
         await refresh()
         toast('已用重新辨識的結果重跑規則')
       } catch (cause) {
         toast(errMsg(cause), 'err')
       } finally {
+        pdfCanvases.forEach(disposeCanvas)
         await worker?.terminate().catch(() => {})
         setRecognising(false)
         setRecogniseProgress(0)
@@ -132,6 +181,30 @@ export default function CaseReviewPage() {
   const documentTypes: DocumentTypeOption[] = settings.document_types.filter((type) =>
     caseData.required_document_types.includes(type.code),
   )
+  const currentDocumentTypes = new Set(
+    caseData.documents.filter((document) => document.is_current).map((document) => document.document_type_code),
+  )
+  const missingDocuments = caseData.required_document_types
+    .filter((code) => !currentDocumentTypes.has(code))
+    .map((code) => settings.document_types.find((type) => type.code === code)?.label || code)
+  const findingsPanel = (
+    <FindingsPanel
+      findings={caseData.findings.map((finding) => ({
+        ...finding,
+        note: finding.note_text || renderNote(finding.note),
+      }))}
+      rules={caseData.rules}
+      missingDocuments={missingDocuments}
+      focusedRuleCode={focus?.ruleCode ?? null}
+      onLocate={onLocate}
+      canReview={can('case_review')}
+      onOverride={async (ruleCode, body) => {
+        await overrideFinding(caseNo, ruleCode, body)
+        await refresh()
+        toast('已寫入人工判定')
+      }}
+    />
+  )
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -144,6 +217,9 @@ export default function CaseReviewPage() {
           description={`${caseData.scheme_name} · 第一次送件 ${dateTime(caseData.first_submitted_at)}`}
           actions={
             <span className="flex flex-wrap items-center gap-2">
+              <Link to={`/review-settings?scheme=${encodeURIComponent(caseData.scheme_code)}`} className="inline-flex min-h-8 items-center gap-1 rounded-lg border border-border px-2.5 text-[13px] text-muted hover:bg-background-lite hover:text-primary">
+                <ListChecks size={13} /> 資料重點設定
+              </Link>
               <Badge tone={STATUS_TONE[caseData.status]}>{STATUS_STAFF_LABEL[caseData.status]}</Badge>
               {caseData.verdict && (
                 <span className="text-[13px] text-muted">{VERDICT_LABEL[caseData.verdict] ?? caseData.verdict}</span>
@@ -161,9 +237,13 @@ export default function CaseReviewPage() {
           <DocumentViewer
             documents={caseData.documents}
             selectedId={selectedDocumentId}
-            onSelect={setSelectedDocumentId}
+            onSelect={(documentId) => {
+              setSelectedDocumentId(documentId)
+              setFocus(null)
+            }}
             loadUrl={loadUrl}
             focusBbox={focus?.bbox ?? null}
+            findings={caseData.findings}
             onReRecognise={can('case_review') ? (doc) => void reRecognise(doc) : undefined}
             recognising={recognising}
             recogniseProgress={recogniseProgress}
@@ -171,7 +251,9 @@ export default function CaseReviewPage() {
         </section>
 
         <aside aria-label="審核面板" className="min-h-0 space-y-4 overflow-auto">
-          <Card title="申請資料">
+          {findingsPanel}
+
+          <Card title="申請概況">
             <dl className="divide-y divide-border">
               <Row label="申請人" value={caseData.applicant_name} />
               <Row label="手機" value={caseData.phone_masked} />
@@ -227,22 +309,6 @@ export default function CaseReviewPage() {
               </p>
             )}
           </Card>
-
-          <FindingsPanel
-            findings={caseData.findings.map((finding) => ({
-              ...finding,
-              note: finding.note_text || renderNote(finding.note),
-            }))}
-            rules={caseData.rules}
-            focusedRuleCode={focus?.ruleCode ?? null}
-            onLocate={onLocate}
-            canReview={can('case_review')}
-            onOverride={async (ruleCode, body) => {
-              await overrideFinding(caseNo, ruleCode, body)
-              await refresh()
-              toast('已寫入人工判定')
-            }}
-          />
 
           <ComparePanel
             claimed={caseData.purchase_amount}
