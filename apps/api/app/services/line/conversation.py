@@ -30,7 +30,8 @@ __all__ = [
 DEFAULT_TTL_MINUTES = 30
 
 # `idle` 不會寫進資料庫——沒有列就是 idle。
-FLOWS = ("idle", "case_verify", "sop_session", "sop_pending")
+# `sop_pending` 是退件推播按下「教我準備」後、P4 真的開 session 之前的中繼狀態。
+FLOWS = ("idle", "case_verify", "checklist", "sop_pending", "sop_session")
 
 
 @dataclass(frozen=True)

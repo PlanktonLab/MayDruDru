@@ -138,7 +138,12 @@ def text_message(text: str, quick: dict[str, Any] | None = None) -> dict[str, An
 
 
 def quick_reply(items: Sequence[tuple[str, str]]) -> dict[str, Any]:
-    """`[(label, postback_data)]` → LINE quick reply（最多 13 個）。"""
+    """`[(label, postback_data)]` → LINE quick reply（最多 13 個）。
+
+    沒有項目就回空 dict：一個 `items` 為空的 quickReply 會被 LINE 拒收。
+    """
+    if not items:
+        return {}
     return {
         "items": [
             {"type": "action", "action": {"type": "postback", "label": _clip(label), "data": data, "displayText": _clip(label)}}

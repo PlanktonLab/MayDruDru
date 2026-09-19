@@ -357,8 +357,13 @@ async def publish(
     actor: Actor | None = None,
     expected_version: int | None = None,
     now: datetime | None = None,
+    record_audit: bool = True,
 ) -> ContentView:
-    """發布。草稿清空、版本遞增、快取失效；文字真的變了才寫稽核。"""
+    """發布。草稿清空、版本遞增、快取失效；文字真的變了才寫稽核。
+
+    `record_audit=False` 給 `reset()` 用——那一步自己會寫一列 `reset`，
+    再寫一列 `publish` 只會讓稽核出現兩筆講同一件事的紀錄。
+    """
     row = await get_or_create(db, tenant_id, key)
     check_version(row, expected_version)
     before = row.content
@@ -368,7 +373,7 @@ async def publish(
     row.published_at = now or datetime.now(UTC)
     row.published_by = actor.id if actor else None
     bump(row)
-    if before != after:
+    if record_audit and before != after:
         await audit.log(
             db, actor, "publish", "content", key,
             {"content": {"from": before, "to": after}}, tenant_id=tenant_id,
@@ -411,7 +416,8 @@ async def reset(
     row = await get_or_create(db, tenant_id, key)
     check_version(row, expected_version)
     before = row.content
-    view = await publish(db, tenant_id, key, definition.default, actor=actor, expected_version=None)
+    view = await publish(db, tenant_id, key, definition.default, actor=actor, expected_version=None,
+                         record_audit=False)
     await audit.log(
         db, actor, "reset", "content", key,
         {"content": {"from": before, "to": definition.default}}, tenant_id=tenant_id,

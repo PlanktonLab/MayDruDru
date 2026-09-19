@@ -280,6 +280,19 @@ async def test_reset_restores_the_shipped_text_and_always_audits(db, tenant):
     assert len(resets) == 1
 
 
+async def test_reset_does_not_also_log_a_publish(db, tenant):
+    """一次還原就是一件事，稽核不該出現兩筆在講同一次操作。"""
+    from app.models import AuditLog
+
+    await contents.publish(db, tenant.id, "home.unknown", "改過的", actor=STAFF)
+    await db.commit()
+    before = len((await db.execute(select(AuditLog).where(AuditLog.action == "publish"))).scalars().all())
+    await contents.reset(db, tenant.id, "home.unknown", actor=STAFF)
+    await db.commit()
+    after = len((await db.execute(select(AuditLog).where(AuditLog.action == "publish"))).scalars().all())
+    assert after == before
+
+
 async def test_version_conflict_is_refused(db, tenant):
     row = await contents.get_or_create(db, tenant.id, "home.unknown")
     await db.commit()
