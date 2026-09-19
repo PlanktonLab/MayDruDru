@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -27,6 +27,25 @@ async def richmenu_status(
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
     return await richmenu.status(db, user.tenant_id)
+
+
+@router.get(
+    "/richmenu/image",
+    response_class=Response,
+    responses={200: {"content": {"image/jpeg": {}}}},
+)
+async def richmenu_image(
+    user: CurrentUser = Depends(current_user),
+    db: AsyncSession = Depends(get_db),
+) -> Response:
+    """目前選單圖；沒有客製圖時回傳系統內建美術稿。"""
+    data = await richmenu.current_image(db, user.tenant_id)
+    check = richmenu.inspect_image(data)
+    return Response(
+        data,
+        media_type=check.content_type,
+        headers={"Cache-Control": "private, max-age=60"},
+    )
 
 
 @router.post("/richmenu/sync")

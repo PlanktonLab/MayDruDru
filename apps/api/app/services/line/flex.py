@@ -42,6 +42,7 @@ __all__ = [
     "scheme_carousel_message",
     "scheme_message",
     "sop_options_message",
+    "sop_all_steps_messages",
     "sop_quick_reply",
     "sop_step_messages",
     "step_card_message",
@@ -175,6 +176,17 @@ async def sop_quick_reply(db: AsyncSession, tenant_id: str) -> dict[str, Any]:
     return quick_reply(
         [
             (await _t(db, tenant_id, "line.quickreply.next"), postback("sop_next")),
+            (await _t(db, tenant_id, "line.quickreply.stuck"), postback("sop_stuck")),
+            (await _t(db, tenant_id, "line.quickreply.switch"), postback("sop_switch")),
+            (await _t(db, tenant_id, "line.quickreply.exit"), postback("sop_exit")),
+        ]
+    )
+
+
+async def sop_support_quick_reply(db: AsyncSession, tenant_id: str) -> dict[str, Any]:
+    """完整教學送出後的動作；不再提供逐步的「下一步」。"""
+    return quick_reply(
+        [
             (await _t(db, tenant_id, "line.quickreply.stuck"), postback("sop_stuck")),
             (await _t(db, tenant_id, "line.quickreply.switch"), postback("sop_switch")),
             (await _t(db, tenant_id, "line.quickreply.exit"), postback("sop_exit")),
@@ -637,6 +649,56 @@ async def sop_step_messages(
         return messages[-MAX_SOP_MESSAGES:]
     messages.append(text_message(body, await sop_quick_reply(db, tenant_id)))
     return messages[-MAX_SOP_MESSAGES:]
+
+
+async def sop_all_steps_messages(
+    db: AsyncSession,
+    tenant_id: str,
+    steps: Sequence[dict[str, Any]],
+    *,
+    alt_text: str,
+) -> list[dict[str, Any]]:
+    """完整 SOP → 每 12 步一個可左右滑動的 Flex carousel。"""
+    bubbles: list[dict[str, Any]] = []
+    for step in steps:
+        title = str(step.get("title") or step.get("alt") or "-")
+        instruction = str(step.get("instruction") or "")
+        body_contents: list[dict[str, Any]] = [
+            {"type": "text", "text": title, "weight": "bold", "size": "md", "wrap": True},
+        ]
+        if instruction.strip():
+            body_contents.append(
+                {"type": "text", "text": instruction, "size": "sm", "color": theme.TEXT_SECONDARY,
+                 "wrap": True, "margin": "sm"}
+            )
+        bubble: dict[str, Any] = {
+            "type": "bubble",
+            "size": "kilo",
+            "body": {"type": "box", "layout": "vertical", "contents": body_contents},
+        }
+        if step.get("kind") == "image" and step.get("url"):
+            width = max(1, int(step.get("width") or 1040))
+            height = max(1, int(step.get("height") or 1040))
+            bubble["hero"] = {
+                "type": "image",
+                "url": str(step["url"]),
+                "size": "full",
+                "aspectMode": "fit",
+                "aspectRatio": f"{width}:{height}",
+            }
+        bubbles.append(bubble)
+
+    messages: list[dict[str, Any]] = []
+    for start in range(0, len(bubbles), 12):
+        messages.append(
+            {
+                "type": "flex",
+                "altText": _clip(alt_text, 400),
+                "contents": {"type": "carousel", "contents": bubbles[start : start + 12]},
+                "quickReply": await sop_support_quick_reply(db, tenant_id),
+            }
+        )
+    return messages
 
 
 async def sop_options_message(

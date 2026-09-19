@@ -6,7 +6,7 @@
  * `lib/api.ts` 維持原樣——那是全站共用的 client，不該為了一個功能區改形狀。
  */
 
-import { api, del, get, post, put } from '../../lib/api'
+import { api, apiFetch, del, ensureOk, get, post, put } from '../../lib/api'
 import type {
   ContentPreview,
   ContentView,
@@ -96,6 +96,16 @@ export const fetchMedia = () => get<{ items: MediaItem[] }>('/api/admin/media')
 /* ------------------------------------------------------------- 圖文選單 */
 
 export const fetchRichMenu = () => get<RichMenuStatus>('/api/admin/line/richmenu')
+
+export async function fetchRichMenuImage(): Promise<string> {
+  const blob = await (await ensureOk(await apiFetch('/api/admin/line/richmenu/image'))).blob()
+  return await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result))
+    reader.onerror = () => reject(reader.error ?? new Error('無法讀取圖文選單圖片'))
+    reader.readAsDataURL(blob)
+  })
+}
 
 /**
  * 同步。欄位名固定是 `image`（不是 `lib/api.upload` 的 `file`），沒帶圖就沿用

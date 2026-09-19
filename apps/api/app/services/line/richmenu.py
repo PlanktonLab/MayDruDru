@@ -45,6 +45,7 @@ __all__ = [
     "Tile",
     "bounds",
     "build_request",
+    "current_image",
     "default_image_bytes",
     "get_client",
     "inspect_image",
@@ -445,7 +446,7 @@ async def publish(
 
     圖檔在呼叫 LINE **之前**先驗；驗不過就不會留下一個沒有圖的半成品選單。
     """
-    data = image if image is not None else await _current_image(db, tenant_id)
+    data = image if image is not None else await current_image(db, tenant_id)
     check = inspect_image(data)
     sync_log = LineSyncLog(
         tenant_id=tenant_id,
@@ -581,7 +582,7 @@ async def _row(db: AsyncSession, tenant_id: str) -> LineRichMenu | None:
     ).scalar_one_or_none()
 
 
-async def _current_image(db: AsyncSession, tenant_id: str) -> bytes:
+async def current_image(db: AsyncSession, tenant_id: str) -> bytes:
     """承辦人上傳過的圖優先；沒有（或讀不到）就用內建美術稿。"""
     row = await _row(db, tenant_id)
     if row and row.image_key:
