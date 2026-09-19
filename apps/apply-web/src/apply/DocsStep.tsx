@@ -8,7 +8,7 @@
  * 所以市民可以在段落之間來回，不必照順序填完。
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Check } from 'lucide-react'
 import { cx } from '@maydru/ui'
 import { DocField, type DocProblem } from './DocField'
@@ -52,10 +52,12 @@ export function DocsStep({
   periods = 1,
   onNavChange,
 }: DocsStepProps) {
-  const types = documentTypesFor(scheme, requiredCodes)
+  const types = useMemo(() => documentTypesFor(scheme, requiredCodes), [requiredCodes, scheme])
   // 申請多期時，收據與繳款憑證會展開成每期一份。
-  const slots = expandSlots(types, periods)
-  const groups = groupDocuments(slots, docs)
+  const slots = useMemo(() => expandSlots(types, periods), [periods, types])
+  // `onNavChange` 會更新父層；分組物件必須在輸入不變時維持同一個 reference，
+  // 否則 effect 每次 render 都會把父層再更新一次，形成循環。
+  const groups = useMemo(() => groupDocuments(slots, docs), [docs, slots])
   const [active, setActive] = useState(0)
 
   // 必備文件會隨繳費方式或身分別變動，分段數也跟著變；索引超出範圍就收回最後一段。
@@ -143,6 +145,7 @@ export function DocsStep({
             label={slot.label}
             value={docs[slot.key]}
             required
+            sopSchemeCode={scheme.code}
             problems={problemsByDoc[slot.key] ?? problemsByDoc[slot.code] ?? []}
             onChange={(doc) => onDoc(slot.key, doc)}
             onClear={() => onClear(slot.key)}
