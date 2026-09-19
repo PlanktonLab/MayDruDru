@@ -60,7 +60,7 @@ export function ConfirmStep({
           {state.channel.paid_by_proxy && <Row label="付款人" value="由他人代為支付" />}
           <Row label="購買日期" value={date(state.channel.purchase_date)} />
           <Row label="實際扣款金額" value={money(amount)} />
-          {estimate != null && <Row label="預估可補助" value={money(estimate)} />}
+          {estimate != null && <Row label="最高補助金額" value={money(estimate)} />}
           <Row label="上傳文件" value={`${types.filter((type) => state.docs[type.code]).length} 份`} />
         </dl>
       </Card>

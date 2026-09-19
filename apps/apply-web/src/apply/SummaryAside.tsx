@@ -36,7 +36,8 @@ export function SummaryAside({ scheme, state, requiredCodes }: SummaryAsideProps
   const tier = scheme.tiers.find((item) => item.code === state.identity.tier_code)
   const channel = scheme.payment_channels.find((item) => item.code === state.channel.payment_channel_code)
   const amount = Number(state.channel.purchase_amount)
-  // 預估金額只在金額與身分都齊了才算得出來；缺一個就先留白，不要秀一個會變的數字。
+  // 這是**上限**不是預測值：補助率乘上金額，再與級距上限取小的那個。
+  // 金額與身分都齊了才算得出來；缺一個就先留白，不要秀一個會變的數字。
   const estimate =
     tier && Number.isFinite(amount) && amount > 0
       ? Math.min(Math.round(amount * tier.subsidy_rate), tier.cap_amount)
@@ -78,7 +79,7 @@ export function SummaryAside({ scheme, state, requiredCodes }: SummaryAsideProps
       </dl>
 
       <div className="mt-6 rounded-[14px] bg-background-lite p-5">
-        <p className="text-[12px] text-muted">預估補助金額</p>
+        <p className="text-[12px] text-muted">最高補助金額</p>
         <p className="mt-2 text-[26px] font-semibold tracking-tight tabular-nums text-primary">
           {estimate != null ? money(estimate) : '—'}
         </p>

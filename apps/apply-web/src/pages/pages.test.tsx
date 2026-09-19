@@ -106,7 +106,7 @@ describe('ConfirmStep', () => {
     expect(screen.queryByText('尚未通過檢查')).toBeNull()
   })
 
-  it('預估補助金額依級距與上限計算', () => {
+  it('最高補助金額依級距與上限計算', () => {
     render(
       <Providers>
         <ConfirmStep
