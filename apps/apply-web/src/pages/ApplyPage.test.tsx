@@ -217,19 +217,27 @@ describe('ApplyPage', () => {
     next()
     expect((await screen.findByRole('alert')).textContent).toContain('份必備文件沒有上傳')
 
-    const inputs = screen
-      .getAllByLabelText(/^選擇.*的檔案$/)
-      .filter((node): node is HTMLInputElement => node instanceof HTMLInputElement)
-    expect(inputs).toHaveLength(6)
-    for (const input of inputs) {
-      const card = input.closest('section')!
-      fireEvent.change(input, { target: { files: [new File(['x'], 'doc.jpg', { type: 'image/jpeg' })] } })
-      // 電信帳單是強制遮罩的：讀完檔會先出現遮罩編輯器，確認過才會繼續辨識。
-      await waitFor(() => expect(card.textContent).toMatch(/換一張|確認遮罩/))
-      const confirm = within(card).queryByRole('button', { name: '確認遮罩' })
-      if (confirm) fireEvent.click(confirm)
-      await waitFor(() => expect(card.textContent).toContain('換一張'))
+    // 上傳步驟分成三段，一次只看得到一段的欄位；每段填完再走到下一段。
+    let filled = 0
+    for (;;) {
+      const inputs = screen
+        .getAllByLabelText(/^選擇.*的檔案$/)
+        .filter((node): node is HTMLInputElement => node instanceof HTMLInputElement)
+      for (const input of inputs) {
+        const card = input.closest('section')!
+        fireEvent.change(input, { target: { files: [new File(['x'], 'doc.jpg', { type: 'image/jpeg' })] } })
+        // 電信帳單是強制遮罩的：讀完檔會先出現遮罩編輯器，確認過才會繼續辨識。
+        await waitFor(() => expect(card.textContent).toMatch(/換一張|確認遮罩/))
+        const confirm = within(card).queryByRole('button', { name: '確認遮罩' })
+        if (confirm) fireEvent.click(confirm)
+        await waitFor(() => expect(card.textContent).toContain('換一張'))
+        filled += 1
+      }
+      const toNext = screen.queryByRole('button', { name: /^下一段：/ })
+      if (!toNext) break
+      fireEvent.click(toNext)
     }
+    expect(filled).toBe(6)
 
     next()
     await screen.findByRole('heading', { name: '確認並送出' })
