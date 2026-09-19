@@ -20,7 +20,7 @@ const TYPES: [string, string][] = [
 ]
 
 const SNIPPET = `curl -X POST https://<your-host>/v1/sessions \\
-  -H "X-API-Key: sk_..." \\
+  -H "Authorization: Bearer sk_..." \\
   -H "Content-Type: application/json" \\
   -d '{"external_user_id": "line:U123", "hint": "我要轉帳"}'`
 
@@ -32,7 +32,7 @@ export function ApiUsageGuide() {
           <div>
             <div className="mb-1 text-xs font-medium text-muted">驗證與路徑</div>
             <p className="text-sm leading-6">
-              每個請求帶 header <code className="rounded bg-background px-1 font-mono text-xs">X-API-Key</code>，base path 為 <code className="rounded bg-background px-1 font-mono text-xs">/v1</code>。
+              每個請求帶 header <code className="rounded bg-background px-1 font-mono text-xs">Authorization: Bearer &lt;key&gt;</code>，base path 為 <code className="rounded bg-background px-1 font-mono text-xs">/v1</code>。
               key 綁定 tenant，回應只會包含本 tenant 已發布的內容。
             </p>
           </div>

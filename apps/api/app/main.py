@@ -31,6 +31,7 @@ from .routers import (
     webhooks,
 )
 from .routers.admin import applications as admin_applications
+from .routers.admin import audit as admin_audit
 from .routers.admin import contents as admin_contents
 from .routers.admin import copilot as admin_copilot
 from .routers.admin import faqs as admin_faqs
@@ -121,7 +122,8 @@ def create_app() -> FastAPI:
     app = FastAPI(title=s.app_name, version="0.1.0", lifespan=lifespan)
     app.add_middleware(CORSMiddleware, allow_origins=s.cors_origins, allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
     for r in (auth, tenant, catalog_admin, components, flows, variants, playground, evals, dashboard,
-              admin_schemes, admin_applications, admin_reviewers, public_api, public_resources, webhooks, media):
+              admin_schemes, admin_applications, admin_reviewers, admin_audit,
+              public_api, public_resources, webhooks, media):
         app.include_router(r.router)
     app.include_router(apply.router)  # P3 送件與審核：市民匿名端點（SPEC §8.1）
     app.include_router(sop.router)  # P4 SOP 串接：市民匿名的教學端點（SPEC §8.5 / §10.2）

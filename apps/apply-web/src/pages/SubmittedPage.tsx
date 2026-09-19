@@ -5,8 +5,10 @@
  */
 
 import { Link, useParams, useSearchParams } from 'react-router-dom'
-import { Check, QrCode } from 'lucide-react'
+import { Check } from 'lucide-react'
 import { Button, Card, EmptyState } from '@maydru/ui'
+import QRCode from 'qrcode'
+import { useEffect, useState } from 'react'
 
 /** `.env` 的 `VITE_LINE_OA_ID`，例如 `@maydru`；沒設定時不顯示綁定區塊。 */
 const LINE_OA_ID = import.meta.env.VITE_LINE_OA_ID as string | undefined
@@ -14,6 +16,19 @@ const LINE_OA_ID = import.meta.env.VITE_LINE_OA_ID as string | undefined
 export function lineDeepLink(caseNo: string, oaId: string | undefined): string | null {
   if (!oaId) return null
   return `https://line.me/R/oaMessage/${encodeURIComponent(oaId)}/?case=${encodeURIComponent(caseNo)}`
+}
+
+function LineQr({ value }: { value: string }) {
+  const [src, setSrc] = useState('')
+  useEffect(() => {
+    let live = true
+    void QRCode.toDataURL(value, { width: 224, margin: 1, errorCorrectionLevel: 'M' })
+      .then((url) => { if (live) setSrc(url) })
+    return () => { live = false }
+  }, [value])
+  return src
+    ? <img src={src} width={112} height={112} alt="用 LINE 掃描追蹤案件的 QR code" className="size-28 rounded-xl" />
+    : <span aria-label="正在產生 LINE QR code" className="size-28 animate-pulse rounded-xl bg-background-lite" />
 }
 
 export default function SubmittedPage() {
@@ -63,11 +78,8 @@ export default function SubmittedPage() {
       {deepLink && (
         <Card title="用 LINE 追蹤這件案子" subtitle="綁定後狀態一有變動就會主動通知你，不用自己回來查。">
           <div className="flex items-center gap-4">
-            <span
-              aria-hidden
-              className="flex size-28 shrink-0 items-center justify-center rounded-2xl border border-dashed border-border text-tertiary"
-            >
-              <QrCode size={40} />
+            <span className="flex size-28 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-border bg-white">
+              <LineQr value={deepLink} />
             </span>
             <div className="min-w-0 space-y-2">
               <p className="text-[13px] leading-5 text-muted">

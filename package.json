@@ -17,6 +17,8 @@
     "dev:apply": "npm run dev -w @maydru/apply-web"
   },
   "devDependencies": {
+    "@types/qrcode": "^1.5.6",
+    "axe-core": "^4.13.0",
     "oxlint": "^1.81.0",
     "typescript": "~6.0.2",
     "vitest": "^3.2.4"
@@ -29,5 +31,8 @@
   },
   "engines": {
     "node": ">=24"
+  },
+  "dependencies": {
+    "qrcode": "^1.5.4"
   }
 }

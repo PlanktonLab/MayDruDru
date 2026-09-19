@@ -5,10 +5,16 @@ import { useState } from 'react'
 import { del, get, patch, post } from '../lib/api'
 import { useAuth } from '../lib/auth'
 import { useInvalidate } from '../lib/hooks'
-import type { ApiKey } from '../lib/types'
+import type { ApiKey, ApiScope } from '../lib/types'
 import { Badge, Button, Empty, Field, Input, Modal, Spinner, confirmDialog, errMsg, useToast } from '../components/ui'
 import { ApiUsageGuide } from '../components/admin/ApiUsageGuide'
 import { Notice, PageHeader, Table, Td, Th, fmtDate } from '../components/admin/shared'
+
+const SCOPES: { value: ApiScope; label: string }[] = [
+  { value: 'read', label: '讀取' }, { value: 'apply', label: '送件' }, { value: 'review', label: '審核' },
+  { value: 'sop', label: 'SOP' }, { value: 'contents', label: '文案' },
+  { value: 'webhooks', label: 'Webhook' }, { value: 'admin', label: '全部管理' },
+]
 
 export default function ApiKeysPage() {
   const { can } = useAuth()
@@ -43,12 +49,13 @@ export default function ApiKeysPage() {
       {q.data && !q.data.length && <Empty>尚無 API key。點「新增 Key」建立第一把。</Empty>}
       {q.data && q.data.length > 0 && (
         <Table>
-          <thead><tr><Th>名稱</Th><Th>Key</Th><Th>狀態</Th><Th>速率限制</Th><Th>最後使用</Th><Th>建立時間</Th><Th className="text-right">操作</Th></tr></thead>
+          <thead><tr><Th>名稱</Th><Th>Key</Th><Th>Scopes</Th><Th>狀態</Th><Th>速率限制</Th><Th>最後使用</Th><Th>建立時間</Th><Th className="text-right">操作</Th></tr></thead>
           <tbody>
             {q.data.map((k) => (
               <tr key={k.id} className="hover:bg-background-lite">
                 <Td className="whitespace-nowrap font-medium">{k.name}</Td>
                 <Td className="font-mono text-xs text-muted">{k.prefix}…</Td>
+                <Td><span className="flex max-w-60 flex-wrap gap-1">{k.scopes.map((scope) => <Badge key={scope} tone="accent">{scope}</Badge>)}</span></Td>
                 <Td><Badge tone={k.status === 'active' ? 'good' : 'danger'}>{k.status === 'active' ? '啟用' : '停用'}</Badge></Td>
                 <Td className="whitespace-nowrap text-muted">{k.rate_limit_per_minute} 次/分</Td>
                 <Td className="whitespace-nowrap text-xs text-muted">{fmtDate(k.last_used_at)}</Td>
@@ -77,20 +84,22 @@ function KeyModal({ apiKey, onClose, onCreated }: { apiKey: ApiKey | null; onClo
   const invalidate = useInvalidate()
   const [name, setName] = useState(apiKey?.name ?? '')
   const [rate, setRate] = useState(String(apiKey?.rate_limit_per_minute ?? 120))
+  const [scopes, setScopes] = useState<ApiScope[]>(apiKey?.scopes ?? ['read'])
   const [saving, setSaving] = useState(false)
   const submit = async () => {
     const n = Number(rate)
     if (!name.trim()) { toast('請填寫名稱', 'err'); return }
+    if (!scopes.length) { toast('請至少選一個 scope', 'err'); return }
     if (!Number.isInteger(n) || n <= 0) { toast('速率限制需為正整數', 'err'); return }
     setSaving(true)
     try {
       if (apiKey) {
-        await patch(`/api/api-keys/${apiKey.id}`, { name: name.trim(), rate_limit_per_minute: n })
+        await patch(`/api/api-keys/${apiKey.id}`, { name: name.trim(), scopes, rate_limit_per_minute: n })
         await invalidate('api-keys')
         toast('已更新 key')
         onClose()
       } else {
-        const k = await post<ApiKey>('/api/api-keys', { name: name.trim(), rate_limit_per_minute: n })
+        const k = await post<ApiKey>('/api/api-keys', { name: name.trim(), scopes, rate_limit_per_minute: n })
         await invalidate('api-keys')
         onCreated(k)
       }
@@ -105,6 +114,17 @@ function KeyModal({ apiKey, onClose, onCreated }: { apiKey: ApiKey | null; onClo
         <Field label="速率限制（每分鐘請求數）" hint="超過時 API 回傳 rate_limited 錯誤碼">
           <Input type="number" min={1} step={1} value={rate} onChange={(e) => setRate(e.target.value)} required />
         </Field>
+        <fieldset>
+          <legend className="mb-1 text-xs font-medium text-muted">Scopes</legend>
+          <div className="grid grid-cols-2 gap-2 rounded-lg border border-border p-3 sm:grid-cols-3">
+            {SCOPES.map((scope) => <label key={scope.value} className="flex min-h-11 cursor-pointer items-center gap-2 text-sm">
+              <input type="checkbox" checked={scopes.includes(scope.value)} onChange={(e) => setScopes((current) =>
+                e.target.checked ? [...current, scope.value] : current.filter((value) => value !== scope.value))} />
+              {scope.label}<span className="font-mono text-[10px] text-muted">{scope.value}</span>
+            </label>)}
+          </div>
+          <p className="mt-1 text-[11px] text-secondary">admin 可使用全部端點；其餘 scope 只開放對應能力。</p>
+        </fieldset>
         <div className="flex justify-end gap-2 pt-1">
           <Button type="button" onClick={onClose}>取消</Button>
           <Button type="submit" variant="primary" loading={saving}>{apiKey ? '儲存' : '建立'}</Button>
@@ -134,7 +154,7 @@ function PlaintextModal({ apiKey, onClose }: { apiKey: ApiKey; onClose: () => vo
           <code className="flex-1 select-all break-all font-mono text-xs leading-5">{key || '（後端未回傳 plaintext）'}</code>
           <Button size="sm" variant={copied ? 'good' : 'primary'} onClick={copy} disabled={!key}>{copied ? <><Check size={13} /> 已複製</> : <><Copy size={13} /> 複製</>}</Button>
         </div>
-        <div className="text-xs text-muted">使用方式：在每個請求加上 header <code className="rounded bg-background px-1 font-mono">X-API-Key: {key ? `${apiKey.prefix}…` : ''}</code>，詳見下方「如何使用」。</div>
+        <div className="text-xs text-muted">使用方式：在每個請求加上 header <code className="rounded bg-background px-1 font-mono">Authorization: Bearer {key ? `${apiKey.prefix}…` : ''}</code>，詳見下方「如何使用」。</div>
         <div className="flex justify-end"><Button variant="primary" onClick={close}>我已保存，關閉</Button></div>
       </div>
     </Modal>

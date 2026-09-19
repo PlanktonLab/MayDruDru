@@ -23,7 +23,8 @@ export const ROLE_CAPS: Record<Role, Capability[]> = {
 }
 export interface User { id: string; tenant_id: string; email: string; name: string; role: Role; is_active: boolean; created_at?: string | null }
 export interface Tenant { id: string; name: string; slug: string; settings: Record<string, unknown> }
-export interface ApiKey { id: string; name: string; prefix: string; status: 'active' | 'disabled'; rate_limit_per_minute: number; last_used_at: string | null; created_at: string; plaintext?: string | null }
+export type ApiScope = 'read' | 'apply' | 'review' | 'sop' | 'contents' | 'webhooks' | 'admin'
+export interface ApiKey { id: string; name: string; prefix: string; status: 'active' | 'disabled'; scopes: ApiScope[]; rate_limit_per_minute: number; last_used_at: string | null; created_at: string; plaintext?: string | null }
 
 export interface Goal { id: string; name: string; description: string; aliases: string[] }
 export type Channel = 'mobile_app' | 'web' | 'desktop'

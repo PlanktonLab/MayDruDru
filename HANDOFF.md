@@ -1,7 +1,7 @@
 # HANDOFF — MayDru 交接文件
 
 寫給接手的開發者（GPT Codex）。日期 2026-09-19。
-**先讀這份，再讀 [`CLAUDE.md`](CLAUDE.md)（工作規則）與 [`SPEC.md`](SPEC.md)（唯一規格來源，§16 是階段表、§18 是決策紀錄 D1–D34）。**
+**先讀這份，再讀 [`CLAUDE.md`](CLAUDE.md)（工作規則）與 [`SPEC.md`](SPEC.md)（唯一規格來源，§16 是階段表、§18 是決策紀錄 D1–D35）。**
 
 ---
 
@@ -16,10 +16,10 @@
 | **P4 SOP 串接** | ✅ 已完成並合併（含 apply-web 教學／遮罩定位、admin 對照、完整 E2E 與 CI） |
 | **P5 方案管理與內容助理** | ✅ 已完成並合併（merge `83a13b9`） |
 | **P6 `/v1` 與 webhook** | ✅ 已完成（完整資源契約、scopes、outbox webhook、生成 client） |
-| P7 部署 | ⬜ 未開始 |
-| P8 打磨 | ⬜ 未開始 |
+| P7 部署 | ⏸️ 程式與 compose 已就緒；等待 VM、DNS、憑證與 LINE 正式切換 |
+| **P8 打磨** | ✅ 已完成（Dashboard、稽核 UI、axe gate、LINE QR、文件） |
 
-目前測試數：後端 **1280 passed、5 skipped**，admin-web 120、apply-web 91、packages 131；OpenAPI 與生成 client 已同步。下一階段是 P7 部署。
+目前測試數：後端 **1281 passed、5 skipped**，admin-web 122、apply-web 92、packages 131；OpenAPI 與生成 client 已同步。程式面已完成，剩 P7 正式環境切換。
 
 ---
 
@@ -111,9 +111,9 @@ docker compose up -d postgres redis minio renderer
 
 `docker/`、`docker-compose.prod.yml`、`deploy/nginx/maydru.conf`、`deploy/vm-setup.md` 在 P0 就寫好了，**但從未在真的 VM 上跑過**。要做：多架構映像（buildx arm64+amd64 推 GHCR）、VM 部署、資料搬遷（`scripts/migrate_legacy/`、SOP_Tutor 的 `pg_dump`/`mc mirror`）、smoke test、把 LINE webhook URL 切過去。§19 的 O1–O4（DNS、憑證、LINE channel 憑證、使用條款）要產品負責人先處理。
 
-### P8 打磨（SPEC §15）
+### P8 打磨（**已完成**，SPEC §15）
 
-HIG 審視、axe 可及性檢查、Dashboard、稽核日誌 UI、文件。已知的具體項目：apply-web 成功頁的 LINE QR 還是虛線佔位（需要 QR 函式庫或伺服器產圖，且 `VITE_LINE_OA_ID` 尚未設定，目前該區塊預設隱藏）、相機拍攝用的是 `<input capture>` 而非舊專案的裁切框 modal、多頁 PDF 逐頁遮罩的體驗待順。
+Dashboard、tenant-scoped 稽核日誌 API/UI、admin/apply axe serious/critical gate、44pt scope controls 與 LINE deep-link QR 已完成。QR 仍需正式環境提供 `VITE_LINE_OA_ID` 才會顯示；這與 LINE channel 選擇同屬 O2。相機採原生 `<input capture>`，多頁 PDF 沿用逐頁處理，屬後續體驗優化而非上線阻擋。
 
 ---
 
@@ -156,7 +156,7 @@ Commit 用 Conventional Commits、中文摘要，scope 例如 `api`、`line`、`
 
 | 檔案 | 內容 |
 |---|---|
-| [`SPEC.md`](SPEC.md) | 唯一規格來源。§6 資料表、§7 狀態機、§8 功能規格、§9 Agent 規格與紅線、§10 API 契約、§11 安全隱私、§16 階段表、§18 決策 D1–D34 |
+| [`SPEC.md`](SPEC.md) | 唯一規格來源。§6 資料表、§7 狀態機、§8 功能規格、§9 Agent 規格與紅線、§10 API 契約、§11 安全隱私、§16 階段表、§18 決策 D1–D35 |
 | [`CLAUDE.md`](CLAUDE.md) | 工作規則、結構、開發指令、風格慣例 |
 | [`README.md`](README.md) | 專案概觀與快速上手 |
 | `docs/legacy/inventory-sop-tutor.md` | 舊專案 SOP_Tutor 的完整盤點（models、routers、services、ai 管線、docker）— 本專案的後端基底 |

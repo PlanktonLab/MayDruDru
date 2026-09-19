@@ -128,5 +128,7 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository_owner }}/maydru-${{ matrix.image.name }}:latest
             ghcr.io/${{ github.repository_owner }}/maydru-${{ matrix.image.name }}:${{ github.sha }}
+          build-args: |
+            VITE_LINE_OA_ID=${{ vars.VITE_LINE_OA_ID }}
           cache-from: type=gha,scope=${{ matrix.image.name }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image.name }}

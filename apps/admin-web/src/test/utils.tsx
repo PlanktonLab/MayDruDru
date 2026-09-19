@@ -17,8 +17,9 @@ export function signIn(token = 'mock-token'): void {
   localStorage.setItem('sop_token', token)
 }
 
-export function renderAt(element: ReactElement, path: string, route: string): RenderResult {
-  signIn()
+export function renderAt(element: ReactElement, path: string, route: string, signedIn = true): RenderResult {
+  if (signedIn) signIn()
+  else localStorage.removeItem('sop_token')
   return render(
     <QueryClientProvider client={makeClient()}>
       <ToastProvider>

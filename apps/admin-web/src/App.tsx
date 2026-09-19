@@ -21,6 +21,7 @@ import LineUnmatchedPage from './pages/line/UnmatchedPage'
 import SchemesPage from './pages/schemes/SchemesPage'
 import SchemeEditorPage from './pages/schemes/SchemeEditorPage'
 import SopMappingsPage from './pages/schemes/SopMappingsPage'
+import AuditLogsPage from './pages/AuditLogsPage'
 
 export default function App() {
   return (
@@ -42,6 +43,7 @@ export default function App() {
           <Route path="/goals" element={<Navigate to="/canvas" replace />} />
           <Route path="/members" element={<MembersPage />} />
           <Route path="/api-keys" element={<ApiKeysPage />} />
+          <Route path="/audit-logs" element={<RequireCap capability="admin"><AuditLogsPage /></RequireCap>} />
           {/* LINE 內容（SPEC §8.2）：讀取開放給所有登入的承辦人，寫入由頁面內部擋。 */}
           <Route path="/line/contents" element={<LineContentsPage />} />
           <Route path="/line/faqs" element={<LineFaqsPage />} />

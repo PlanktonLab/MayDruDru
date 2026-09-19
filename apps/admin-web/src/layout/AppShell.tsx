@@ -1,6 +1,6 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import { clsx } from 'clsx'
-import { BarChart3, Bell, BookOpen, ClipboardCheck, FileSearch, FlaskConical, FolderCog, HelpCircle, KeyRound, LayoutGrid, Link2, LogOut, MessageSquare, MessageSquareText, Moon, PanelLeftClose, PanelLeftOpen, SearchX, Sun, Users, Workflow } from 'lucide-react'
+import { BarChart3, Bell, BookOpen, ClipboardCheck, FileClock, FileSearch, FlaskConical, FolderCog, HelpCircle, KeyRound, LayoutGrid, Link2, LogOut, MessageSquare, MessageSquareText, Moon, PanelLeftClose, PanelLeftOpen, SearchX, Sun, Users, Workflow } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useAuth } from '../lib/auth'
 import { ROLE_LABEL, type Capability } from '../lib/types'
@@ -18,6 +18,7 @@ const NAV: { to: string; label: string; icon: typeof Workflow; cap?: Capability 
   // 平台 and Goal used to be pages of their own; both are edited inside Canvas now.
   { to: '/members', label: '成員', icon: Users, cap: 'admin' },
   { to: '/api-keys', label: 'API Key', icon: KeyRound, cap: 'admin' },
+  { to: '/audit-logs', label: '稽核日誌', icon: FileClock, cap: 'admin' },
 ]
 
 /**

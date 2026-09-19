@@ -6,6 +6,6 @@
 
 from __future__ import annotations
 
-from . import applications, contents, copilot, faqs, line, media, reviewers, schemes
+from . import applications, audit, contents, copilot, faqs, line, media, reviewers, schemes
 
-__all__ = ["applications", "contents", "copilot", "faqs", "line", "media", "reviewers", "schemes"]
+__all__ = ["applications", "audit", "contents", "copilot", "faqs", "line", "media", "reviewers", "schemes"]

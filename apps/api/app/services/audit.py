@@ -8,12 +8,31 @@ from __future__ import annotations
 
 from typing import Any
 
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models import AuditLog
 from .actors import Actor
 
-__all__ = ["diff_of", "log"]
+__all__ = ["diff_of", "list_logs", "log"]
+
+
+async def list_logs(
+    db: AsyncSession, tenant_id: str, *, action: str = "", target_type: str = "",
+    actor: str = "", offset: int = 0, limit: int = 50,
+) -> tuple[list[AuditLog], int]:
+    where = [AuditLog.tenant_id == tenant_id]
+    if action:
+        where.append(AuditLog.action == action)
+    if target_type:
+        where.append(AuditLog.target_type == target_type)
+    if actor:
+        where.append(func.lower(AuditLog.actor_name).like(f"%{actor.strip().lower()}%"))
+    total = int((await db.execute(select(func.count(AuditLog.id)).where(*where))).scalar_one())
+    rows = (await db.execute(select(AuditLog).where(*where).order_by(
+        AuditLog.created_at.desc(), AuditLog.id.desc(),
+    ).offset(offset).limit(limit))).scalars().all()
+    return list(rows), total
 
 
 async def log(

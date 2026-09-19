@@ -2,6 +2,8 @@
 # and every workspace package.json are needed before `npm ci` can run.
 FROM node:24-alpine AS build
 WORKDIR /repo
+ARG VITE_LINE_OA_ID=""
+ENV VITE_LINE_OA_ID=$VITE_LINE_OA_ID
 COPY package.json package-lock.json tsconfig.base.json ./
 COPY apps/admin-web/package.json apps/admin-web/
 COPY apps/apply-web/package.json apps/apply-web/

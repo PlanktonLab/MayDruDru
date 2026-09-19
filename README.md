@@ -4,7 +4,7 @@
 
 完整規格在 [`SPEC.md`](SPEC.md)（v1.0，唯一規格來源）；工作規則在 [`CLAUDE.md`](CLAUDE.md)。
 
-目前階段：**P0–P6 已完成並合併**（SPEC §16）。資料層、內容與 LINE、送件與審核、SOP、方案管理、完整 `/v1` 與 outbound webhook 均已就緒；下一階段是正式部署（P7）。
+目前階段：**P0–P6、P8 已完成並合併**（SPEC §16）。資料層、內容與 LINE、送件與審核、SOP、方案管理、完整 `/v1`、outbound webhook、Dashboard、稽核 UI 與可及性 gate 均已就緒；P7 等待正式 VM／DNS／憑證／LINE 切換。
 
 ## 版面
 
@@ -195,7 +195,7 @@ npm test                      # vitest
 npm run build                 # tsc -b && vite build
 ```
 
-目前的數量：後端 1280（另有 5 個環境條件 skip）、admin-web 120、apply-web 91、五個 package 合計 131。
+目前的數量：後端 1281（另有 5 個環境條件 skip）、admin-web 122、apply-web 92、五個 package 合計 131。
 
 CI（`.github/workflows/ci.yml`）跑同一組指令，另加 `docker buildx`（linux/arm64 + linux/amd64），只有 main 的 push 會推 GHCR。
 

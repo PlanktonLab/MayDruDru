@@ -611,6 +611,7 @@ Cloudflare proxied；origin cert 需涵蓋三個名稱（萬用或重簽）。DN
 | D32 | `/v1` API key 正式使用 `Authorization: Bearer <key>`；`X-API-Key` 保留相容。每把 key 明列 scopes，`admin` 可通過所有 scope gate | 符合標準 Bearer 整合方式，同時不讓既有 SOP 呼叫立即中斷；路由宣告所需能力而不是自行判斷 key 名稱 |
 | D33 | outbound webhook 以 `webhook_deliveries` 作 transactional outbox；領域 service 只在同一交易建立 delivery，worker 每分鐘補排 pending，單筆工作以 arq 最多重試五次 | 案件成功但 Redis 短暫失效時事件不會消失；HTTP 失敗不回滾業務交易，重送與稽核都以同一 delivery id 為準 |
 | D34 | `packages/api-client/src/schema.d.ts` 是 OpenAPI 的可重現生成物並提交進 git；CI 重新生成後用 `git diff --exit-code` 驗證 | PR 可以直接審契約差異，前端不必在安裝時啟動 API；漏更新 schema 會在 CI 立即失敗 |
+| D35 | P8 的可及性門檻以 axe 的 WCAG A/AA serious/critical violations 為自動化 gate；顏色對比另由 token 設計與人工檢視負責（jsdom 無法計算實際樣式）。稽核 UI 只讀 `audit_logs.diff`，不展開案件與文件 | 自動測試抓得到名稱、語意、結構等嚴重退步，又不製造 jsdom canvas 的假訊號；稽核畫面不成為第二份個資資料庫 |
 
 ---
 

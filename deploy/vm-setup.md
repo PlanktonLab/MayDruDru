@@ -6,6 +6,7 @@
 ## 0. 前提
 
 - DNS 與 Cloudflare origin cert 由產品負責人處理；憑證需涵蓋 `maydru`、`maydru-admin`、`maydru-api` 三個名稱，放在 `/etc/ssl/cloudflare/`。
+- 決定 LINE channel 後，在 GitHub repository variables 設 `VITE_LINE_OA_ID`（例如 `@maydru`）再建正式 apply-web 映像；成功頁才會顯示綁定 QR。
 - SOP_Tutor 的 stack 仍在跑。MayDru 用不同的 project name（`maydru`）、不同 volume、不同連接埠，兩者可並存到切換確認為止。
 
 ## 1. 取得程式與建立 `.env`
@@ -37,8 +38,8 @@
 
 ## 4. 資料搬遷與 smoke test
 
-1. 依 P1 的 `scripts/migrate_legacy/` 匯入 youth-line-bot 的 SQLite 與 SOP_Tutor 的 Postgres / MinIO 資料，並比對匯入報表。
-2. 跑 `scripts/e2e_smoke.py` 驗證送件 → 審核 → 推播 → SOP 的主要路徑。
+1. 依 P1 的 `apps/api/scripts/migrate_legacy/` 匯入 youth-line-bot 的 SQLite 與 SOP_Tutor 的 Postgres / MinIO 資料，並比對匯入報表。
+2. 在 `apps/api/` 跑 `python scripts/e2e_maydru.py` 驗證送件 → 審核 → 推播 → SOP 的主要路徑；需要實際 renderer/worker 的 SOP 產圖 smoke 另跑 `python scripts/e2e_smoke.py <API_BASE_URL>`。
 
 ## 5. 切換 LINE webhook
 
