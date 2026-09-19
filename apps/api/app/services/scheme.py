@@ -17,6 +17,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models import (
+    TOOL_STATUSES,
     DocumentType,
     DocumentTypeSopFlow,
     EligibleTool,
@@ -40,7 +41,10 @@ __all__ = [
     "is_open",
     "list_children",
     "list_schemes",
+    "pending_tools",
+    "reorder_children",
     "required_document_types",
+    "resolve_tool",
     "scheme_apply_view",
     "scheme_public_view",
     "scheme_settings_view",
@@ -192,6 +196,85 @@ async def update_child(
 async def delete_child(db: AsyncSession, obj: Any) -> None:
     await db.delete(obj)
     await db.flush()
+
+
+# ------------------------------------------------------------------ 排序
+
+async def reorder_children(db: AsyncSession, scheme: Scheme, kind: str, ids: Sequence[str]) -> list[Any]:
+    """照送上來的順序重寫 `sort_order`（0、1、2…），回傳排好的清單。
+
+    沒出現在 `ids` 裡的列排在後面，維持它們原本的相對順序——後台一次只拖一個分頁，
+    漏掉一筆不該讓它跳到最前面去。不認得的 id 直接忽略，不是 404：使用者按下儲存
+    的那一刻，別人剛刪掉其中一列是完全可能的，而那不該讓整次排序失敗。
+
+    這裡刻意不檢查 `expected_version`：排序改的是「這幾列之間的關係」，不是任何一列
+    的內容，用單列的版本號去鎖一個跨列的操作只會鎖錯東西。
+    """
+    model = child_model(kind)
+    if not hasattr(model, "sort_order"):
+        raise HTTPException(400, f"{kind} 沒有排序")
+    rows = await list_children(db, scheme, kind)
+    by_id = {row.id: row for row in rows}
+    ordered = [by_id[i] for i in ids if i in by_id]
+    ordered += [row for row in rows if row.id not in set(ids)]
+    for index, row in enumerate(ordered):
+        row.sort_order = index
+    await db.flush()
+    return ordered
+
+
+# ------------------------------------------------------------- 待審工具
+
+async def pending_tools(db: AsyncSession, scheme: Scheme) -> list[EligibleTool]:
+    """民眾送件時打了、但清單上還沒有的工具（submit-flow 的 pendingTools）。"""
+    q = (
+        select(EligibleTool)
+        .where(EligibleTool.scheme_id == scheme.id, EligibleTool.status == "PENDING")
+        .order_by(EligibleTool.request_count.desc(), EligibleTool.name)
+    )
+    return list((await db.execute(q)).scalars())
+
+
+async def resolve_tool(
+    db: AsyncSession,
+    scheme: Scheme,
+    tool: EligibleTool,
+    *,
+    status: str,
+    verdict_note: str = "",
+    merge_into_id: str | None = None,
+) -> EligibleTool:
+    """處理一筆待審工具：核可、退回，或併進既有的那一筆。
+
+    併入是第三種答案，而且是最常見的一種：民眾打的「chatgpt plus」「ChatGPT 訂閱」
+    其實就是清單上的「ChatGPT Plus」。併入時把名字與別名都加到既有那一筆的 `aliases`，
+    下一個人打同樣的字就會直接對上，待審佇列也不會再冒出同一個東西的第七種寫法。
+    被併掉的那一列直接刪除——留著只會讓同一個工具在清單上出現兩次。
+    """
+    if status not in TOOL_STATUSES:
+        raise HTTPException(400, f"未知的工具狀態 {status}")
+    if merge_into_id:
+        target = await db.get(EligibleTool, merge_into_id)
+        if target is None or target.scheme_id != scheme.id or target.id == tool.id:
+            raise HTTPException(404, "找不到要併入的工具")
+        aliases = list(target.aliases or [])
+        for name in [tool.name, *(tool.aliases or [])]:
+            text = str(name).strip()
+            if text and text != target.name and text not in aliases:
+                aliases.append(text)
+        target.aliases = aliases
+        target.request_count = int(target.request_count or 0) + int(tool.request_count or 0)
+        if verdict_note:
+            target.verdict_note = verdict_note
+        bump(target)
+        await db.delete(tool)
+        await db.flush()
+        return target
+    tool.status = status
+    tool.verdict_note = verdict_note
+    bump(tool)
+    await db.flush()
+    return tool
 
 
 # ------------------------------------------------------- 必要文件（submit-flow 移植）

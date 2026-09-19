@@ -135,3 +135,60 @@ class VisualReview(BaseModel):
     score: float = Field(ge=0, le=1, description="版面相似度 0~1（只看版面比例與元件，不看資料內容）")
     issues: list[str] = Field(default_factory=list, description="具體可修正的版面問題，每條一句")
     privacy_leak: bool = Field(default=False, description="復刻圖上是否仍看得到原圖的個資或資料字串")
+
+
+# ------------------------------------------------------- 內容助理（SPEC §8.6 / §9.6）
+# 三支助理共用同一組型別。共通的設計是「每句話都要指得出依據」：模型回的是一串
+# **句子**加上一份引用清單，句子自己說它引用第幾筆；沒有依據的句子由
+# `services/copilot.py` 在伺服器端標上「待查證」，而不是靠提示詞請模型自律。
+
+COPILOT_SOURCE_TYPES = (
+    "scheme", "document_type", "payment_channel", "rejection_code",
+    "review_rule", "knowledge_document", "content", "faq",
+)
+
+
+class Citation(BaseModel):
+    """一筆依據：它來自哪張表、哪一列、原文是哪一句。"""
+
+    source_type: Literal["scheme", "document_type", "payment_channel", "rejection_code",
+                         "review_rule", "knowledge_document", "content", "faq"] = "scheme"
+    source_id: str = Field(default="", description="那一列的識別字：方案代碼、文件類型代碼、文案 key、知識文件 id")
+    quote: str = Field(default="", description="被引用的原文，逐字，不要改寫")
+
+
+class DraftSentence(BaseModel):
+    """草稿的一句話。`citation_index` 指向 citations 的索引；沒有依據就留 null。"""
+
+    text: str = ""
+    citation_index: int | None = Field(default=None, description="這句話的依據是 citations 的第幾筆（從 0 起）；憑空推測就留空")
+
+
+class ContentDraft(BaseModel):
+    """助理 (a)：一則罐頭訊息的草稿。"""
+
+    sentences: list[DraftSentence] = Field(default_factory=list, description="草稿逐句，依顯示順序")
+    citations: list[Citation] = Field(default_factory=list)
+    notes: str = Field(default="", description="給承辦人的一句提醒，例如還缺哪個資訊")
+
+
+class FaqSuggestion(BaseModel):
+    """助理 (b)：一群問不出答案的句子收斂成的一則 FAQ 建議。"""
+
+    question: str = Field(default="", description="用民眾的說法寫成一個問句")
+    sentences: list[DraftSentence] = Field(default_factory=list, description="答案逐句")
+    citations: list[Citation] = Field(default_factory=list)
+    keywords: list[str] = Field(default_factory=list, description="讓 bot 比對得到這一則的關鍵字，3~6 個")
+    category: str = Field(default="", description="分類，沿用既有 FAQ 的分類名稱")
+
+
+class SchemeCopyItem(BaseModel):
+    """助理 (c)：方案文案集裡的一則。`key` 必須是呼叫方給的那一份清單裡的值。"""
+
+    key: str = ""
+    sentences: list[DraftSentence] = Field(default_factory=list)
+    citations: list[Citation] = Field(default_factory=list)
+
+
+class SchemeCopySet(BaseModel):
+    items: list[SchemeCopyItem] = Field(default_factory=list)

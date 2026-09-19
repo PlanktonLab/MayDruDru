@@ -59,6 +59,7 @@ __all__ = [
     "approval_blockers",
     "blockers_for",
     "db_approval_blockers",
+    "dry_run",
     "evaluate",
     "evaluate_application",
     "facts_for",
@@ -824,6 +825,57 @@ async def evaluate_application(db: AsyncSession, application: Application) -> li
                                 application.paid_by_proxy),
     )
     return evaluate(rules, documents, facts)
+
+
+async def dry_run(db: AsyncSession, scheme: Scheme, payload: Mapping[str, Any]) -> dict[str, Any]:
+    """規則試算（SPEC §8.2「規則編輯器」）：貼一段 OCR 文字，看規則會判成什麼。
+
+    **不落地、不碰案件**，純運算——所以它可以在規則還沒存檔時就被呼叫，承辦人員
+    改一個關鍵字就按一次，不會在 `review_findings` 上留下一堆假資料。
+
+    `rules` 沒給就用方案存著的那一份；給了就用給的那一份（規則編輯器在存檔前試算，
+    送上來的是編輯中的版本）。這支存在的理由是**校準**：後台的試算面板在瀏覽器裡
+    跑 `@maydru/review-rules`，這裡跑 Python 版，兩邊對同一段文字必須判得一樣，
+    不一樣就是規則引擎的兩個實作走鐘了（SPEC §14「規則一致性」）。
+    """
+    raw_rules = payload.get("rules")
+    rules = (
+        [RuleSpec.from_dict(r) for r in raw_rules]
+        if isinstance(raw_rules, Sequence) and not isinstance(raw_rules, (str, bytes))
+        else await rules_for(db, scheme.id)
+    )
+    documents = [
+        OcrDocument(
+            document_type_code=str(d.get("document_type_code", "") or ""),
+            ocr=OcrResult.from_dict(d.get("ocr") if isinstance(d.get("ocr"), Mapping) else None),
+        )
+        for d in (payload.get("documents") or [])
+        if isinstance(d, Mapping)
+    ]
+    raw_facts = payload.get("facts")
+    facts = ApplicationFacts.from_dict(raw_facts if isinstance(raw_facts, Mapping) else {})
+    if not facts.required_document_type_codes:
+        from .scheme import required_document_types
+
+        facts = ApplicationFacts(
+            purchase_amount=facts.purchase_amount,
+            purchase_date=facts.purchase_date,
+            tier_code=facts.tier_code,
+            payment_channel_code=facts.payment_channel_code,
+            paid_by_proxy=facts.paid_by_proxy,
+            required_document_type_codes=tuple(
+                required_document_types(scheme, facts.tier_code, facts.payment_channel_code, facts.paid_by_proxy)
+            ),
+        )
+    findings = evaluate(rules, documents, facts)
+    result = precheck(findings, rules)
+    return {
+        "verdict": result.verdict,
+        "findings": [f.to_dict() for f in findings],
+        "blocking": [f.rule_code for f in result.blocking],
+        "warnings": [f.rule_code for f in result.warnings],
+        "suggested_supplement": suggested_supplements(findings),
+    }
 
 
 async def persist_findings(

@@ -27,8 +27,10 @@ from .base import EMBED_DIM, Base, TsMixin, VersionMixin, new_id, now
 __all__ = [
     "CONTENT_TYPES",
     "NOTIFICATION_STATUSES",
+    "SUGGESTION_STATUSES",
     "AuditLog",
     "Content",
+    "CopilotSuggestion",
     "Faq",
     "KnowledgeDocument",
     "LineConversation",
@@ -44,6 +46,7 @@ __all__ = [
 
 CONTENT_TYPES = ("text", "button", "label", "flex")
 NOTIFICATION_STATUSES = ("queued", "sent", "failed", "skipped")
+SUGGESTION_STATUSES = ("pending", "accepted", "dismissed")
 
 
 class Content(TsMixin, VersionMixin, Base):
@@ -242,6 +245,29 @@ class AuditLog(Base):
     target_id: Mapped[str] = mapped_column(String(64), default="")
     diff: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, index=True)
+
+
+class CopilotSuggestion(TsMixin, Base):
+    """內容助理產出的建議，等承辦人員採用（SPEC §8.6 b / 決策 D8）。
+
+    存下來是因為「採用」是第二次呼叫：`POST …/faq-suggestions/{id}/accept` 需要一個
+    穩定的 id，而重跑一次聚類不保證得到同一批建議。`payload` 是整則建議的 JSON
+    （問題、答案草稿、引用、樣本句），`sample_count` 讓後台知道這一群有多少人問過。
+    樣本句在寫進來之前就已經去識別化（`services/copilot.py`）。
+    """
+
+    __tablename__ = "copilot_suggestions"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    tenant_id: Mapped[str] = mapped_column(String(32), index=True)
+    kind: Mapped[str] = mapped_column(String(30), default="faq", index=True)
+    status: Mapped[str] = mapped_column(String(20), default="pending", index=True)
+    payload: Mapped[dict] = mapped_column(JSON, default=dict)
+    sample_count: Mapped[int] = mapped_column(Integer, default=0)
+    created_by: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    resolved_by: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    target_id: Mapped[str] = mapped_column(String(32), default="")  # 採用後建出來的 FAQ id
 
 
 # pgvector HNSW 索引（alembic 0014 只在 Postgres 上建立）。

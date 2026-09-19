@@ -47,7 +47,9 @@ __all__ = [
     "SAMPLE_VARIABLES",
     "ContentView",
     "categories",
+    "ensure_row",
     "get_or_create",
+    "save_generated_draft",
     "invalidate",
     "list_contents",
     "prefixed",
@@ -292,6 +294,84 @@ async def get_or_create(db: AsyncSession, tenant_id: str, key: str) -> Content:
     await db.flush()
     invalidate(tenant_id)
     return row
+
+
+async def ensure_row(
+    db: AsyncSession,
+    tenant_id: str,
+    key: str,
+    *,
+    category: str = "",
+    title: str = "",
+    description: str = "",
+    content_type: str = "text",
+    scheme_id: str | None = None,
+    sort_order: int = 0,
+) -> Content:
+    """讀一筆文案；沒有列就補一列，**不要求這個 key 在 registry 裡**。
+
+    `get_or_create()` 對不認得的 key 丟 404，因為它服務的是後台編輯器——那裡的 key
+    一定來自 registry。方案專屬文案不一樣：它是內容助理依方案設定生出來的
+    （`status.…`、`rejection.…`、`guide.…` 三組，key 以方案代碼開頭），出廠時不存在，
+    也不該被 `sync_defaults()` 當成「registry 裡少了一筆」而刪掉或補上預設值。
+
+    已經存在的列只補中繼資料的空白處，不動 `content` 與 `draft`——承辦人員改過的字
+    永遠不被蓋掉（同 `sync_defaults()`）。
+    """
+    row = await _row(db, tenant_id, key)
+    if row is not None:
+        if scheme_id and not row.scheme_id:
+            row.scheme_id = scheme_id
+        if title and not row.title:
+            row.title = title
+        if description and not row.description:
+            row.description = description
+        return row
+    definition = get_definition(key)
+    row = Content(
+        tenant_id=tenant_id,
+        key=key,
+        category=category or (definition.category if definition else "general"),
+        title=title or (definition.title if definition else key),
+        description=description or (definition.description if definition else ""),
+        content="" if definition is None else definition.default,
+        content_type=content_type or (definition.content_type if definition else "text"),
+        variables=list(definition.variables) if definition else [],
+        scheme_id=scheme_id,
+        sort_order=sort_order or (definition.sort_order if definition else 0),
+    )
+    db.add(row)
+    await db.flush()
+    invalidate(tenant_id)
+    return row
+
+
+async def save_generated_draft(
+    db: AsyncSession,
+    tenant_id: str,
+    key: str,
+    draft: str,
+    *,
+    actor: Actor | None = None,
+    category: str = "",
+    title: str = "",
+    description: str = "",
+    scheme_id: str | None = None,
+) -> ContentView:
+    """內容助理寫草稿用的入口：缺列就補列，然後只動 `draft`。
+
+    刻意不提供「順便發布」的參數。助理永遠只寫 draft，`content` 要變成什麼樣子
+    是 admin 按下發布時才決定的（SPEC §8.6、決策 D8），這條紅線由型別本身擋住比
+    由呼叫端自律可靠。
+    """
+    row = await ensure_row(db, tenant_id, key, category=category, title=title,
+                           description=description, scheme_id=scheme_id)
+    row.draft = draft
+    bump(row)
+    await audit.log(db, actor, "save_draft", "content", key,
+                    {"length": len(draft), "source": "copilot"}, tenant_id=tenant_id)
+    await db.flush()
+    return _view(row)
 
 
 async def sync_defaults(db: AsyncSession, tenant_id: str) -> dict[str, int]:
