@@ -22,7 +22,13 @@ const FOCUSABLE =
  * 用原生 `<dialog>`：backdrop、inert 背景、Esc 關閉都由瀏覽器負責，
  * 我們只補兩件事——把 Esc 導回 `onClose`（而不是讓 dialog 自己關掉、狀態卻沒更新），
  * 以及把 Tab 圈在對話框裡（jsdom 與少數瀏覽器不會自己做）。
+ *
+ * 置中要自己寫。瀏覽器預設是 `position:fixed; inset:0; height:fit-content; margin:auto`，
+ * 但 Tailwind preflight 把所有元素的 `margin` 歸零，於是對話框會黏在畫面左上角。
+ * `CENTERED` 把那四件事明寫回來——別把它拿掉，這個 bug 在測試裡看不出來。
  */
+const CENTERED = 'fixed inset-0 m-auto h-fit'
+
 export function Modal({ open, onClose, title, subtitle, footer, width = 520, children, className }: ModalProps) {
   const ref = useRef<HTMLDialogElement>(null)
 
@@ -77,6 +83,7 @@ export function Modal({ open, onClose, title, subtitle, footer, width = 520, chi
         onClose()
       }}
       className={cx(
+        CENTERED,
         'w-[calc(100vw-2rem)] max-w-none rounded-2xl border border-border bg-canvas p-0 text-primary',
         'backdrop:bg-scrim open:flex open:flex-col',
         'max-h-[85vh] overflow-hidden',

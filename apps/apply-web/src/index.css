@@ -1,5 +1,9 @@
 @import "tailwindcss";
 @import "@maydru/ui/tokens.css";
+/* `@maydru/ui` 在 node_modules 裡（workspace 符號連結），Tailwind 預設不掃那裡，
+   所以只出現在共用元件裡的 utility（Modal 的 max-h-[85vh]）會一個規則都不產生。
+   指名掃它的原始碼。 */
+@source "../../../packages/ui/src";
 
 /* apply-web 是行動優先的市民介面：一個畫面一個主要動作，字級偏大，
    點擊目標至少 44px（SPEC §15）。base layer 讓 utility 仍然能覆蓋。 */

@@ -1,5 +1,9 @@
 @import "tailwindcss";
 @import "@maydru/ui/tokens.css";
+/* `@maydru/ui` 在 node_modules 裡（workspace 符號連結），Tailwind 預設不掃那裡，
+   所以只出現在共用元件裡的 utility（Modal 的 max-h-[85vh]）會一個規則都不產生。
+   指名掃它的原始碼。 */
+@source "../../../packages/ui/src";
 
 /* Base rules live in the base layer so utilities (text-white on a blue
    button, for one) can still win — an unlayered rule beats every layer. */

@@ -109,6 +109,31 @@ describe('Modal', () => {
     )
     expect(screen.getByRole('button', { name: '關閉' })).toBeTruthy()
   })
+
+  it('置中是自己寫的，不靠 <dialog> 的預設 margin', () => {
+    // Tailwind preflight 把 margin 歸零，UA 的 `margin:auto` 就沒了，對話框會黏在
+    // 左上角。jsdom 不做版面，所以這裡只能守著那幾個 class——少一個就是那個 bug。
+    render(
+      <Modal open onClose={vi.fn()} title="確認撤回">
+        <p>內容</p>
+      </Modal>,
+    )
+    const classes = screen.getByRole('dialog').className.split(/\s+/)
+    for (const needed of ['fixed', 'inset-0', 'm-auto', 'h-fit']) {
+      expect(classes).toContain(needed)
+    }
+  })
+
+  it('外面傳進來的 className 不會蓋掉置中', () => {
+    render(
+      <Modal open onClose={vi.fn()} title="確認撤回" className="text-left">
+        <p>內容</p>
+      </Modal>,
+    )
+    const classes = screen.getByRole('dialog').className.split(/\s+/)
+    expect(classes).toContain('m-auto')
+    expect(classes).toContain('text-left')
+  })
 })
 
 describe('Stepper', () => {
