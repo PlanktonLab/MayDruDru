@@ -614,6 +614,7 @@ Cloudflare proxied；origin cert 需涵蓋三個名稱（萬用或重簽）。DN
 | D35 | P8 的可及性門檻以 axe 的 WCAG A/AA serious/critical violations 為自動化 gate；顏色對比另由 token 設計與人工檢視負責（jsdom 無法計算實際樣式）。稽核 UI 只讀 `audit_logs.diff`，不展開案件與文件 | 自動測試抓得到名稱、語意、結構等嚴重退步，又不製造 jsdom canvas 的假訊號；稽核畫面不成為第二份個資資料庫 |
 | D36 | 將既有 ProReview 能力在後台收斂為「審查作業」導覽：案件總覽與實際審核沿用單一案件／finding 資料；另提供獨立「資料重點設定」入口，但仍直接編輯方案的 `review_rules`，不建立第二份規則 | 承辦人能按工作流程找到設定與審核，不必先知道規則藏在方案管理；共用同一份 API、規則引擎與稽核紀錄可避免設定漂移 |
 | D37 | LINE rich menu 保留新 action 名稱並相容舊 youth-line-bot 的 `subsidy_info`、`eligibility` postback；後台版面直接預覽目前圖檔，沒有客製圖時顯示內建美術稿 | LINE 上已發布的舊選單不應因後端整合改名而失效；看得到實際圖檔才能讓承辦人確認預設圖片與點擊熱區一致 |
+| D38 | LINE 選定一條 SOP 後，以 Flex carousel 一次傳送全部步驟圖片，不再要求逐步按「下一步」；保留卡住截圖、換流程與結束 | 民眾可一次掌握完整操作並自行回看；carousel 能在 LINE 單次回覆上限內承載多張步驟卡 |
 
 ---
 

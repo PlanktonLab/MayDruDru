@@ -2385,6 +2385,16 @@ _SOP: tuple[ContentDefinition, ...] = (
         sort_order=104,
     ),
     _def(
+        "line.sop.all_steps_started",
+        "sop",
+        "一次顯示完整教學",
+        "LINE 選定操作指引後，完整步驟圖片之前的說明。",
+        "以下是「{{document}}」的完整操作指引，請左右滑動查看全部步驟。\n"
+        "如果畫面和教學不同，可以點「我卡住了」並上傳截圖。",
+        variables=("document",),
+        sort_order=104,
+    ),
+    _def(
         "line.sop.stuck_ask_screenshot",
         "sop",
         "請民眾傳截圖",

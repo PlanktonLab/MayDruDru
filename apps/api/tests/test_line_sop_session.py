@@ -60,7 +60,10 @@ def texts(messages) -> str:
 
 
 def images(messages) -> list[dict]:
-    return [m for m in messages if m.get("type") == "image"]
+    return [
+        m for m in messages
+        if m.get("type") == "image" or (m.get("type") == "flex" and (m.get("contents") or {}).get("type") == "carousel")
+    ]
 
 
 def quick_actions(message) -> list[str]:
@@ -124,13 +127,16 @@ async def test_picking_a_document_with_one_flow_starts_the_session(db, tenant, m
     messages = await reply(db, tenant, postback_event("sop_document", doc=DOC))
 
     body = texts(messages)
-    assert await say(db, tenant, "line.sop.started", document="BILLING_STATEMENT") in body
+    assert await say(db, tenant, "line.sop.all_steps_started", document="BILLING_STATEMENT") in body
     # SPEC §8.4「敏感提醒」：第一則回覆就要帶到
     assert await say(db, tenant, "security.screenshot_notice") in body
-    assert images(messages), "第一張步驟卡應該是圖片訊息"
+    assert images(messages), "完整步驟應該放在 carousel"
     assert quick_actions(images(messages)[0]) == [
-        "action=sop_next", "action=sop_stuck", "action=sop_switch", "action=sop_exit",
+        "action=sop_stuck", "action=sop_switch", "action=sop_exit",
     ]
+    bubbles = images(messages)[0]["contents"]["contents"]
+    assert len(bubbles) == 2
+    assert all(bubble.get("hero", {}).get("url") for bubble in bubbles)
 
     state = await state_of(db, tenant)
     assert state.flow == "sop_session" and state.sop_session_id

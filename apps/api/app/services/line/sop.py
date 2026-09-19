@@ -32,7 +32,7 @@ from ...ai import intent as intent_rules
 from ...ai.session_graph import SessionEngine, SessionStore
 from ...models import DocumentType, Flow, Platform, Scheme
 from ...pii import hash_user_id
-from .. import contents, sop_links
+from .. import contents, sop_links, sop_public
 from . import conversation, flex
 
 log = logging.getLogger("maydru.line.sop")
@@ -263,10 +263,17 @@ async def open_for_flow(
         return await ctx.say_with_menu("line.sop.no_flow", document=document_label or document_code or flow.name)
 
     await _remember(ctx, session_id, document_code=document_code, document_label=document_label, flow_id=flow.id)
-    lead = await ctx.t("line.sop.started", document=document_label or document_code or flow.name)
+    lead = await ctx.t("line.sop.all_steps_started", document=document_label or document_code or flow.name)
     notice = await contents.t(ctx.db, ctx.tenant_id, "security.screenshot_notice")
-    messages = [flex.text_message(lead), flex.text_message(notice)]
-    messages.extend(await render(ctx, response))
+    complete = await sop_public.flow_steps(ctx.db, ctx.tenant_id, flow.id, theme=THEME)
+    carousels = await flex.sop_all_steps_messages(
+        ctx.db, ctx.tenant_id, complete.get("messages") or [], alt_text=lead
+    )
+    header = flex.text_message("\n\n".join(part for part in (lead, notice) if part.strip()))
+    # LINE 一次最多回五則；四個 carousel 以下保留說明，五個時把名額全留給步驟圖。
+    messages = [header, *carousels] if len(carousels) < 5 else carousels
+    if not carousels:
+        messages.extend(await render(ctx, response))
     return messages[:5]
 
 
