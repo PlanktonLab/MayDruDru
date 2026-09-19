@@ -150,6 +150,51 @@ describe('HelpPage', () => {
     await waitFor(() => expect(screen.queryByText('什麼是「出帳帳單」？我要去哪裡拿？')).toBeNull())
     expect(await screen.findByText('我的證件照片會被保留多久？')).toBeTruthy()
   })
+
+  it('支援熱門標籤點擊與清除搜尋', async () => {
+    render(
+      <Providers>
+        <HelpPage />
+      </Providers>,
+    )
+    expect(await screen.findByText('什麼是「出帳帳單」？我要去哪裡拿？')).toBeTruthy()
+    // 點擊熱門搜尋「身分證遮罩」
+    fireEvent.click(screen.getByRole('button', { name: '身分證遮罩' }))
+    await waitFor(() => expect(screen.queryByText('什麼是「出帳帳單」？我要去哪裡拿？')).toBeNull())
+    // 點擊清除搜尋按鈕
+    fireEvent.click(screen.getByRole('button', { name: '清除搜尋內容' }))
+    expect(await screen.findByText('什麼是「出帳帳單」？我要去哪裡拿？')).toBeTruthy()
+  })
+
+  it('支援依分類切換篩選與解答滿意度回饋', async () => {
+    render(
+      <Providers>
+        <HelpPage />
+      </Providers>,
+    )
+    expect(await screen.findByText('什麼是「出帳帳單」？我要去哪裡拿？')).toBeTruthy()
+    // 切換至「隱私安全」分類
+    fireEvent.click(screen.getByRole('button', { name: /^隱私安全/ }))
+    await waitFor(() => expect(screen.queryByText('什麼是「出帳帳單」？我要去哪裡拿？')).toBeNull())
+    expect(await screen.findByText('我的證件照片會被保留多久？')).toBeTruthy()
+
+    // 點擊滿意度「這則回答有幫助」
+    const voteBtn = screen.getAllByRole('button', { name: '這則回答有幫助' })[0]
+    fireEvent.click(voteBtn)
+    expect(await screen.findByText('感謝你的回饋！')).toBeTruthy()
+  })
+
+  it('提供自助捷徑連結與專人客服資訊', async () => {
+    render(
+      <Providers>
+        <HelpPage />
+      </Providers>,
+    )
+    expect(screen.getByRole('link', { name: /查詢案件進度/ }).getAttribute('href')).toBe('/status')
+    expect(screen.getByRole('link', { name: /扣款證明圖文教學/ }).getAttribute('href')).toBe('/sop')
+    expect(screen.getByText(/LINE 官方線上客服/)).toBeTruthy()
+    expect(screen.getByText(/\(03\) 533-3115/)).toBeTruthy()
+  })
 })
 
 describe('SubmittedPage', () => {
