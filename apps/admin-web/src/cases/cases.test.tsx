@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import CasesQueuePage from '../pages/CasesQueuePage'
-import CaseReviewPage from '../pages/CaseReviewPage'
+import CaseReviewPage, { mergePageOcr } from '../pages/CaseReviewPage'
 import { DecisionBar } from './DecisionBar'
 import { ComparePanel, compareAmounts } from './ComparePanel'
 import { clampZoom, toPercentBox } from './DocumentViewer'
@@ -18,7 +18,10 @@ import type { AllowedTransition, ApprovalBlocker, CaseFinding, TransitionInput }
 
 vi.mock('@maydru/ocr', async () => ({
   createOcrWorker: vi.fn(async () => ({ terminate: vi.fn() })),
+  disposeCanvas: vi.fn(),
+  pdfToPageCanvases: vi.fn(),
   recognize: vi.fn(async () => ({ text: '', confidence: 90, lines: [] })),
+  toBlob: vi.fn(),
 }))
 
 function openQueue() {
@@ -447,6 +450,15 @@ describe('文件檢視器的數學', () => {
   it('沒有尺寸時寧可不畫框', () => {
     expect(toPercentBox({ x0: 0, y0: 0, x1: 10, y1: 10 }, 0, 0)).toBeNull()
     expect(toPercentBox(null, 500, 500)).toBeNull()
+  })
+
+  it('多頁 PDF OCR 合併後會把第二頁座標往下移', () => {
+    const first = { text: '第一頁', confidence: 90, lines: [{ text: '第一頁', confidence: 90, bbox: { x0: 1, y0: 2, x1: 10, y1: 12 }, words: [] }] }
+    const second = { text: '第二頁', confidence: 80, lines: [{ text: '第二頁', confidence: 80, bbox: { x0: 3, y0: 4, x1: 20, y1: 14 }, words: [] }] }
+    const result = mergePageOcr([first, second], [100, 200])
+    expect(result.text).toBe('第一頁\n第二頁')
+    expect(result.confidence).toBe(85)
+    expect(result.lines[1].bbox).toEqual({ x0: 3, y0: 104, x1: 20, y1: 114 })
   })
 })
 

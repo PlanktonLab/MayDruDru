@@ -11,7 +11,7 @@ import { Link, useParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, ListChecks, ShieldAlert } from 'lucide-react'
 import { Badge, Card, Select, Spinner, Timeline, type TimelineEvent } from '@maydru/ui'
-import { createOcrWorker, recognize } from '@maydru/ocr'
+import { createOcrWorker, disposeCanvas, pdfToPageCanvases, recognize, type OcrLine, type OcrResult } from '@maydru/ocr'
 import { ComparePanel } from '../cases/ComparePanel'
 import { DecisionBar } from '../cases/DecisionBar'
 import { DocumentViewer } from '../cases/DocumentViewer'
@@ -33,6 +33,34 @@ import { errMsg, useToast } from '../components/ui'
 import { PageHeader } from '../components/admin/shared'
 import type { BoundingBox } from '@maydru/review-rules'
 import type { CaseDocument, DocumentTypeOption } from '../cases/types'
+
+function shiftLines(lines: OcrLine[], dy: number): OcrLine[] {
+  return lines.map((line) => ({
+    ...line,
+    bbox: { ...line.bbox, y0: line.bbox.y0 + dy, y1: line.bbox.y1 + dy },
+    words: line.words.map((word) => ({
+      ...word,
+      bbox: { ...word.bbox, y0: word.bbox.y0 + dy, y1: word.bbox.y1 + dy },
+    })),
+  }))
+}
+
+export function mergePageOcr(results: OcrResult[], pageHeights: number[]): OcrResult {
+  let offset = 0
+  const lines: OcrLine[] = []
+  results.forEach((result, index) => {
+    lines.push(...shiftLines(result.lines, offset))
+    offset += pageHeights[index] ?? 0
+  })
+  const confidences = results.map((result) => result.confidence).filter((value) => value > 0)
+  return {
+    text: results.map((result) => result.text).join('\n'),
+    confidence: confidences.length
+      ? Math.round(confidences.reduce((sum, value) => sum + value, 0) / confidences.length)
+      : 0,
+    lines,
+  }
+}
 
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -81,16 +109,37 @@ export default function CaseReviewPage() {
       setRecognising(true)
       setRecogniseProgress(0)
       let worker: Awaited<ReturnType<typeof createOcrWorker>> | null = null
+      let pdfCanvases: HTMLCanvasElement[] = []
       try {
         const { url } = await documentUrl(caseNo, document.id)
-        worker = await createOcrWorker({ onProgress: setRecogniseProgress })
-        const result = await recognize(worker, url)
+        let currentPage = 0
+        let pageCount = 1
+        worker = await createOcrWorker({
+          onProgress: (progress) => setRecogniseProgress((currentPage + progress) / pageCount),
+        })
+        let result: OcrResult
+        if (document.mime === 'application/pdf') {
+          const response = await fetch(url)
+          if (!response.ok) throw new Error(`PDF 下載失敗（${response.status}）`)
+          const pages = await pdfToPageCanvases(await response.blob(), { maxPages: 5 })
+          pdfCanvases = pages.canvases
+          pageCount = pdfCanvases.length
+          const results: OcrResult[] = []
+          for (let index = 0; index < pdfCanvases.length; index++) {
+            currentPage = index
+            results.push(await recognize(worker, pdfCanvases[index]))
+          }
+          result = mergePageOcr(results, pdfCanvases.map((canvas) => canvas.height))
+        } else {
+          result = await recognize(worker, url)
+        }
         await putDocumentOcr(caseNo, document.id, result)
         await refresh()
         toast('已用重新辨識的結果重跑規則')
       } catch (cause) {
         toast(errMsg(cause), 'err')
       } finally {
+        pdfCanvases.forEach(disposeCanvas)
         await worker?.terminate().catch(() => {})
         setRecognising(false)
         setRecogniseProgress(0)
@@ -164,9 +213,13 @@ export default function CaseReviewPage() {
           <DocumentViewer
             documents={caseData.documents}
             selectedId={selectedDocumentId}
-            onSelect={setSelectedDocumentId}
+            onSelect={(documentId) => {
+              setSelectedDocumentId(documentId)
+              setFocus(null)
+            }}
             loadUrl={loadUrl}
             focusBbox={focus?.bbox ?? null}
+            findings={caseData.findings}
             onReRecognise={can('case_review') ? (doc) => void reRecognise(doc) : undefined}
             recognising={recognising}
             recogniseProgress={recogniseProgress}
