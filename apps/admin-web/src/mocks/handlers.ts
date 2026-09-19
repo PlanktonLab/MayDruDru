@@ -16,13 +16,14 @@ function toQueueRow(item: CaseDetail): QueueRow {
     rules: _rules,
     allowed_transitions: _transitions,
     approval_blockers: _blockers,
+    scheme_settings: _settings,
     ...row
   } = item
   return row
 }
 
 export interface MockOptions {
-  /** 沒有審核人清單端點時（目前的真實情況）回 404。 */
+  /** 設成 false 可以模擬「審核人名單拿不到」，指派選單會停用並說明原因。 */
   reviewers?: boolean
   cases?: Record<string, CaseDetail>
 }
@@ -182,21 +183,22 @@ export function createHandlers(options: MockOptions = {}): HttpHandler[] {
       const found = cases[String(params.case_no)]
       if (!found) return HttpResponse.json({ code: 'CASE_NOT_FOUND' }, { status: 404 })
       const { reviewer_id } = (await request.json()) as { reviewer_id: string | null }
-      const reviewer = REVIEWERS.find((item) => item.id === reviewer_id) ?? null
+      const match = REVIEWERS.find((item) => item.id === reviewer_id)
+      // 契約：`assigned_reviewer` 只有 id 與名字，不帶 email／角色。
+      const reviewer = match ? { id: match.id, name: match.name } : null
       found.assigned_reviewer = reviewer
       found.assigned_reviewer_id = reviewer?.id ?? null
       return HttpResponse.json({ assigned_reviewer: reviewer })
     }),
 
     http.get('/api/admin/reviewers', () =>
-      options.reviewers
-        ? HttpResponse.json(REVIEWERS)
-        : // 真後端目前沒有這支端點；預設模擬它不存在，指派選單就會停用。
-          HttpResponse.json({ detail: 'Not Found' }, { status: 404 }),
+      options.reviewers === false
+        ? HttpResponse.json({ detail: '服務暫時無法使用' }, { status: 503 })
+        : HttpResponse.json(REVIEWERS),
     ),
 
-    // 退件原因與文件標籤目前只能從公開的方案端點借（見 README「契約缺口」）。
-    http.get('/api/apply/schemes/:code', () => HttpResponse.json(SCHEME_SETTINGS)),
+    // 案件頁用的是 `CaseDetail.scheme_settings`；這支是同一份資料的獨立入口。
+    http.get('/api/admin/schemes/:code/settings', () => HttpResponse.json(SCHEME_SETTINGS)),
   ]
 }
 

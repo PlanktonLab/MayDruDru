@@ -23,6 +23,12 @@ export interface Reviewer {
   name: string
 }
 
+/** `GET /api/admin/reviewers` 的一列：帶得到 case_review / case_supervise 的啟用帳號。 */
+export interface AssignableReviewer extends Reviewer {
+  email: string
+  role: string
+}
+
 export interface QueueRow {
   case_no: string
   /** 佇列只給遮罩後的姓名；完整姓名要進案件頁才看得到（SPEC §11）。 */
@@ -137,6 +143,8 @@ export interface CaseDetail extends QueueRow {
   approved_amount: number | null
   /** 伺服器算出來的必備文件代碼；補件表單的選項來源。 */
   required_document_types: string[]
+  /** 方案設定（退件碼、文件類型、天數…）跟著案件一起給，案件頁不必再打一支 API。 */
+  scheme_settings: SchemeSettings
   documents_purge_at: string | null
   documents: CaseDocument[]
   findings: CaseFinding[]
@@ -148,21 +156,61 @@ export interface CaseDetail extends QueueRow {
 }
 
 /**
- * 退件原因。案件詳情沒有帶方案設定，所以這份清單來自
- * `GET /api/apply/schemes/{code}`——那支端點沒有 `staff_label`，
- * 表單只好用給市民看的說法當選項標題（見 README「契約缺口」）。
+ * 退件原因（`scheme_settings.rejection_codes`）。`staff_label` 是承辦在表單上看到的
+ * 內部說法，`public_*` 那兩段才是市民收到的字——同一份清單，兩種讀者。
  */
 export interface RejectionCodeOption {
   code: string
-  staff_label?: string
+  staff_label: string
   public_what_wrong: string
   public_how_to_fix: string
   related_document_type_codes: string[]
+  related_sop_flow_ids?: string[]
 }
 
 export interface DocumentTypeOption {
   code: string
   label: string
+  hint?: string
+  required?: boolean
+  required_when?: string
+  must_mask?: boolean
+  keep_visible?: string
+  accepted_mime?: string[]
+  max_pages?: number
+  sort_order?: number
+}
+
+export interface PaymentChannelOption {
+  code: string
+  label: string
+  hint?: string
+  required_document_type_codes?: string[]
+  guide_content_key?: string
+}
+
+export interface TierOption {
+  code: string
+  label: string
+  subsidy_rate?: number
+  cap_amount?: number
+  required_proof_doc_types?: string[]
+}
+
+/**
+ * 案件頁組表單要的方案設定。跟著 `CaseDetail` 一起回來，所以案件頁只打一支 API；
+ * 需要單獨取用時是 `GET /api/admin/schemes/{code}/settings`。
+ */
+export interface SchemeSettings {
+  code: string
+  name: string
+  supplement_days: number
+  max_revisions: number
+  retention_days: number
+  tiers: TierOption[]
+  document_types: DocumentTypeOption[]
+  payment_channels: PaymentChannelOption[]
+  rejection_codes: RejectionCodeOption[]
 }
 
 export interface PresignedUrl {

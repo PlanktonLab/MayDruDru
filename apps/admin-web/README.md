@@ -63,10 +63,10 @@ SOP 區的端點不在 mocks 裡，會照常打真後端。瀏覽器端需要 `p
 npm test -w @maydru/admin-web
 ```
 
-## 契約缺口（待後端補）
+## 案件頁的資料來源
 
-| 缺什麼 | 影響 |
+| 要什麼 | 從哪來 |
 |---|---|
-| 審核人清單端點（只有 `POST …/assign` 吃 `reviewer_id`） | 指派選單目前是停用的，畫面會說明原因 |
-| `rejection_codes[].staff_label` 不在 `GET /api/apply/schemes/{code}` | 補件／退件表單只好用給市民看的說法當選項標題 |
-| `ApplicationDetailOut` 不帶方案設定 | 案件頁得額外打一次公開的方案端點拿退件原因與文件標籤 |
+| 退件原因（含承辦看的 `staff_label`）、文件類型、補件天數 | `CaseDetail.scheme_settings`，跟案件一起回來；獨立入口是 `GET /api/admin/schemes/{code}/settings` |
+| 指派選單的名單 | `GET /api/admin/reviewers`：本機關中帶得到 `case_review` / `case_supervise` 的啟用帳號 |
+| 時間軸上「誰做的」 | `events[].actor_name`（承辦才有名字；系統與市民一律 null） |

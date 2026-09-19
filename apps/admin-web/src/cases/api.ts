@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import type { OcrResult } from '@maydru/ocr'
 import { get, post, put } from '../lib/api'
 import type {
+  AssignableReviewer,
   CaseDetail,
   FindingOverrideInput,
   PresignedUrl,
@@ -61,19 +62,13 @@ export function useCaseDetail(caseNo: string | undefined) {
 }
 
 /**
- * 可指派的審核人。P3 契約還沒有這支端點（只有 `POST …/assign` 吃 `reviewer_id`），
- * 所以拿不到時回空陣列——指派選單會變成唯讀，但案件頁其他部分照常運作。
+ * 可指派的審核人：本機關中帶得到 `case_review` / `case_supervise` 的啟用帳號。
+ * 名單整個後台共用，所以放寬 staleTime——它不會在一次審核裡變動。
  */
 export function useReviewers() {
   return useQuery({
     queryKey: ['case-reviewers'],
-    queryFn: async () => {
-      try {
-        return await get<Reviewer[]>('/api/admin/reviewers')
-      } catch {
-        return [] as Reviewer[]
-      }
-    },
+    queryFn: () => get<AssignableReviewer[]>('/api/admin/reviewers'),
     staleTime: 5 * 60_000,
   })
 }

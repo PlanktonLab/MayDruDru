@@ -5,12 +5,14 @@
  */
 
 import type {
+  AssignableReviewer,
   CaseDetail,
   CaseDocument,
   CaseFinding,
   DocumentTypeOption,
   RejectionCodeOption,
   ReviewRule,
+  SchemeSettings,
 } from '../cases/types'
 import type { User } from '../lib/types'
 
@@ -27,36 +29,42 @@ export const CURRENT_USER: User = {
 }
 
 export const DOCUMENT_TYPES: DocumentTypeOption[] = [
-  { code: 'ID_CARD_FRONT', label: '身分證正面' },
-  { code: 'ID_CARD_BACK', label: '身分證反面' },
-  { code: 'OFFICIAL_RECEIPT', label: '官方收據' },
-  { code: 'CARD_LAST4_PHOTO', label: '信用卡圖片' },
-  { code: 'BILLING_STATEMENT', label: '信用卡帳單扣款紀錄' },
-  { code: 'BANKBOOK_COVER', label: '存摺封面影本' },
-  { code: 'AFFIDAVIT', label: '切結書' },
+  { code: 'ID_CARD_FRONT', label: '身分證正面', required: true, must_mask: false, max_pages: 1, sort_order: 1 },
+  { code: 'ID_CARD_BACK', label: '身分證反面', required: true, must_mask: false, max_pages: 1, sort_order: 2 },
+  { code: 'OFFICIAL_RECEIPT', label: '官方收據', required: true, max_pages: 3, sort_order: 3 },
+  { code: 'CARD_LAST4_PHOTO', label: '信用卡圖片', required: true, must_mask: true,
+    keep_visible: '卡號末四碼與持卡人姓名', max_pages: 1, sort_order: 4 },
+  { code: 'BILLING_STATEMENT', label: '信用卡帳單扣款紀錄', required: true, must_mask: true,
+    keep_visible: '扣款日期、臺幣金額、卡號末四碼', max_pages: 3, sort_order: 5 },
+  { code: 'BANKBOOK_COVER', label: '存摺封面影本', required: true, max_pages: 1, sort_order: 6 },
+  { code: 'AFFIDAVIT', label: '切結書', required: true, max_pages: 2, sort_order: 7 },
 ]
 
 export const REJECTION_CODES: RejectionCodeOption[] = [
   {
     code: 'BILLING_NO_TWD',
+    staff_label: '帳單未顯示臺幣金額',
     public_what_wrong: '出帳帳單上看不到換算後的臺幣金額',
     public_how_to_fix: '請重新取得一份含臺幣金額的帳單。下方是你的付款方式的取得步驟。',
     related_document_type_codes: ['BILLING_STATEMENT'],
   },
   {
     code: 'BILLING_AMOUNT_MISMATCH',
+    staff_label: '帳單金額與申報金額不符',
     public_what_wrong: '帳單上的金額與你填寫的金額不一致',
     public_how_to_fix: '請以帳單上實際扣款的臺幣金額為準，回到申請資料修正填報金額。',
     related_document_type_codes: ['BILLING_STATEMENT'],
   },
   {
     code: 'DOC_MISSING',
+    staff_label: '缺少必要文件',
     public_what_wrong: '有一份必要文件沒有收到',
     public_how_to_fix: '請補上承辦標示的那一份文件。',
     related_document_type_codes: [],
   },
   {
     code: 'OTHER',
+    staff_label: '其他（請填說明）',
     public_what_wrong: '其他需要修正的事項',
     public_how_to_fix: '請參考承辦的補充說明。',
     related_document_type_codes: [],
@@ -111,6 +119,26 @@ export const REVIEW_RULES: ReviewRule[] = [
     config: { document_type_codes: [], from_payment_channel: true, rejection_code: 'DOC_MISSING' },
   },
 ]
+
+/** 案件頁組表單的方案設定，跟著 `CaseDetail.scheme_settings` 一起回來。 */
+export const SCHEME_SETTINGS: SchemeSettings = {
+  code: SCHEME_CODE,
+  name: SCHEME_NAME,
+  supplement_days: 14,
+  max_revisions: 3,
+  retention_days: 90,
+  tiers: [
+    { code: 'GENERAL', label: '一般身分', subsidy_rate: 0.5, cap_amount: 3000, required_proof_doc_types: [] },
+    { code: 'SPECIAL', label: '特定對象', subsidy_rate: 0.9, cap_amount: 6000,
+      required_proof_doc_types: ['SPECIAL_STATUS_PROOF'] },
+  ],
+  document_types: DOCUMENT_TYPES,
+  payment_channels: [
+    { code: 'CREDIT_CARD', label: '信用卡', required_document_type_codes: ['BILLING_STATEMENT', 'CARD_LAST4_PHOTO'] },
+    { code: 'TELECOM', label: '電信帳單', required_document_type_codes: ['TELECOM_BILL'] },
+  ],
+  rejection_codes: REJECTION_CODES,
+}
 
 const now = new Date()
 const daysAgo = (days: number) => new Date(now.getTime() - days * 86_400_000).toISOString()
@@ -220,6 +248,7 @@ function baseCase(caseNo: string, overrides: Partial<CaseDetail>): CaseDetail {
     intake_channel: 'WEB',
     version: 1,
     required_document_types: REQUIRED_DOCS,
+    scheme_settings: SCHEME_SETTINGS,
     documents_purge_at: null,
     documents: [
       document('doc-id-front', 'ID_CARD_FRONT', '身分證正面'),
@@ -250,6 +279,7 @@ function baseCase(caseNo: string, overrides: Partial<CaseDetail>): CaseDetail {
         from_status: null,
         to_status: 'SUBMITTED',
         actor_type: 'APPLICANT',
+        actor_name: null,
         created_at: daysAgo(5),
         rejection_codes: [],
       },
@@ -258,6 +288,7 @@ function baseCase(caseNo: string, overrides: Partial<CaseDetail>): CaseDetail {
         from_status: 'SUBMITTED',
         to_status: 'UNDER_REVIEW',
         actor_type: 'SYSTEM',
+        actor_name: null,
         created_at: daysAgo(5),
         rejection_codes: [],
       },
@@ -322,13 +353,7 @@ export const CASES: Record<string, CaseDetail> = {
   }),
 }
 
-export const REVIEWERS = [
-  { id: 'user-reviewer', name: '示範承辦' },
-  { id: 'user-supervisor', name: '示範覆核' },
+export const REVIEWERS: AssignableReviewer[] = [
+  { id: 'user-reviewer', name: '示範承辦', email: 'reviewer@example.gov.tw', role: 'case_reviewer' },
+  { id: 'user-supervisor', name: '示範覆核', email: 'supervisor@example.gov.tw', role: 'case_supervisor' },
 ]
-
-export const SCHEME_SETTINGS = {
-  supplement_days: 14,
-  rejection_codes: REJECTION_CODES,
-  document_types: DOCUMENT_TYPES,
-}

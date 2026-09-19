@@ -198,11 +198,68 @@ describe('CaseReviewPage', () => {
     expect(await screen.findByText('OCR 來源：申請人上傳')).toBeTruthy()
   })
 
-  it('沒有審核人清單端點時指派選單停用並說明原因', async () => {
+  it('指派選單列出可指派的審核人與他們的角色', async () => {
+    openCase('HC-2026-900002')
+    const select = (await screen.findByLabelText('指派審核人')) as HTMLSelectElement
+    await waitFor(() => expect(select.disabled).toBe(false))
+    expect(within(select).getByRole('option', { name: /示範承辦（案件審核人）/ })).toBeTruthy()
+    expect(within(select).getByRole('option', { name: /示範覆核（案件覆核人）/ })).toBeTruthy()
+  })
+
+  it('指派會 POST 到 assign 端點', async () => {
+    const calls: unknown[] = []
+    server.events.on('request:start', async ({ request }) => {
+      if (request.method === 'POST' && request.url.includes('/assign'))
+        calls.push(await request.clone().json())
+    })
+    openCase('HC-2026-900002')
+    const select = (await screen.findByLabelText('指派審核人')) as HTMLSelectElement
+    await waitFor(() => expect(select.disabled).toBe(false))
+    fireEvent.change(select, { target: { value: 'user-supervisor' } })
+    await waitFor(() => expect(calls).toEqual([{ reviewer_id: 'user-supervisor' }]))
+    server.events.removeAllListeners()
+  })
+
+  it('審核人名單拿不到時指派停用，並說明是載入失敗', async () => {
+    server.use(
+      http.get('/api/admin/reviewers', () => HttpResponse.json({ detail: '壞了' }, { status: 503 })),
+    )
     openCase('HC-2026-900002')
     const select = (await screen.findByLabelText('指派審核人')) as HTMLSelectElement
     expect(select.disabled).toBe(true)
-    expect(screen.getByText(/後端尚未提供審核人清單端點/)).toBeTruthy()
+    expect(await screen.findByText(/審核人名單載入失敗/)).toBeTruthy()
+  })
+
+  async function openSupplementModal() {
+    fireEvent.click(await screen.findByRole('button', { name: '要求補件' }))
+    await screen.findByText('補件期限')
+    return within(screen.getByRole('dialog'))
+  }
+
+  it('補件表單的退件原因用承辦看得懂的 staff_label', async () => {
+    openCase('HC-2026-900002')
+    const modal = await openSupplementModal()
+    fireEvent.click(modal.getByText('信用卡帳單扣款紀錄'))
+    const reasons = (await modal.findByLabelText('退件原因')) as HTMLSelectElement
+    expect(within(reasons).getByRole('option', { name: '帳單未顯示臺幣金額' })).toBeTruthy()
+    // 市民端的說法不會被拿來當承辦的選項標題。
+    expect(within(reasons).queryByRole('option', { name: /出帳帳單上看不到/ })).toBeNull()
+  })
+
+  it('補件表單只列出這件案子真的要附的文件', async () => {
+    openCase('HC-2026-900002')
+    const modal = await openSupplementModal()
+    expect(modal.getByText('切結書')).toBeTruthy()
+    // 級距佐證文件不在 required_document_types 裡，就不該出現在補件清單。
+    expect(modal.queryByText('特定對象證明')).toBeNull()
+  })
+
+  it('時間軸寫出是誰做的：承辦有名字，系統沒有', async () => {
+    openCase('HC-2026-900002')
+    const timeline = (await screen.findByText('事件時間軸')).closest('section')!
+    expect(timeline.textContent).toContain('由系統自動執行')
+    fireEvent.click(screen.getByRole('button', { name: '核定' }))
+    await waitFor(() => expect(timeline.textContent).toContain('由 示範承辦'))
   })
 
   it('案件不存在時顯示錯誤與回佇列的出口', async () => {

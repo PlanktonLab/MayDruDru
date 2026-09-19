@@ -8,7 +8,7 @@
 
 import { useCallback, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, ShieldAlert } from 'lucide-react'
 import { Badge, Card, Select, Spinner, Timeline, type TimelineEvent } from '@maydru/ui'
 import { createOcrWorker, recognize } from '@maydru/ocr'
@@ -27,27 +27,19 @@ import {
   useReviewers,
 } from '../cases/api'
 import { STATUS_STAFF_LABEL, STATUS_TONE, VERDICT_LABEL, date, dateTime, money } from '../cases/labels'
-import { get } from '../lib/api'
 import { useAuth } from '../lib/auth'
+import { ROLE_LABEL, type Role } from '../lib/types'
 import { errMsg, useToast } from '../components/ui'
 import { PageHeader } from '../components/admin/shared'
 import type { BoundingBox } from '@maydru/review-rules'
-import type { CaseDocument, DocumentTypeOption, RejectionCodeOption } from '../cases/types'
+import type { CaseDocument, CaseEvent, DocumentTypeOption } from '../cases/types'
 
-/** 案件詳情沒有帶方案設定，退件原因與文件標籤只能從公開的方案端點借。 */
-interface SchemeSettings {
-  supplement_days: number
-  rejection_codes: RejectionCodeOption[]
-  document_types: DocumentTypeOption[]
-}
-
-function useSchemeSettings(schemeCode: string | undefined) {
-  return useQuery({
-    queryKey: ['case-scheme', schemeCode],
-    queryFn: () => get<SchemeSettings>(`/api/apply/schemes/${encodeURIComponent(schemeCode!)}`),
-    enabled: Boolean(schemeCode),
-    staleTime: 5 * 60_000,
-  })
+/** 誰做的。承辦有名字（`actor_name`），系統與市民沒有——那不是缺資料，是本來就沒有人。 */
+export function actorLabel(event: Pick<CaseEvent, 'actor_type' | 'actor_name'>): string | null {
+  if (event.actor_name) return `由 ${event.actor_name}`
+  if (event.actor_type === 'SYSTEM') return '由系統自動執行'
+  if (event.actor_type === 'APPLICANT') return '由申請人'
+  return null
 }
 
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
@@ -66,7 +58,6 @@ export default function CaseReviewPage() {
   const { can } = useAuth()
   const detail = useCaseDetail(caseNo)
   const caseData = detail.data
-  const scheme = useSchemeSettings(caseData?.scheme_code)
   const reviewers = useReviewers()
 
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null)
@@ -126,7 +117,7 @@ export default function CaseReviewPage() {
         at: dateTime(event.created_at),
         tone: STATUS_TONE[event.to_status],
         description: [
-          event.actor_name ? `由 ${event.actor_name}` : event.actor_type === 'SYSTEM' ? '由系統' : null,
+          actorLabel(event),
           event.reason,
           event.rejection_codes.length ? `退件原因：${event.rejection_codes.join('、')}` : null,
         ]
@@ -144,11 +135,11 @@ export default function CaseReviewPage() {
       </div>
     )
 
-  const documentTypes: DocumentTypeOption[] =
-    scheme.data?.document_types?.filter((type) => caseData.required_document_types.includes(type.code)) ??
-    caseData.documents
-      .filter((doc) => doc.is_current)
-      .map((doc) => ({ code: doc.document_type_code, label: doc.document_type_label }))
+  /** 補件表單的選項：方案設定裡「這件案子真的要附」的那幾種文件。 */
+  const settings = caseData.scheme_settings
+  const documentTypes: DocumentTypeOption[] = settings.document_types.filter((type) =>
+    caseData.required_document_types.includes(type.code),
+  )
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -218,7 +209,7 @@ export default function CaseReviewPage() {
             <Select
               aria-label="指派審核人"
               value={caseData.assigned_reviewer?.id ?? ''}
-              disabled={!can('case_review') || reviewers.data === undefined || reviewers.data.length === 0}
+              disabled={!can('case_review') || !reviewers.data?.length}
               onChange={async (event) => {
                 try {
                   await assignReviewer(caseNo, event.target.value || null)
@@ -232,13 +223,15 @@ export default function CaseReviewPage() {
               <option value="">未指派</option>
               {(reviewers.data ?? []).map((reviewer) => (
                 <option key={reviewer.id} value={reviewer.id}>
-                  {reviewer.name}
+                  {reviewer.name}（{ROLE_LABEL[reviewer.role as Role] ?? reviewer.role}）
                 </option>
               ))}
             </Select>
-            {(reviewers.data?.length ?? 0) === 0 && (
+            {!reviewers.isLoading && !reviewers.data?.length && (
               <p className="mt-2 text-[12px] text-muted">
-                目前沒有可指派的名單（後端尚未提供審核人清單端點）。
+                {reviewers.error
+                  ? '審核人名單載入失敗，指派先停用。'
+                  : '這個機關還沒有具審核權限的帳號，請先到「成員」新增。'}
               </p>
             )}
           </Card>
@@ -268,9 +261,9 @@ export default function CaseReviewPage() {
           <DecisionBar
             transitions={caseData.allowed_transitions}
             blockers={caseData.approval_blockers}
-            rejectionCodes={scheme.data?.rejection_codes ?? []}
+            rejectionCodes={settings.rejection_codes}
             documentTypes={documentTypes}
-            supplementDays={scheme.data?.supplement_days ?? 14}
+            supplementDays={settings.supplement_days}
             onSubmit={async (input) => {
               await runTransition(caseNo, input)
               await refresh()
