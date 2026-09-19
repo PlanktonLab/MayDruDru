@@ -10,10 +10,12 @@
 
 import { useMemo, useState } from 'react'
 import { AlertTriangle, Info } from 'lucide-react'
-import { Badge, Card, Field, FlatSelect, Input, cx } from '@maydru/ui'
+import { Badge, Button, Field, FlatSelect, Input, cx } from '@maydru/ui'
 import type { FlatSelectOption } from '@maydru/ui'
 import type { EligibleTool, SchemePublic, ToolStatus } from '../lib/types'
 import type { ToolChoice } from './state'
+import { toolGroups } from './toolGroups'
+import { verdictFor } from './toolVerdict'
 
 const STATUS_TONE: Record<ToolStatus, 'good' | 'danger' | 'warn'> = {
   APPROVED: 'good',
@@ -71,18 +73,40 @@ export function ToolStep({ scheme, value, onChange, error }: ToolStepProps) {
   // 「其他」是自己填的，所以沒有 tool_id；用這個條件回推目前是不是選了其他。
   const [other, setOther] = useState(() => Boolean(value.name) && value.tool_id === null)
 
+  // 選單依公告的分類分組，組內依英文字母排序；「其他（自行填寫）」固定在最後。
   const options: FlatSelectOption[] = useMemo(
     () => [
-      ...scheme.eligible_tools
-        .map((tool) => ({ value: tool.id, label: tool.name, group: STATUS_LABEL[tool.status] }))
-        // 依名稱排序，找起來才像在翻字典；伺服器的順序是給承辦看的。
-        .sort((a, b) => a.label.localeCompare(b.label, 'en', { sensitivity: 'base' })),
+      ...toolGroups(scheme.eligible_tools).flatMap((group) =>
+        group.tools.map((tool) => ({ value: tool.id, label: tool.name, group: group.label })),
+      ),
       { value: OTHER, label: '其他（自行填寫）' },
     ],
     [scheme.eligible_tools],
   )
 
   const selected = scheme.eligible_tools.find((tool) => tool.id === value.tool_id) ?? null
+
+  /**
+   * 自行填寫的欄位有兩個狀態：正在打的字（`draft`）與已經送去檢查的字（`value.name`）。
+   * 分開的理由是判定只在按下「檢查補助資格」時更新——邊打邊判定會在人還沒打完
+   * 就先說「不符合」。改字之後判定先收起來，避免舊判定配新名字。
+   */
+  const [draft, setDraft] = useState(() => (value.tool_id === null ? value.name : ''))
+  const [checked, setChecked] = useState(() => (value.tool_id === null ? value.name : ''))
+
+  const check = () => {
+    const name = draft.trim()
+    if (!name) return
+    setChecked(name)
+    onChange({ name, tool_id: null })
+  }
+
+  // 比對整份工具清單（含沒列在選單上的不予補助項目），在送出前就把
+  // 「這個不能申請」講出來，而不是等退件。
+  const verdict = useMemo(
+    () => (other && checked && checked === draft.trim() ? verdictFor(checked, scheme.eligible_tools) : null),
+    [other, checked, draft, scheme.eligible_tools],
+  )
 
   return (
     <div className="space-y-4">
@@ -98,6 +122,8 @@ export function ToolStep({ scheme, value, onChange, error }: ToolStepProps) {
             onChange={(next) => {
               if (next === OTHER) {
                 setOther(true)
+                setDraft('')
+                setChecked('')
                 onChange({ name: '', tool_id: null })
                 return
               }
@@ -138,24 +164,61 @@ export function ToolStep({ scheme, value, onChange, error }: ToolStepProps) {
       )}
 
       {other && (
-        <Card title="自己填寫工具名稱" subtitle="沒收錄不代表不能申請，只是需要承辦人工認定。">
-          <Field label="工具名稱" required error={error} hint="請照帳單上的英文原名填寫，方便承辦查證。">
+        <>
+          <Field label="其他 AI 工具名稱" required error={error}>
             {(props) => (
-              <Input
-                {...props}
-                value={value.name}
-                onChange={(event) => onChange({ name: event.target.value, tool_id: null })}
-                placeholder="例如 Perplexity Pro"
-              />
+              <div className="relative flex items-center">
+                <Input
+                  {...props}
+                  value={draft}
+                  onChange={(event) => setDraft(event.target.value)}
+                  onKeyDown={(event) => {
+                    // Enter 直接檢查；輸入法組字中的 Enter 是在選字，不能當送出。
+                    if (event.key === 'Enter' && !event.nativeEvent.isComposing) {
+                      event.preventDefault()
+                      check()
+                    }
+                  }}
+                  placeholder="請填寫工具名稱"
+                  className="pr-32"
+                />
+                <Button
+                  variant="primary"
+                  size="sm"
+                  disabled={!draft.trim()}
+                  onClick={check}
+                  className="absolute right-1.5"
+                >
+                  檢查補助資格
+                </Button>
+              </div>
             )}
           </Field>
-        </Card>
+
+          {/* 按下檢查才出結果，不邊打邊跳：邊打邊變的判定會在你還沒打完
+              就先說「不符合」，看起來像系統在跟你吵架。 */}
+          <div aria-live="polite">
+            {verdict && (
+              <div className="rounded-xl border border-border bg-canvas p-4">
+                <p
+                  className={cx(
+                    'text-[14px] font-semibold',
+                    verdict.tone === 'danger' ? 'text-danger' : 'text-primary',
+                  )}
+                >
+                  {verdict.title}
+                </p>
+                <p className="mt-1 text-[13px] leading-relaxed text-muted">{verdict.body}</p>
+              </div>
+            )}
+          </div>
+        </>
       )}
 
       {/* 不予補助的範圍在選工具的當下就講清楚，而不是等送出才擋：
           這三類是最常見的誤申請，講在前面能省掉一整趟準備文件的白工。
           講「類別」而不是逐一列工具——清單永遠列不完，但規則只有這三條。 */}
-      <div className="rounded-xl border border-border bg-background-lite p-4">
+      <div className="rounded-xl border border-border bg-canvas p-4">
         <p className="flex items-center gap-1.5 text-[14px] font-semibold text-primary">
           <Info size={15} aria-hidden className="shrink-0 text-accent" />
           不予補助範圍提醒（請於申請前確認）

@@ -88,10 +88,8 @@ export function IdentityStep({ scheme, value, onChange, errors }: IdentityStepPr
                 aria-checked={selected}
                 onClick={() => onChange({ tier_code: tier.code })}
                 className={cx(
-                  'flex min-h-11 w-full items-center gap-3 rounded-xl border p-3.5 text-left transition-colors',
-                  selected
-                    ? 'border-accent bg-accent-bg'
-                    : 'border-border bg-canvas hover:border-accent/40 hover:bg-background-lite',
+                  'flex min-h-11 w-full items-center gap-3 rounded-xl border border-border bg-canvas p-3.5',
+                  'text-left transition-colors hover:bg-background-lite',
                 )}
               >
                 <span

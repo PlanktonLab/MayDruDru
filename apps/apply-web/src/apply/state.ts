@@ -7,6 +7,7 @@
 
 import type { OcrResult } from '@maydru/ocr'
 import type { Finding, SchemePublic, Verdict } from '../lib/types'
+import { matchTool } from './toolVerdict'
 
 export const STEP_KEYS = ['tool', 'identity', 'channel', 'guide', 'docs', 'confirm'] as const
 export type StepKey = (typeof STEP_KEYS)[number]
@@ -21,7 +22,7 @@ export const STEPS = [
 ] as const
 
 export const STEP_TITLE: Record<StepKey, string> = {
-  tool: '你買的是哪一個 AI 工具？',
+  tool: '確認申請工具',
   identity: '填寫申請人資料',
   channel: '你怎麼付這筆錢？',
   guide: '要準備哪些文件',
@@ -247,9 +248,17 @@ export function channelErrors(channel: ChannelInfo): FieldErrors {
 
 export function toolErrors(state: ApplyState, scheme: SchemePublic | undefined): FieldErrors {
   if (!state.tool.name.trim()) return { tool: '請選擇或輸入你購買的工具名稱。' }
-  const matched = scheme?.eligible_tools.find((tool) => tool.id === state.tool.tool_id)
-  if (matched?.status === 'REJECTED')
+  // 從選單選的：直接看那個工具的判定。
+  const picked = scheme?.eligible_tools.find((tool) => tool.id === state.tool.tool_id)
+  if (picked?.status === 'REJECTED')
     return { tool: '這個工具依計畫規定不予補助，換一個符合資格的工具才能繼續。' }
+  // 自行填寫的：比對名稱，比對到不予補助的一樣要擋——不然畫面已經說了不能申請，
+  // 卻還放人走下去準備文件，等於白工。查無收錄則不擋（由承辦人工認定）。
+  if (!state.tool.tool_id && scheme) {
+    const guessed = matchTool(state.tool.name, scheme.eligible_tools)
+    if (guessed?.status === 'REJECTED')
+      return { tool: '這個工具依計畫規定不予補助，換一個符合資格的工具才能繼續。' }
+  }
   return {}
 }
 

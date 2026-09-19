@@ -3,6 +3,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { fakeCanvas, ocrModuleMock, renderAt } from '../test/utils'
+import { compareToolName } from '../apply/toolGroups'
 
 const ocr = ocrModuleMock()
 vi.mock('@maydru/ocr', () => ocr)
@@ -23,10 +24,11 @@ function open() {
 const next = () => fireEvent.click(screen.getByRole('button', { name: /下一步/ }))
 const back = () => fireEvent.click(screen.getByRole('button', { name: /上一步/ }))
 
-/** 第一步的工具是下拉選單：先打開，再點選項（選項是 role="option"，不是 button）。 */
-async function pickTool(name = 'Claude Pro') {
+/** 第一步的工具是下拉選單：先打開，再點選項（選項是 role="option"，不是 button）。
+ *  選項的可及名稱會連分類一起帶進來（「Claude通用型 AI」），所以用開頭比對。 */
+async function pickTool(name = 'Claude') {
   fireEvent.click(await screen.findByRole('combobox', { name: /AI 工具名稱/ }))
-  fireEvent.click(await screen.findByRole('option', { name: new RegExp(name) }))
+  fireEvent.click(await screen.findByRole('option', { name: new RegExp(`^${name}`) }))
 }
 
 function fillIdentity() {
@@ -44,36 +46,72 @@ function fillChannel() {
 describe('ApplyPage', () => {
   it('第一步沒選工具時按下一步會擋住並說怎麼修', async () => {
     open()
-    await screen.findByRole('heading', { name: '你買的是哪一個 AI 工具？' })
+    await screen.findByRole('heading', { name: '確認申請工具' })
     next()
     expect((await screen.findByRole('alert')).textContent).toContain('請選擇或輸入你購買的工具名稱')
   })
 
-  it('不予補助的工具選了也過不去，而且看得到判定理由', async () => {
+  it('自行填寫不予補助的工具，當場說不符資格且過不去', async () => {
     open()
-    await pickTool('DeepSeek')
-    // 判定理由會出現兩次：工具卡片上一次，「不予補助範圍提醒」卡片上再一次。
-    expect(screen.getAllByText(/中國公司，具中資背景/).length).toBeGreaterThan(0)
+    // 不予補助的工具不列在選單裡，但自行填寫時仍要比對得到。
+    await pickTool('其他（自行填寫）')
+    fireEvent.change(screen.getByLabelText(/其他 AI 工具名稱/), { target: { value: 'DeepSeek' } })
+    fireEvent.click(screen.getByRole('button', { name: '檢查補助資格' }))
+    expect(await screen.findByText('這個工具不符合補助資格')).toBeTruthy()
+    expect(screen.getByText(/中國公司，具中資背景/)).toBeTruthy()
     next()
-    expect((await screen.findByRole('alert')).textContent).toContain('不予補助')
+    // 畫面上有兩個 alert：欄位錯誤，以及判定面板的 aria-live 區。這裡要的是前者。
+    const alerts = await screen.findAllByRole('alert')
+    expect(alerts.map((node) => node.textContent ?? '').join('|')).toContain('不予補助')
   })
 
-  it('選單收錄的工具依名稱排序，並附上判定作為分類', async () => {
+  it('自行填寫沒收錄的工具不擋送出，改標為人工認定', async () => {
+    open()
+    await pickTool('其他（自行填寫）')
+    fireEvent.change(screen.getByLabelText(/其他 AI 工具名稱/), { target: { value: '某個沒聽過的工具' } })
+    fireEvent.click(screen.getByRole('button', { name: '檢查補助資格' }))
+    expect(await screen.findByText('這個工具我們還沒有收錄')).toBeTruthy()
+    next()
+    expect(await screen.findByRole('heading', { name: '填寫申請人資料' })).toBeTruthy()
+  })
+
+  it('選單依公告分類分組，組內依英文字母排序，不列不予補助的工具', async () => {
     open()
     fireEvent.click(await screen.findByRole('combobox', { name: /AI 工具名稱/ }))
-    const labels = screen.getAllByRole('option').map((option) => option.textContent ?? '')
-    // 最後一項固定是「其他（自行填寫）」，前面才是依名稱排序的工具。
-    expect(labels.at(-1)).toContain('其他')
-    const names = labels.slice(0, -1).map((text) => text.replace(/(可補助|不予補助|需人工認定)$/, ''))
-    expect([...names].sort((a, b) => a.localeCompare(b, 'en', { sensitivity: 'base' }))).toEqual(names)
-    // 判定當作選項右邊的分類顯示，選之前就看得到。
-    expect(labels.some((text) => text.includes('不予補助'))).toBe(true)
+    const options = screen.getAllByRole('option')
+
+    // 最後一項固定是「其他（自行填寫）」。
+    expect(options.at(-1)?.textContent).toContain('其他（自行填寫）')
+
+    // 分組依公告順序出現，且同一組的選項連在一起。
+    const groups = options.slice(0, -1).map((option) => option.querySelector('span:last-child')?.textContent ?? '')
+    expect([...new Set(groups)]).toEqual([
+      '通用型 AI',
+      '影像／設計類 AI',
+      '辦公／生產力類 AI',
+      '學習／語言類 AI',
+      '其他',
+    ])
+
+    // 每一組內部依英文字母排序（「其他 Adobe…」跟著 Adobe 排）。
+    for (const label of new Set(groups)) {
+      const names = options
+        .filter((option) => option.querySelector('span:last-child')?.textContent === label)
+        .map((option) => option.querySelector('span')?.textContent ?? '')
+      expect([...names].sort((a, b) => compareToolName(a, b))).toEqual(names)
+    }
+
+    // 不予補助的工具不出現在選單上（自行填寫時才比對得到）。
+    const all = options.map((option) => option.textContent ?? '').join('|')
+    expect(all).not.toContain('DeepSeek')
+    expect(all).not.toContain('Poe.com')
   })
 
   it('選「其他」可以自己填工具名稱', async () => {
     open()
-    await pickTool('其他')
-    fireEvent.change(screen.getByLabelText(/^工具名稱/), { target: { value: 'Perplexity Pro' } })
+    await pickTool('其他（自行填寫）')
+    fireEvent.change(screen.getByLabelText(/其他 AI 工具名稱/), { target: { value: 'Perplexity Pro' } })
+    fireEvent.click(screen.getByRole('button', { name: '檢查補助資格' }))
     next()
     expect(await screen.findByRole('heading', { name: '填寫申請人資料' })).toBeTruthy()
   })

@@ -152,7 +152,7 @@ describe('首頁', () => {
   it('不先讓人選方案，直接進入唯一那個補助計畫的第一步', async () => {
     renderAt(<ApplyPage />, '/', '/')
     // 開放中的方案只有一個，所以進站看到的就是申請流程的第一步。
-    expect(await screen.findByRole('heading', { name: '你買的是哪一個 AI 工具？' })).toBeTruthy()
+    expect(await screen.findByRole('heading', { name: '確認申請工具' })).toBeTruthy()
   })
 
   it('沒有開放中的方案時說明現況，並給查詢案件的出口', async () => {

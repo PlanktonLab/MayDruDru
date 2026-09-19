@@ -36,10 +36,8 @@ export function ChannelStep({ scheme, value, onChange, errors }: ChannelStepProp
                 aria-checked={selected}
                 onClick={() => onChange({ payment_channel_code: channel.code })}
                 className={cx(
-                  'flex min-h-11 w-full items-start gap-3 rounded-xl border p-3.5 text-left transition-colors',
-                  selected
-                    ? 'border-accent bg-accent-bg'
-                    : 'border-border bg-canvas hover:border-accent/40 hover:bg-background-lite',
+                  'flex min-h-11 w-full items-start gap-3 rounded-xl border border-border bg-canvas p-3.5',
+                  'text-left transition-colors hover:bg-background-lite',
                 )}
               >
                 <span

@@ -334,21 +334,60 @@ function tool(
   return { id, name, vendor, status, aliases, verdict_note }
 }
 
+/* 選單收錄的工具（計畫公告的清單）。分組由前端的 `toolGroups` 依名稱對應，
+   後端的 `eligible_tools` 沒有分類欄位。 */
 export const ELIGIBLE_TOOLS: EligibleTool[] = [
-  tool('tool-chatgpt', 'ChatGPT Plus', 'OpenAI, L.L.C.', 'APPROVED', ['chatgpt', 'chat gpt', 'GPT', 'OpenAI'],
+  // 通用型 AI
+  tool('tool-chatgpt', 'ChatGPT', 'OpenAI, L.L.C.', 'APPROVED', ['chatgpt', 'chat gpt', 'GPT', 'OpenAI', 'ChatGPT Plus'],
     '美國公司，無中資背景。屬一般性生成式 AI 工具，符合本計畫補助範圍。'),
-  tool('tool-claude', 'Claude Pro', 'Anthropic PBC', 'APPROVED', ['claude', '克勞德', 'anthropic'],
+  tool('tool-claude', 'Claude', 'Anthropic PBC', 'APPROVED', ['claude', '克勞德', 'anthropic', 'Claude Pro'],
     '美國公司，無中資背景。符合本計畫補助範圍。'),
-  tool('tool-gemini', 'Gemini Advanced（Google One AI Premium）', 'Google LLC', 'APPROVED',
-    ['gemini', '雙子星', 'google one ai', 'bard'], '美國公司，無中資背景。符合本計畫補助範圍。'),
-  tool('tool-m365-copilot', 'Microsoft 365 Copilot', 'Microsoft Corporation', 'APPROVED',
-    ['copilot', '微軟 copilot', 'm365 copilot'], '美國公司，無中資背景。符合本計畫補助範圍。'),
-  tool('tool-gh-copilot', 'GitHub Copilot', 'GitHub, Inc.（Microsoft 子公司）', 'APPROVED',
-    ['github copilot', 'gh copilot'], '美國公司，無中資背景。程式開發輔助工具，符合本計畫補助範圍。'),
+  tool('tool-google-ai', 'Google AI 的訂閱方案（如 Gemini Advanced）', 'Google LLC', 'APPROVED',
+    ['gemini', '雙子星', 'google one ai', 'bard', 'Gemini Advanced', 'Google One AI Premium'],
+    '美國公司，無中資背景。符合本計畫補助範圍。'),
+  tool('tool-grok', 'Grok', 'xAI Corp.', 'APPROVED', ['grok', 'xai', 'x ai'],
+    '美國公司，無中資背景。符合本計畫補助範圍。'),
+  tool('tool-perplexity', 'Perplexity', 'Perplexity AI, Inc.', 'APPROVED', ['perplexity', 'perplexity pro'],
+    '美國公司，無中資背景。符合本計畫補助範圍。'),
+
+  // 影像／設計類 AI
+  tool('tool-adobe-firefly', 'Adobe Firefly', 'Adobe Inc.', 'APPROVED', ['firefly', 'adobe firefly'],
+    '美國公司，無中資背景。影像生成工具，符合本計畫補助範圍。'),
+  tool('tool-adobe-other', '其他 Adobe AI 創作工具', 'Adobe Inc.', 'APPROVED',
+    ['adobe', 'photoshop ai', 'adobe ai'],
+    '美國公司，無中資背景。須為具 AI 功能之創作工具，實際方案由承辦核對。'),
+  tool('tool-canva', 'Canva AI', 'Canva Pty Ltd（澳洲）', 'PENDING', ['canva', 'canva pro', 'canva ai'],
+    '澳洲公司，無中資背景，但本身為設計工具、AI 功能僅為其中一部分。是否屬「AI 數位工具」需依申請人實際使用目的逐案認定。'),
+  tool('tool-figma-ai', 'Figma AI', 'Figma, Inc.', 'PENDING', ['figma', 'figma ai'],
+    '美國公司，無中資背景，但 AI 功能僅為設計工具的一部分，需依實際使用目的逐案認定。'),
   tool('tool-midjourney', 'Midjourney', 'Midjourney, Inc.', 'APPROVED', ['midjourney', 'MJ'],
     '美國公司，無中資背景。影像生成工具，符合本計畫補助範圍。'),
+
+  // 辦公／生產力類 AI
+  tool('tool-m365-copilot', 'Microsoft Copilot（Pro/M365）', 'Microsoft Corporation', 'APPROVED',
+    ['copilot', '微軟 copilot', 'm365 copilot', 'microsoft copilot', 'copilot pro'],
+    '美國公司，無中資背景。符合本計畫補助範圍。'),
   tool('tool-notion', 'Notion AI', 'Notion Labs, Inc.', 'APPROVED', ['notion ai', 'notion'],
     '美國公司，無中資背景。符合本計畫補助範圍。'),
+  tool('tool-copyai', 'copy.ai', 'CopyAI, Inc.', 'APPROVED', ['copy.ai', 'copyai', 'copy ai'],
+    '美國公司，無中資背景。符合本計畫補助範圍。'),
+  tool('tool-jasper', 'Jasper', 'Jasper AI, Inc.', 'APPROVED', ['jasper', 'jasper ai'],
+    '美國公司，無中資背景。符合本計畫補助範圍。'),
+
+  // 學習／語言類 AI
+  tool('tool-grammarly', 'Grammarly', 'Grammarly, Inc.', 'APPROVED', ['grammarly'],
+    '美國公司，無中資背景。符合本計畫補助範圍。'),
+  tool('tool-speak', 'Speak', 'Speakeasy Labs, Inc.', 'APPROVED', ['speak', 'speak ai'],
+    '美國公司，無中資背景。符合本計畫補助範圍。'),
+  tool('tool-elicit', 'Elicit', 'Elicit Research, PBC', 'APPROVED', ['elicit'],
+    '美國公司，無中資背景。符合本計畫補助範圍。'),
+
+  // 其他
+  tool('tool-cursor', 'Cursor（代碼編輯器 AI）', 'Anysphere Inc.', 'APPROVED', ['cursor', 'cursor ai'],
+    '美國公司，無中資背景。程式開發輔助工具，符合本計畫補助範圍。'),
+
+  /* 以下不列在選單裡，但保留在資料中：市民自行填寫工具名稱時要比對得到，
+     才能在送出前就告訴他「這個不予補助」，而不是等退件。 */
   tool('tool-doubao', '豆包（Doubao）', '北京字節跳動科技有限公司', 'REJECTED', ['豆包', 'doubao', '字節 AI'],
     '母公司為字節跳動（中國），屬中資背景服務。依本計畫規定，具中資背景之服務不予補助。'),
   tool('tool-deepseek', 'DeepSeek', '杭州深度求索人工智能基礎技術研究有限公司', 'REJECTED',
@@ -359,8 +398,6 @@ export const ELIGIBLE_TOOLS: EligibleTool[] = [
     '透過集合式 AI 平台購買涉及非合規軟體綑綁銷售，本計畫僅補助直接向 AI 官網購買，故不予補助。'),
   tool('tool-goingbus', 'GoingBus', 'GoingBus', 'REJECTED', ['goingbus', 'going bus'],
     '屬代購／帳號合租網站，非申請人向 AI 軟體官網直購，不屬本計畫補助範圍，不予補助。'),
-  tool('tool-canva', 'Canva Pro', 'Canva Pty Ltd（澳洲）', 'PENDING', ['canva', 'canva pro'],
-    '澳洲公司，無中資背景，但本身為設計工具、AI 功能僅為其中一部分。是否屬「AI 數位工具」需依申請人實際使用目的逐案認定。'),
 ]
 
 export const SCHEME_SUMMARY: SchemeSummary = {
