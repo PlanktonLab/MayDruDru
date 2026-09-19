@@ -74,6 +74,9 @@ CONTENT_CATEGORIES: tuple[ContentCategory, ...] = (
     ContentCategory("review", "審核判定說明", "🔎", "規則引擎判不出來時，案件頁那一行「為什麼」"),
     # 標籤刻意不叫「申請小幫手」——那是 apply 分類的名字，後台側邊欄不該出現兩個同名項目。
     ContentCategory("sop", "教學對話", "🧑‍🏫", "一步一圖教學對話裡的固定語句"),
+    # registry 裡沒有任何 key 屬於這一類：方案專屬文案是內容助理 (c) 依方案設定生出來的
+    # 資料列（`contents.scheme_id` 有值），出廠時不存在，所以只有分類、沒有預設值。
+    ContentCategory("scheme", "方案專屬文案", "🗂️", "某一個方案自己的狀態說明、退件說明與文件指引"),
 )
 
 

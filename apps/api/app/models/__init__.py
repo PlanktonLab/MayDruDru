@@ -31,8 +31,10 @@ from .base import EMBED_DIM, Base, TsMixin, VersionMixin, new_id, now
 from .content import (
     CONTENT_TYPES,
     NOTIFICATION_STATUSES,
+    SUGGESTION_STATUSES,
     AuditLog,
     Content,
+    CopilotSuggestion,
     Faq,
     KnowledgeDocument,
     LineConversation,
@@ -100,7 +102,8 @@ __all__ = [
     "CaseNoCounter", "CaseVerification", "DocumentOcrResult", "ImmutableEventError",
     "ReviewFinding",
     # content (§6.4)
-    "CONTENT_TYPES", "NOTIFICATION_STATUSES", "AuditLog", "Content", "Faq",
+    "CONTENT_TYPES", "NOTIFICATION_STATUSES", "SUGGESTION_STATUSES",
+    "AuditLog", "Content", "CopilotSuggestion", "Faq",
     "KnowledgeDocument", "LineConversation", "LineRichMenu", "LineSyncLog", "LineUser",
     "Media", "Notification", "UnmatchedMessage", "WebhookDelivery", "WebhookSubscription",
 ]

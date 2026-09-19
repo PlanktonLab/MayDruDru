@@ -1854,6 +1854,24 @@
         "title": "ComponentRect",
         "type": "object"
       },
+      "ContentDraftIn": {
+        "properties": {
+          "instruction": {
+            "default": "",
+            "maxLength": 500,
+            "title": "Instruction",
+            "type": "string"
+          },
+          "tone": {
+            "default": "",
+            "maxLength": 100,
+            "title": "Tone",
+            "type": "string"
+          }
+        },
+        "title": "ContentDraftIn",
+        "type": "object"
+      },
       "DemoDataField": {
         "description": "A value the clerk typed for this platform. Whatever they typed is what\nthe replica shows, verbatim — there is no second kind of value (a `real`\nflag existed until v0.7; nobody could tell what it meant, and a value you\ntyped yourself is by definition the one you want on the page).",
         "properties": {
@@ -4515,6 +4533,21 @@
         "title": "RenderCardsOut",
         "type": "object"
       },
+      "ReorderIn": {
+        "description": "把整個分頁重新排序：送上新的 id 順序，伺服器把 `sort_order` 重寫成 0、1、2…。",
+        "properties": {
+          "ids": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 200,
+            "title": "Ids",
+            "type": "array"
+          }
+        },
+        "title": "ReorderIn",
+        "type": "object"
+      },
       "RequiredDocumentsIn": {
         "additionalProperties": false,
         "properties": {
@@ -4608,6 +4641,84 @@
           "id"
         ],
         "title": "ReviewerOut",
+        "type": "object"
+      },
+      "RuleEvaluateIn": {
+        "description": "規則試算的輸入：一組（可選的）規則、幾份 OCR 結果、申請書上的事實。\n\n`rules` 省略時用方案目前存著的那一份；規則編輯器在存檔前試算時會把編輯中的\n版本送上來，所以這裡收的是完整的規則物件而不是 code。",
+        "properties": {
+          "documents": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "maxItems": 20,
+            "title": "Documents",
+            "type": "array"
+          },
+          "facts": {
+            "additionalProperties": true,
+            "title": "Facts",
+            "type": "object"
+          },
+          "rules": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rules"
+          }
+        },
+        "title": "RuleEvaluateIn",
+        "type": "object"
+      },
+      "RuleEvaluateOut": {
+        "properties": {
+          "blocking": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Blocking",
+            "type": "array"
+          },
+          "findings": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Findings",
+            "type": "array"
+          },
+          "suggested_supplement": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Suggested Supplement",
+            "type": "array"
+          },
+          "verdict": {
+            "title": "Verdict",
+            "type": "string"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "verdict"
+        ],
+        "title": "RuleEvaluateOut",
         "type": "object"
       },
       "SchemeIn": {
@@ -5901,6 +6012,19 @@
         "title": "SubmitResultOut",
         "type": "object"
       },
+      "SuggestIn": {
+        "properties": {
+          "limit": {
+            "default": 8,
+            "maximum": 20.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "SuggestIn",
+        "type": "object"
+      },
       "SupplementItemIn": {
         "properties": {
           "document_type_code": {
@@ -6080,6 +6204,40 @@
           "access_token"
         ],
         "title": "TokenOut",
+        "type": "object"
+      },
+      "ToolResolveIn": {
+        "description": "處理一筆待審工具。`merge_into_id` 有值時 `status` 不生效——併入就是併入。",
+        "properties": {
+          "merge_into_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Merge Into Id"
+          },
+          "status": {
+            "default": "APPROVED",
+            "enum": [
+              "APPROVED",
+              "REJECTED",
+              "PENDING"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "verdict_note": {
+            "default": "",
+            "maxLength": 500,
+            "title": "Verdict Note",
+            "type": "string"
+          }
+        },
+        "title": "ToolResolveIn",
         "type": "object"
       },
       "TransitionIn": {
@@ -7834,6 +7992,296 @@
         ]
       }
     },
+    "/api/admin/copilot/contents/{key}/draft": {
+      "post": {
+        "description": "助理 (a)：依這個 key 的說明、語氣與變數產生草稿，只寫 `contents.draft`。",
+        "operationId": "draft_content_api_admin_copilot_contents__key__draft_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "title": "Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ContentDraftIn"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Draft Content Api Admin Copilot Contents  Key  Draft Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Draft Content",
+        "tags": [
+          "admin-copilot"
+        ]
+      }
+    },
+    "/api/admin/copilot/faq-suggestions": {
+      "get": {
+        "operationId": "list_faq_suggestions_api_admin_copilot_faq_suggestions_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "default": "pending",
+              "title": "Status",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Faq Suggestions Api Admin Copilot Faq Suggestions Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Faq Suggestions",
+        "tags": [
+          "admin-copilot"
+        ]
+      },
+      "post": {
+        "description": "助理 (b)：把未命中訊息聚類，每一群請模型寫一則 FAQ 建議。",
+        "operationId": "generate_faq_suggestions_api_admin_copilot_faq_suggestions_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/SuggestIn"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Generate Faq Suggestions Api Admin Copilot Faq Suggestions Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Generate Faq Suggestions",
+        "tags": [
+          "admin-copilot"
+        ]
+      }
+    },
+    "/api/admin/copilot/faq-suggestions/{suggestion_id}/accept": {
+      "post": {
+        "description": "採用建議：建出一則**停用中**的 FAQ（`source=copilot`），等承辦人員改完再啟用。",
+        "operationId": "accept_faq_suggestion_api_admin_copilot_faq_suggestions__suggestion_id__accept_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "suggestion_id",
+            "required": true,
+            "schema": {
+              "title": "Suggestion Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Accept Faq Suggestion Api Admin Copilot Faq Suggestions  Suggestion Id  Accept Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Accept Faq Suggestion",
+        "tags": [
+          "admin-copilot"
+        ]
+      }
+    },
+    "/api/admin/copilot/faq-suggestions/{suggestion_id}/dismiss": {
+      "post": {
+        "operationId": "dismiss_faq_suggestion_api_admin_copilot_faq_suggestions__suggestion_id__dismiss_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "suggestion_id",
+            "required": true,
+            "schema": {
+              "title": "Suggestion Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Dismiss Faq Suggestion Api Admin Copilot Faq Suggestions  Suggestion Id  Dismiss Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Dismiss Faq Suggestion",
+        "tags": [
+          "admin-copilot"
+        ]
+      }
+    },
+    "/api/admin/copilot/schemes/{code}/drafts": {
+      "post": {
+        "description": "助理 (c)：依方案設定一次產出整套對外文案的草稿（狀態、退件說明、文件指引）。",
+        "operationId": "scheme_drafts_api_admin_copilot_schemes__code__drafts_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Scheme Drafts Api Admin Copilot Schemes  Code  Drafts Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Scheme Drafts",
+        "tags": [
+          "admin-copilot"
+        ]
+      }
+    },
     "/api/admin/faqs": {
       "get": {
         "operationId": "list_faqs_api_admin_faqs_get",
@@ -8949,6 +9397,171 @@
         ]
       }
     },
+    "/api/admin/schemes/{code}/eligible-tools/pending": {
+      "get": {
+        "description": "待審工具佇列：民眾打了、但清單上還沒有的工具名稱。",
+        "operationId": "list_pending_tools_api_admin_schemes__code__eligible_tools_pending_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Pending Tools Api Admin Schemes  Code  Eligible Tools Pending Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Pending Tools",
+        "tags": [
+          "admin-schemes"
+        ]
+      }
+    },
+    "/api/admin/schemes/{code}/eligible-tools/{tool_id}/resolve": {
+      "post": {
+        "description": "核可／退回一筆待審工具，或把它併進既有的那一筆。",
+        "operationId": "resolve_eligible_tool_api_admin_schemes__code__eligible_tools__tool_id__resolve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "tool_id",
+            "required": true,
+            "schema": {
+              "title": "Tool Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ToolResolveIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Resolve Eligible Tool Api Admin Schemes  Code  Eligible Tools  Tool Id  Resolve Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Resolve Eligible Tool",
+        "tags": [
+          "admin-schemes"
+        ]
+      }
+    },
+    "/api/admin/schemes/{code}/review-rules/evaluate": {
+      "post": {
+        "description": "規則編輯器的「試算」：貼一段 OCR 文字，看規則會判成什麼。不落地。\n\n後台的試算面板在瀏覽器裡跑 `@maydru/review-rules` 給即時回饋，這一支跑的是\n伺服器上的 Python 版。兩邊對同一段文字必須判得一樣——承辦人員按這顆按鈕，\n就是在確認他剛寫的規則在真正做判定的那一側也成立（SPEC §14「規則一致性」）。",
+        "operationId": "evaluate_review_rules_api_admin_schemes__code__review_rules_evaluate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RuleEvaluateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuleEvaluateOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Evaluate Review Rules",
+        "tags": [
+          "admin-schemes"
+        ]
+      }
+    },
     "/api/admin/schemes/{code}/settings": {
       "get": {
         "description": "案件頁要的方案設定：退件碼（含 `staff_label`）、文件類型、管道、級距、天數。\n\n要 `case_review` 而不是 `admin`——承辦人不能改方案，但看不到退件碼的內部說法就\n沒辦法退件。必須排在 `/{code}/{kind}` 之前，否則 `settings` 會被當成子設定表。",
@@ -9093,6 +9706,73 @@
           }
         },
         "summary": "Create Child",
+        "tags": [
+          "admin-schemes"
+        ]
+      }
+    },
+    "/api/admin/schemes/{code}/{kind}/reorder": {
+      "post": {
+        "description": "把整個分頁的 `sort_order` 按送上來的順序重寫一次。",
+        "operationId": "reorder_children_api_admin_schemes__code___kind__reorder_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "title": "Kind",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReorderIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Reorder Children Api Admin Schemes  Code   Kind  Reorder Post",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reorder Children",
         "tags": [
           "admin-schemes"
         ]

@@ -13,10 +13,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...db import get_db
 from ...deps import CurrentUser, require_cap
-from ...services import audit
+from ...services import audit, review
 from ...services import scheme as scheme_service
 from ...services.actors import Actor
-from .schemas import ChildIn, SchemeIn, SchemeOut, SchemePatch, SchemeSettingsOut
+from .schemas import (
+    ChildIn,
+    ReorderIn,
+    RuleEvaluateIn,
+    RuleEvaluateOut,
+    SchemeIn,
+    SchemeOut,
+    SchemePatch,
+    SchemeSettingsOut,
+    ToolResolveIn,
+)
 
 router = APIRouter(prefix="/api/admin/schemes", tags=["admin-schemes"])
 
@@ -115,6 +125,78 @@ async def delete_scheme(
     await audit.log(db, Actor.staff(user), "delete", "scheme", code, {}, tenant_id=user.tenant_id)
     await db.commit()
     return Response(status_code=204)
+
+
+# --------------------------------------------- 規則試算與待審工具（P5）
+# 這三支都排在 `/{code}/{kind}` 之前：FastAPI 依宣告順序比對，寫在後面的話
+# `review-rules` 會先被 `/{code}/{kind}` 吃掉，`evaluate` 會被當成 child_id。
+
+
+@router.post("/{code}/review-rules/evaluate", response_model=RuleEvaluateOut)
+async def evaluate_review_rules(
+    code: str,
+    body: RuleEvaluateIn,
+    user: CurrentUser = Depends(require_cap("admin")),
+    db: AsyncSession = Depends(get_db),
+) -> RuleEvaluateOut:
+    """規則編輯器的「試算」：貼一段 OCR 文字，看規則會判成什麼。不落地。
+
+    後台的試算面板在瀏覽器裡跑 `@maydru/review-rules` 給即時回饋，這一支跑的是
+    伺服器上的 Python 版。兩邊對同一段文字必須判得一樣——承辦人員按這顆按鈕，
+    就是在確認他剛寫的規則在真正做判定的那一側也成立（SPEC §14「規則一致性」）。
+    """
+    scheme = await scheme_service.get_scheme(db, user.tenant_id, code)
+    return RuleEvaluateOut.model_validate(await review.dry_run(db, scheme, body.model_dump()))
+
+
+@router.get("/{code}/eligible-tools/pending")
+async def list_pending_tools(
+    code: str,
+    user: CurrentUser = Depends(require_cap("admin")),
+    db: AsyncSession = Depends(get_db),
+) -> list[dict[str, Any]]:
+    """待審工具佇列：民眾打了、但清單上還沒有的工具名稱。"""
+    scheme = await scheme_service.get_scheme(db, user.tenant_id, code)
+    return [_child_out(t) for t in await scheme_service.pending_tools(db, scheme)]
+
+
+@router.post("/{code}/eligible-tools/{tool_id}/resolve")
+async def resolve_eligible_tool(
+    code: str,
+    tool_id: str,
+    body: ToolResolveIn,
+    user: CurrentUser = Depends(require_cap("admin")),
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, Any]:
+    """核可／退回一筆待審工具，或把它併進既有的那一筆。"""
+    scheme = await scheme_service.get_scheme(db, user.tenant_id, code)
+    tool = await scheme_service.get_child(db, scheme, "eligible-tools", tool_id)
+    result = await scheme_service.resolve_tool(
+        db, scheme, tool,
+        status=body.status, verdict_note=body.verdict_note, merge_into_id=body.merge_into_id,
+    )
+    await audit.log(db, Actor.staff(user), "resolve", "eligible-tools", tool_id,
+                    {"status": body.status, "merge_into_id": body.merge_into_id, "scheme": code},
+                    tenant_id=user.tenant_id)
+    await db.commit()
+    return _child_out(result)
+
+
+@router.post("/{code}/{kind}/reorder")
+async def reorder_children(
+    code: str,
+    kind: str,
+    body: ReorderIn,
+    user: CurrentUser = Depends(require_cap("admin")),
+    db: AsyncSession = Depends(get_db),
+) -> list[dict[str, Any]]:
+    """把整個分頁的 `sort_order` 按送上來的順序重寫一次。"""
+    scheme = await scheme_service.get_scheme(db, user.tenant_id, code)
+    rows = await scheme_service.reorder_children(db, scheme, kind, body.ids)
+    await audit.log(db, Actor.staff(user), "reorder", kind, scheme.code,
+                    {"ids": list(body.ids)}, tenant_id=user.tenant_id)
+    await db.commit()
+    return [_child_out(row) for row in rows]
 
 
 # ------------------------------------------------------------- 子設定表

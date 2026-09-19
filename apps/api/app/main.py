@@ -29,6 +29,7 @@ from .routers import (
 )
 from .routers.admin import applications as admin_applications
 from .routers.admin import contents as admin_contents
+from .routers.admin import copilot as admin_copilot
 from .routers.admin import faqs as admin_faqs
 from .routers.admin import line as admin_line
 from .routers.admin import media as admin_media
@@ -122,6 +123,7 @@ def create_app() -> FastAPI:
     # P2 內容與 LINE（SPEC §8.4 / §8.6）
     for r in (contents, line, admin_contents, admin_faqs, admin_media, admin_line):
         app.include_router(r.router)
+    app.include_router(admin_copilot.router)  # P5 內容助理（SPEC §8.6 / §9.6）
 
     @app.get("/health")
     async def health():

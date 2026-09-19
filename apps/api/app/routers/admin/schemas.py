@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -29,7 +29,10 @@ __all__ = [
     "PaymentChannelSettingOut",
     "QueueOut",
     "RejectionCodeSettingOut",
+    "ReorderIn",
     "ReviewerOut",
+    "RuleEvaluateIn",
+    "RuleEvaluateOut",
     "SchemeIn",
     "SchemeOut",
     "SchemePatch",
@@ -37,6 +40,7 @@ __all__ = [
     "StaffOut",
     "SupplementItemIn",
     "TierSettingOut",
+    "ToolResolveIn",
     "TransitionIn",
     "TransitionResultOut",
 ]
@@ -112,6 +116,40 @@ class ChildIn(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     expected_version: int | None = None
+
+
+class ReorderIn(BaseModel):
+    """把整個分頁重新排序：送上新的 id 順序，伺服器把 `sort_order` 重寫成 0、1、2…。"""
+
+    ids: list[str] = Field(default_factory=list, max_length=200)
+
+
+class ToolResolveIn(BaseModel):
+    """處理一筆待審工具。`merge_into_id` 有值時 `status` 不生效——併入就是併入。"""
+
+    status: Literal["APPROVED", "REJECTED", "PENDING"] = "APPROVED"
+    verdict_note: str = Field(default="", max_length=500)
+    merge_into_id: str | None = None
+
+
+class RuleEvaluateIn(BaseModel):
+    """規則試算的輸入：一組（可選的）規則、幾份 OCR 結果、申請書上的事實。
+
+    `rules` 省略時用方案目前存著的那一份；規則編輯器在存檔前試算時會把編輯中的
+    版本送上來，所以這裡收的是完整的規則物件而不是 code。
+    """
+
+    rules: list[dict[str, Any]] | None = None
+    documents: list[dict[str, Any]] = Field(default_factory=list, max_length=20)
+    facts: dict[str, Any] = Field(default_factory=dict)
+
+
+class RuleEvaluateOut(BaseModel):
+    verdict: str
+    findings: list[dict[str, Any]] = Field(default_factory=list)
+    blocking: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+    suggested_supplement: list[str] = Field(default_factory=list)
 
 
 class SchemeOut(BaseModel):

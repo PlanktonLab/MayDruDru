@@ -13,9 +13,15 @@ from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from pydantic import BaseModel
 
 from .schemas import (
+    Citation,
+    ContentDraft,
+    DraftSentence,
+    FaqSuggestion,
     IntentResult,
     ReplicaOutput,
     RerankResult,
+    SchemeCopyItem,
+    SchemeCopySet,
     ScreenshotDescription,
     StructureAnalysis,
     StyleDocAI,
@@ -153,7 +159,78 @@ html,body{{margin:0;background:{bg};font-family:"Noto Sans TC","PingFang TC","No
         return VisualReview(score=0.9, issues=[], privacy_leak=False)
     if schema is IntentResult:
         return _fake_intent(ctx.get("text", text), ctx)
+    if schema is ContentDraft:
+        return _fake_content_draft(ctx)
+    if schema is FaqSuggestion:
+        return _fake_faq_suggestion(ctx)
+    if schema is SchemeCopySet:
+        return _fake_scheme_copy(ctx)
     raise ValueError(f"fake provider 不支援 {schema.__name__}")
+
+
+# ------------------------------------------------------------------ 內容助理
+# 三支助理的離線替身。刻意可預測：同一份上下文永遠得到同一份草稿，測試才能斷言
+# 內容而不是只斷言「有回東西」。最後一句故意不帶依據，讓「待查證」那條規則在
+# fake provider 上也真的會被觸發。
+
+
+def _cite(row: dict) -> Citation:
+    return Citation(source_type=row.get("source_type", "scheme"), source_id=row.get("source_id", ""),
+                    quote=row.get("quote", ""))
+
+
+def _fake_content_draft(ctx: dict) -> ContentDraft:
+    """助理 (a)：把 key 的用途、語氣與變數清單拼成一段看得懂的草稿。"""
+    title = ctx.get("title") or ctx.get("key") or "這段文字"
+    tone = ctx.get("tone") or ""
+    instruction = ctx.get("instruction") or ""
+    sources = list(ctx.get("sources") or [])
+    citations = [_cite(s) for s in sources]
+    sentences = [DraftSentence(text=f"{title}：請依下列說明操作。", citation_index=0 if citations else None)]
+    for name in list(ctx.get("variables") or []):
+        sentences.append(DraftSentence(text=f"目前的 {name} 是 {{{{{name}}}}}。", citation_index=0 if citations else None))
+    if instruction:
+        sentences.append(DraftSentence(text=f"（依指示調整：{instruction}）", citation_index=None))
+    if tone:
+        sentences.append(DraftSentence(text=f"（語氣：{tone}）", citation_index=None))
+    return ContentDraft(sentences=sentences, citations=citations, notes="fake provider 草稿，請承辦人員確認後再發布")
+
+
+def _fake_faq_suggestion(ctx: dict) -> FaqSuggestion:
+    """助理 (b)：用這一群句子裡最短的一句當問題，答案引用給進來的來源。"""
+    samples = [s for s in (ctx.get("samples") or []) if str(s).strip()]
+    question = min(samples, key=len) if samples else "民眾的提問"
+    sources = list(ctx.get("sources") or [])
+    citations = [_cite(s) for s in sources]
+    sentences = []
+    for index, source in enumerate(sources[:2]):
+        sentences.append(DraftSentence(text=str(source.get("quote") or "").strip(), citation_index=index))
+    sentences.append(DraftSentence(text="其他細節請洽承辦單位確認。", citation_index=None))
+    words = sorted({w for s in samples for w in _keywords(str(s))})[:5]
+    return FaqSuggestion(question=str(question).strip(), sentences=sentences, citations=citations,
+                         keywords=words, category=str(ctx.get("category") or ""))
+
+
+def _keywords(text: str) -> list[str]:
+    """夠用就好的關鍵字：長度 2 以上的連續中文或英數片段。"""
+    import re
+
+    return [w for w in re.findall(r"[一-鿿]{2,4}|[A-Za-z0-9]{2,}", text)][:3]
+
+
+def _fake_scheme_copy(ctx: dict) -> SchemeCopySet:
+    """助理 (c)：呼叫方給幾個 key 就回幾則，key 逐字照抄。"""
+    items = []
+    for row in list(ctx.get("items") or []):
+        sources = list(row.get("sources") or [])
+        citations = [_cite(s) for s in sources]
+        purpose = str(row.get("purpose") or row.get("key") or "")
+        sentences = [DraftSentence(text=purpose, citation_index=0 if citations else None)]
+        if citations:
+            sentences.append(DraftSentence(text=str(citations[0].quote), citation_index=0))
+        sentences.append(DraftSentence(text="如有疑問請與承辦單位聯繫。", citation_index=None))
+        items.append(SchemeCopyItem(key=str(row.get("key") or ""), sentences=sentences, citations=citations))
+    return SchemeCopySet(items=items)
 
 
 def _fake_intent(text: str, ctx: dict) -> IntentResult:
