@@ -226,7 +226,7 @@ export type FieldErrors = Record<string, string>
 export function identityErrors(identity: Identity): FieldErrors {
   const errors: FieldErrors = {}
   if (!identity.applicant_name.trim()) errors.applicant_name = '請填寫與身分證相同的姓名。'
-  if (!PHONE_RE.test(identity.phone.trim())) errors.phone = '請填寫 10 碼手機號碼，例如 0912345678。'
+  if (!PHONE_RE.test(identity.phone.trim())) errors.phone = '請填寫 10 碼聯絡電話，例如 0912345678。'
   if (identity.id_last4 && !LAST4_RE.test(identity.id_last4.trim()))
     errors.id_last4 = '請填身分證字號的最後 4 位數字，或留空。'
   if (identity.email && !EMAIL_RE.test(identity.email.trim()))

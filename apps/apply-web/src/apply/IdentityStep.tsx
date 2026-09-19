@@ -8,7 +8,6 @@ import { Check } from 'lucide-react'
 import { Card, Field, Input, cx } from '@maydru/ui'
 import type { SchemePublic } from '../lib/types'
 import type { FieldErrors, Identity } from './state'
-import { money } from '../lib/format'
 
 export interface IdentityStepProps {
   scheme: SchemePublic
@@ -20,7 +19,10 @@ export interface IdentityStepProps {
 export function IdentityStep({ scheme, value, onChange, errors }: IdentityStepProps) {
   return (
     <div className="space-y-4">
-      <Card title="基本資料" subtitle="請填寫與身分證相同的姓名，方便承辦核對。">
+      {/* 欄位不附說明文字：標籤本身已經說得夠清楚，每格底下再掛一行灰字，
+          整頁的字量會比表單本身還多，反而讓人讀不到重點。只有電子郵件保留
+          placeholder 說明用途——它是唯一「為什麼要問」不明顯的欄位。 */}
+      <Card title="基本資料">
         {/* 桌面兩欄：這幾個欄位都短，一欄排下來會拉得很長，中間留一大片空白。
             手機仍是一欄——窄螢幕上兩欄會把每格擠到放不下一個完整的值。 */}
         <div className="grid gap-4 sm:grid-cols-2">
@@ -34,12 +36,7 @@ export function IdentityStep({ scheme, value, onChange, errors }: IdentityStepPr
               />
             )}
           </Field>
-          <Field
-            label="手機號碼"
-            required
-            error={errors.phone}
-            hint="查詢進度時會用到末四碼。系統只保留末四碼的雜湊值。"
-          >
+          <Field label="聯絡電話" required error={errors.phone}>
             {(props) => (
               <Input
                 {...props}
@@ -47,26 +44,20 @@ export function IdentityStep({ scheme, value, onChange, errors }: IdentityStepPr
                 onChange={(event) => onChange({ phone: event.target.value.replace(/\D/g, '').slice(0, 10) })}
                 inputMode="numeric"
                 autoComplete="tel"
-                placeholder="0912345678"
               />
             )}
           </Field>
-          <Field
-            label="身分證字號末四碼"
-            error={errors.id_last4}
-            hint="可不填。填了之後查詢進度時兩種末四碼都能用。"
-          >
+          <Field label="身分證字號末四碼" error={errors.id_last4}>
             {(props) => (
               <Input
                 {...props}
                 value={value.id_last4}
                 onChange={(event) => onChange({ id_last4: event.target.value.replace(/\D/g, '').slice(0, 4) })}
                 inputMode="numeric"
-                placeholder="1234"
               />
             )}
           </Field>
-          <Field label="電子信箱" error={errors.email} hint="可不填。通知以 LINE 為主。">
+          <Field label="電子郵件" error={errors.email}>
             {(props) => (
               <Input
                 {...props}
@@ -74,14 +65,14 @@ export function IdentityStep({ scheme, value, onChange, errors }: IdentityStepPr
                 value={value.email}
                 onChange={(event) => onChange({ email: event.target.value })}
                 autoComplete="email"
-                placeholder="name@example.com"
+                placeholder="用於案件通知"
               />
             )}
           </Field>
         </div>
       </Card>
 
-      <Card title="申請身分" subtitle={scheme.amount_note}>
+      <Card title="申請身分">
         {/* 單選題：左邊一個圓，選中是實心 accent 打勾、沒選是空心圈。
             圓圈畫在左邊而不是右邊，因為視線是從左往右讀，狀態要先於內容。
             兩個並排——身分別只有兩三個選項，排成一長串反而要多掃一次。 */}
@@ -112,13 +103,7 @@ export function IdentityStep({ scheme, value, onChange, errors }: IdentityStepPr
                 >
                   <Check size={12} strokeWidth={3} />
                 </span>
-                <span className="min-w-0">
-                  <span className="block text-[15px] font-medium text-primary">{tier.label}</span>
-                  <span className="mt-0.5 block text-[13px] leading-5 text-muted">
-                    補助 {Math.round(tier.subsidy_rate * 100)}%，上限 {money(tier.cap_amount)}
-                    {tier.required_proof_doc_types.length > 0 && '（需另附證明文件）'}
-                  </span>
-                </span>
+                <span className="min-w-0 text-[15px] font-medium text-primary">{tier.label}</span>
               </button>
             )
           })}
