@@ -20,6 +20,7 @@ import LineNotificationsPage from './pages/line/NotificationsPage'
 import LineUnmatchedPage from './pages/line/UnmatchedPage'
 import SchemesPage from './pages/schemes/SchemesPage'
 import SchemeEditorPage from './pages/schemes/SchemeEditorPage'
+import SopMappingsPage from './pages/schemes/SopMappingsPage'
 
 export default function App() {
   return (
@@ -51,6 +52,7 @@ export default function App() {
           {/* 方案管理（SPEC §8.2）：讀取開放給登入的承辦人，寫入由頁面內部問 admin。 */}
           <Route path="/schemes" element={<SchemesPage />} />
           <Route path="/schemes/:code" element={<SchemeEditorPage />} />
+          <Route path="/sop/document-types" element={<RequireCap capability="admin"><SopMappingsPage /></RequireCap>} />
         </Route>
         <Route path="*" element={<Navigate to="/canvas" replace />} />
       </Routes>

@@ -49,6 +49,12 @@ async def catalog_goals(db: AsyncSession = Depends(get_db)) -> list[dict[str, An
     return await sop_public.goals(db, await _tenant(db))
 
 
+@router.get("/catalog/document-types", dependencies=[read_guard])
+async def catalog_document_types(db: AsyncSession = Depends(get_db)) -> list[dict[str, str]]:
+    """有已發布教學的文件類型，供市民先選「要取得哪一份」。"""
+    return await sop_public.document_types(db, await _tenant(db))
+
+
 @router.get("/catalog/flows", dependencies=[read_guard])
 async def catalog_flows(
     platform_id: str | None = Query(default=None),

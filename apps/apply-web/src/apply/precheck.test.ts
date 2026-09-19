@@ -154,5 +154,7 @@ describe('文案對應', () => {
   it('sopHref 沒有文件類型時退回 /sop', () => {
     expect(sopHref(null)).toBe('/sop')
     expect(sopHref('ID_CARD_BACK')).toBe('/sop?document_type=ID_CARD_BACK')
+    expect(sopHref('BILLING_STATEMENT', { scheme: 'HCAI115', rejectionCode: 'BAD_BILL' }))
+      .toBe('/sop?document_type=BILLING_STATEMENT&scheme=HCAI115&rejection_code=BAD_BILL')
   })
 })

@@ -65,6 +65,15 @@ async def test_catalog_goals_and_flows(apply_client, db, default_tenant):
     assert (await apply_client.get("/api/sop/catalog/flows?platform_id=nope")).json() == []
 
 
+async def test_catalog_document_types_only_lists_types_with_a_published_mapping(
+    apply_client, db, default_tenant, default_scheme
+):
+    flow = await make_published_flow(db, default_tenant.id)
+    await link_document_type(db, default_tenant.id, default_scheme.id, DOC, flow)
+    rows = (await apply_client.get("/api/sop/catalog/document-types")).json()
+    assert rows == [{"code": DOC, "label": DOC}]
+
+
 async def test_a_draft_flow_never_shows_up_on_the_anonymous_door(apply_client, db, default_tenant):
     flow = await make_published_flow(db, default_tenant.id)
     await unpublish_flow(db, flow.id)
@@ -216,7 +225,7 @@ async def test_the_v1_sop_aliases_answer_exactly_like_the_flat_paths(client, db,
     assert flat.status_code == prefixed.status_code == 200
     assert flat.json() == prefixed.json()
 
-    for path in ("/catalog/platforms", "/catalog/goals", "/catalog/flows"):
+    for path in ("/catalog/platforms", "/catalog/goals", "/catalog/document-types", "/catalog/flows"):
         a = await client.get(f"/v1{path}", headers=headers)
         b = await client.get(f"/v1/sop{path}", headers=headers)
         assert a.json() == b.json()

@@ -4,7 +4,7 @@
 
 完整規格在 [`SPEC.md`](SPEC.md)（v1.0，唯一規格來源）；工作規則在 [`CLAUDE.md`](CLAUDE.md)。
 
-目前階段：**P2 內容與 LINE** 與 **P3 送件與審核**都已併入（SPEC §16）。§6 的資料表、案件狀態機、方案服務、seed 與舊資料搬遷（P1），罐頭訊息、LINE channel 與狀態推播（P2），以及規則引擎、`/api/apply/*` 與 `/api/admin/applications/*`（P3）都已就緒；SOP 串接在 P4。
+目前階段：**P0–P5 已完成並合併**（SPEC §16）。資料層、內容與 LINE、送件與審核、SOP 串接、方案管理與內容助理均已就緒；下一階段是補齊 `/v1` 與 outbound webhook（P6）。
 
 ## 版面
 
@@ -154,6 +154,21 @@ SPEC §14 的 E2E 劇本走的就是它。
 推播由 worker 送出：狀態轉移寫一列 `notifications` 並排一個工作，失敗重試三次，
 三次都失敗就留在 `failed` 讓承辦人看得到。
 
+## SOP 教學（SPEC §8.1、§8.5、§9.1–§9.3）
+
+市民在 apply-web 的 `/sop` 先選文件類型與平台，再逐張瀏覽已發布的 step card；送件準備頁與退件補件頁會直接帶上 `document_type`，退件連結另帶 `scheme` 與 `rejection_code`，因此承辦人特別指定的教學優先。按「我卡住了」可先用瀏覽器端遮罩工具蓋掉敏感資訊，再把截圖送到 `/api/sop/locate`；截圖全程只在記憶體處理、不寫 MinIO 或資料庫。
+
+後台「SOP → 文件類型對照」管理方案 × 文件類型 × 平台的 flow。市民端與 LINE 只解析 `published` flow，草稿不會外流。主要匿名端點：
+
+| 端點 | 做什麼 |
+|---|---|
+| `GET /api/sop/catalog/platforms`、`GET /api/sop/catalog/document-types` | 有已發布教學的平台與文件類型 |
+| `GET /api/sop/document-types/{code}/flows` | 解析文件對應流程；可依平台、方案與退件碼過濾 |
+| `GET /api/sop/flows/{id}/steps` | 依序回傳 step card 與文字備援 |
+| `POST /api/sop/locate` | multipart 截圖定位；回傳結果、引導與定位後的卡片 |
+
+對外 API 使用 `/v1/sop/*`；舊的 `/v1/chat`、`/v1/sessions` 等平路徑暫留一版別名（D28）。
+
 ### OpenAPI 快照
 
 `apps/api/openapi.json` 是提交進 git 的契約快照，CI 用它做「client 同步檢查」。
@@ -180,7 +195,7 @@ npm test                      # vitest
 npm run build                 # tsc -b && vite build
 ```
 
-目前的數量：後端 1006、admin-web 69、apply-web 88、五個 package 合計 131。
+目前的數量：後端 1274（另有 5 個環境條件 skip）、admin-web 120、apply-web 91、五個 package 合計 131。
 
 CI（`.github/workflows/ci.yml`）跑同一組指令，另加 `docker buildx`（linux/arm64 + linux/amd64），只有 main 的 push 會推 GHCR。
 

@@ -5,7 +5,7 @@
  * 測試才能整包 `vi.mock('./queries')` 掉，不必攔 `fetch`。
  */
 
-import { del, get, patch, post } from '../../lib/api'
+import { del, get, patch, post, put } from '../../lib/api'
 import type {
   ChildKind,
   EligibleTool,
@@ -42,6 +42,23 @@ export const deleteChild = (code: string, kind: ChildKind, id: string) =>
 /** 依送上來的 id 順序重寫 `sort_order`。沒帶到的列排在後面。 */
 export const reorderChildren = <T,>(code: string, kind: ChildKind, ids: string[]) =>
   post<T[]>(path(code, `/${kind}/reorder`), { ids })
+
+export interface SopFlowLink {
+  id: string
+  document_type_id: string
+  flow_id: string
+  platform_id: string
+  sort_order: number
+}
+
+export const fetchSopFlowLinks = (code: string, documentTypeCode: string) =>
+  get<SopFlowLink[]>(path(code, `/document-types/${encodeURIComponent(documentTypeCode)}/sop-flows`))
+
+export const replaceSopFlowLinks = (
+  code: string,
+  documentTypeCode: string,
+  links: { flow_id: string; platform_id: string }[],
+) => put<SopFlowLink[]>(path(code, `/document-types/${encodeURIComponent(documentTypeCode)}/sop-flows`), { links })
 
 /* ---------------------------------------------------------- 規則與工具 */
 

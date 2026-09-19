@@ -197,6 +197,11 @@ async def catalog_goals(caller: ApiCaller = Depends(api_caller), db: AsyncSessio
     return [x for x in g if x["has_flows"]]
 
 
+@router.get("/catalog/document-types")
+async def catalog_document_types(caller: ApiCaller = Depends(api_caller), db: AsyncSession = Depends(get_db)):
+    return await sop_public.document_types(db, caller.tenant_id)
+
+
 @router.get("/catalog/flows")
 async def catalog_flows(caller: ApiCaller = Depends(api_caller), db: AsyncSession = Depends(get_db)):
     _, _, f = await tenant_catalog(db, caller.tenant_id)
@@ -245,6 +250,7 @@ _SOP_ALIASES: tuple[tuple[str, str, Any], ...] = (
     ("GET", "/sop/sessions/{session_id}", get_session),
     ("GET", "/sop/catalog/platforms", catalog_platforms),
     ("GET", "/sop/catalog/goals", catalog_goals),
+    ("GET", "/sop/catalog/document-types", catalog_document_types),
     ("GET", "/sop/catalog/flows", catalog_flows),
     ("GET", "/sop/catalog/flows/{flow_id}/cards", catalog_cards),
     ("GET", "/sop/document-types/{code}/flows", document_type_flows),

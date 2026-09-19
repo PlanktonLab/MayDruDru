@@ -604,6 +604,10 @@ Cloudflare proxied；origin cert 需涵蓋三個名稱（萬用或重簽）。DN
 | D25 | LINE channel 是後端的一個模組（`services/line/` + `routers/line.py`），不是獨立服務；訊息在程式內一律是 LINE 的 JSON dict，只有真的要送出去時才轉成 SDK 型別 | 罐頭訊息、案件狀態、方案設定都在同一個程序裡，拆出去只會多一層 API 與一份不同步的設定；dict 讓 builder 不必認識 SDK，測試也能直接斷言 |
 | D26 | 「第一個管理者」的閘門是「任何 tenant 裡都沒有 `is_active` 的 owner」，不是「一個 tenant 都沒有」；`bootstrap-status`、`POST /api/auth/bootstrap` 與`_bootstrap_from_env()` 三處同一條判斷。tenant 已經存在時把 owner 掛上去，不另開機關 | `scripts/seed.py` 會先把機關與方案灌進去，所以「有 tenant、零使用者」是安裝流程裡真的會出現的狀態；用 tenant 數量當閘門會讓那台機器自稱已初始化——端點關著、沒有帳號，誰都進不去，而且沒有補救的路 |
 | D27 | `services/faq.py` 一個模組三個呼叫面：評分（`score`/`search`/`best`，LINE 聽懂一句話時用）、瀏覽（`browse`/`matches`，`/api/apply/faqs` 的清單）、CRUD（後台維護）。P3 原本叫 `search` 的瀏覽函式改名 `browse`，`search` 讓給帶分數的那一支 | 同一張表不該有兩個模組；兩邊的語意也真的不同——市民是在「翻」FAQ，翻到就該看得到，門檻與分數只對「bot 要不要主動回答」有意義。`search` 留給評分那一支，是因為 P4 的向量檢索要換的是它，接縫寫在一個名字上比較好找 |
+| D28 | `/v1/sop/*` 是 SOP 對外契約的正式前綴；原本的 `/v1/chat`、`/v1/sessions`、`/v1/catalog`、`/v1/locate` 等平路徑保留一版別名，而且兩種拼法直接掛到同一個 endpoint 函式 | 既有 SOP_Tutor 整合不用立即停機改網址，新整合又有一致的命名；共用函式與測試能防止兩套契約漂移 |
+| D29 | FAQ service 不直接 import `app.ai`；語意向量由呼叫端以 `Embedder` 注入，Postgres + pgvector 可用時走餘弦檢索，缺向量、SQLite 或查詢失敗時自動退回既有關鍵字評分 | `routers/apply.py` 經 FAQ service 的相依鏈仍符合「證明文件路徑不得碰 AI」的 import-linter 紅線；向量索引尚未補齊時服務也不會中斷 |
+| D30 | 內容助理的模型輸出拆成「句子 + 引用索引」，service 組成草稿時把無有效引用的句子標為「待查證」；FAQ 建議另存 `copilot_suggestions`，接受後才建立停用中的 FAQ | 模型不能把沒有根據的句子包裝成已核准內容；暫存建議讓承辦人可接受或忽略，且不會直接污染正式 FAQ |
+| D31 | 方案管理的六種子設定共用 CRUD／排序端點與前端 tab 骨架；規則編輯器先用 TS 引擎即時試算，再提供伺服器試算比對 | 新增方案與調整規則保持資料驅動；兩版規則引擎若走樣，承辦人在設定當下就看得出差異 |
 
 ---
 

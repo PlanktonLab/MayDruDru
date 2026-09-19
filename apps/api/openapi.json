@@ -13075,6 +13075,35 @@
         ]
       }
     },
+    "/api/sop/catalog/document-types": {
+      "get": {
+        "description": "有已發布教學的文件類型，供市民先選「要取得哪一份」。",
+        "operationId": "catalog_document_types_api_sop_catalog_document_types_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "type": "object"
+                  },
+                  "title": "Response Catalog Document Types Api Sop Catalog Document Types Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Catalog Document Types",
+        "tags": [
+          "sop"
+        ]
+      }
+    },
     "/api/sop/catalog/flows": {
       "get": {
         "description": "已發布的流程，可依平台過濾。",
@@ -14644,6 +14673,53 @@
         ]
       }
     },
+    "/v1/catalog/document-types": {
+      "get": {
+        "operationId": "catalog_document_types_v1_catalog_document_types_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Catalog Document Types",
+        "tags": [
+          "public"
+        ]
+      }
+    },
     "/v1/catalog/flows": {
       "get": {
         "operationId": "catalog_flows_v1_catalog_flows_get",
@@ -15649,6 +15725,53 @@
           }
         },
         "summary": "Send Screenshot",
+        "tags": [
+          "public"
+        ]
+      }
+    },
+    "/v1/sop/catalog/document-types": {
+      "get": {
+        "operationId": "sop_catalog_document_types_v1_sop_catalog_document_types_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-API-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sop Catalog Document Types",
         "tags": [
           "public"
         ]

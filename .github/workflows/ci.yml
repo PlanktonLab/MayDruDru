@@ -68,14 +68,19 @@ jobs:
         run: npm run build
 
   e2e:
-    name: e2e (Playwright)
+    name: e2e (MayDru workflow)
     runs-on: ubuntu-24.04
     needs: [python, node]
-    # P3 才會有可跑的劇本（SPEC §16）。先保留 job 形狀，讓分支保護規則不必改。
-    if: false
     steps:
       - uses: actions/checkout@v4
-      - run: echo "e2e 劇本在 P3 加入"
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.12.17"
+          enable-cache: true
+      - run: uv sync --frozen
+      - name: 送件 → 退件 → LINE/SOP → 補件 → 核准 → 推播
+        working-directory: apps/api
+        run: uv run --package maydru-api python scripts/e2e_maydru.py
 
   docker:
     name: docker buildx (arm64 + amd64)

@@ -1,7 +1,7 @@
 # HANDOFF — MayDru 交接文件
 
 寫給接手的開發者（GPT Codex）。日期 2026-09-19。
-**先讀這份，再讀 [`CLAUDE.md`](CLAUDE.md)（工作規則）與 [`SPEC.md`](SPEC.md)（唯一規格來源，§16 是階段表、§18 是決策紀錄 D1–D27）。**
+**先讀這份，再讀 [`CLAUDE.md`](CLAUDE.md)（工作規則）與 [`SPEC.md`](SPEC.md)（唯一規格來源，§16 是階段表、§18 是決策紀錄 D1–D31）。**
 
 ---
 
@@ -13,13 +13,13 @@
 | P1 資料層 | ✅ 已完成並合併 |
 | P2 內容與 LINE | ✅ 已完成並合併 |
 | P3 送件與審核 | ✅ 已完成並合併（前後端都有，含實機 smoke） |
-| **P4 SOP 串接** | 🔶 **後端骨幹＋測試已提交（`be0f1a4`），apply-web /sop 頁面、admin-web 對照頁、e2e 劇本仍未做** |
-| **P5 方案管理與內容助理** | 🔶 **後端＋前端都已提交在獨立 branch（`ab67356`），尚未合併回 main** |
+| **P4 SOP 串接** | ✅ 已完成並合併（含 apply-web 教學／遮罩定位、admin 對照、完整 E2E 與 CI） |
+| **P5 方案管理與內容助理** | ✅ 已完成並合併（merge `83a13b9`） |
 | P6 `/v1` 與 webhook | ⬜ 未開始 |
 | P7 部署 | ⬜ 未開始 |
 | P8 打磨 | ⬜ 未開始 |
 
-目前測試數：main 分支後端 **1131 passed**（含 P4 的 sop_helpers/test_sop_*/test_intent_classify/test_faq_search/test_line_sop_session，OpenAPI 快照已重新產生），前端 288 passed；P5 branch（`worktree-agent-a9dac84b8568275d8`，尚未合併）後端 1151 passed、admin-web 119 passed（含方案管理頁）。
+目前測試數：後端 **1274 passed、5 skipped**，admin-web 120、apply-web 91、packages 131；OpenAPI 快照已重新產生。下一階段是 P6 `/v1` 完整契約與 outbound webhook。
 
 ---
 
@@ -71,38 +71,16 @@ docker compose up -d postgres redis minio renderer
 
 ## 2. 已完成的收尾動作（本輪交接前做的）
 
-- P4 的測試檔與修正已提交在 main：`be0f1a4`（1512 行測試 + retrieval.py 的 mypy 修正）。OpenAPI 快照已重新產生並隨 commit 一起提交。四道品質門檻（pytest / ruff+mypy+lint-imports / typecheck+lint+test+build）在提交前都跑過，全綠。
-- P5 的前端（`apps/admin-web/src/pages/schemes/` 全部檔案、LINE 內容區的 FAQ 建議卡）已在 worktree 分支 `worktree-agent-a9dac84b8568275d8` 提交（`ab67356`）。過程中修掉一個測試自身的 bug（`user.type` 遇到 regex 裡的 `[` `]` 會被解讀成鍵盤描述符，改用 `user.paste`）。admin-web 119 個測試全過。
+- P4 已補齊 apply-web 教學、admin 文件類型對照、跨模組 E2E 與 CI，並重新產生 OpenAPI。
+- P5 已由 worktree 分支合併回 main（merge `83a13b9`）；衝突已保留 P4/P5 雙方功能，並完成全套回歸。
 
-**下一步只剩一件事：把 P5 branch 合併回 main。**
+### 2.1 P4/P5 整合結果
 
-### 2.1 合併 P5 branch 回 main
-
-P5 branch 從 `82b9825` 分出，main 已經前進到 `be0f1a4`（P4 骨幹＋測試）。合併指令：
-
-```bash
-git checkout main
-git merge --no-ff worktree-agent-a9dac84b8568275d8
-```
-
-預期衝突（**保留雙方功能，逐一手動合併**）：
-
-`apps/api/app/main.py`、`app/routers/admin/__init__.py`、`app/ai/{fake,prompts,schemas}.py`、`app/content_registry/definitions.py`、`app/services/{contents,review,scheme}.py`、`app/routers/admin/{schemas,schemes}.py`、`apps/admin-web/src/{App.tsx,layout/AppShell.tsx}`、`apps/api/openapi.json`（衝突了就別手動合，直接重新產生：見下）。
-
-合併後：
-
-```bash
-cd apps/api && uv run --package maydru-api pytest -q -p no:warnings
-cd .. && uv run ruff check && uv run mypy && uv run lint-imports --config pyproject.toml
-npm run typecheck && npm run lint && npm test && npm run build
-cd apps/api && UPDATE_OPENAPI=1 uv run --package maydru-api pytest tests/test_openapi_snapshot.py -q
-```
-
-四道都綠、OpenAPI 快照重新產生並提交，這一步才算完成。SPEC §18 記得補 P5 的決策編號（main 目前到 D27，P4 留了 D28/D29 給自己但還沒寫，P5 用 D30 起）。
+合併後的單一 main 已包含 P4 與 P5。`app/ai/fake.py` 同時保留意圖分類與內容助理的 fake schema；copilot 用量測試改為寫入隔離測試資料庫；D28–D31 已記錄在 SPEC §18。
 
 ## 3. 剩餘任務
 
-### P4 SOP 串接（**未完成**，SPEC §8.4 / §8.5 / §9.1 / §9.2 / §9.7）
+### P4 SOP 串接（**已完成**，SPEC §8.4 / §8.5 / §9.1 / §9.2 / §9.7）
 
 **已經做好的（`be0f1a4`，已含測試）**：
 - `app/services/sop_links.py`：`document_type ↔ flow` 對照解析；`app/routers/admin/sop_flows.py`：後台 CRUD 端點。
@@ -111,18 +89,17 @@ cd apps/api && UPDATE_OPENAPI=1 uv run --package maydru-api pytest tests/test_op
 - `app/ai/intent.py::classify()`：LLM 意圖分類 + 規則 fallback + quick reply；`services/faq.py` 向量檢索（pgvector，非 Postgres 時退回關鍵字）；`scripts/embed_faqs.py`。
 - `services/policy.py` 改讀 contents 的 `sop.template.*`；`app/ratelimit.py`。
 
-**還沒做的**：
-1. **apply-web 的 `/sop` 與 `/sop/:flow`** — 目前 `apps/apply-web/src/pages/SopPage.tsx` 還是 P3 留下的佔位頁（`grep "api/sop" apps/apply-web/src` 沒有任何結果）。要做：選文件類型／平台 → 列出 flow → step card 逐步瀏覽（上一步/下一步、步驟編號、放大）；「我卡住了」→ 上傳截圖 → `@maydru/mask-editor`（可略過）→ 顯示 contents 的 `security.screenshot_notice` → `POST /api/sop/locate` → 跳到定位到的步驟或顯示引導。頁面要讀網址上的 `?document_type=CODE`（P3 的「教我怎麼取得」連結已經帶好了）。`/status/:case_no` 的退件說明也要連到解析出來的 flow。
-2. **admin-web「文件類型對照」頁** — SOP 導航群組下，方案 × 文件類型的表格，每列可選該平台已發布的 flow（打 `GET/PUT /api/admin/schemes/{code}/document-types/{dt_code}/sop-flows`）。
-3. **`apps/api/scripts/e2e_maydru.py`** — SPEC §14 的完整劇本：送件 → 承辦審核 → 退件 → LINE 推播（Noop 捕捉）→「教我準備」開 SOP session → step card → 網頁補件 → 核准 → 推播。用 `/__test__/line/inbound` 這個測試端點驅動 LINE 側（只在非 production 且 `LINE_SENDER=noop` 時開放）。跑起來要印 `ALL OK`。
-4. **CI 的 `e2e` job**（`.github/workflows/ci.yml` 目前是 stub）。
-5. SPEC §18 補 D28、D29（P4 的實作決策），README 補 SOP 章節，重新產生 OpenAPI 快照。
+**已補完的**：
+1. apply-web `/sop`：文件／平台選擇、流程與逐步卡片、縮放、遮罩與截圖定位；退件頁會帶方案與退件碼連到精確流程。
+2. admin-web「文件類型對照」：方案 × 文件類型 × 平台，只能選已發布流程，整組取代儲存。
+3. `apps/api/scripts/e2e_maydru.py`：送件 → 退件 → LINE 教學 → 補件 → 核准的完整劇本，成功印出 `ALL OK`。
+4. CI 已啟用 MayDru workflow E2E job；SPEC D28–D31、README 與 OpenAPI 均已同步。
 
-### P5 方案管理與內容助理（**已完成，待合併**，SPEC §8.2 / §8.6 / §9.6）
+### P5 方案管理與內容助理（**已完成並合併**，SPEC §8.2 / §8.6 / §9.6）
 
 **已提交（branch `worktree-agent-a9dac84b8568275d8`，commits `3df7619` + `ab67356`）**：後端 `app/ai/copilot.py`、`app/services/copilot.py`、`app/routers/admin/copilot.py`（內容助理 a/b/c）、方案管理後端（排序、待審工具 resolve、規則試算）、alembic `0015_copilot_suggestions`、三個測試檔（`test_copilot.py`、`test_scheme_admin_p5.py`、`test_new_scheme_acceptance.py`，含「新增方案不改 code 即可送件」驗收測試）；前端 `apps/admin-web/src/pages/schemes/*`（方案清單、編輯器、tabs、規則編輯器、試算面板、待審工具、內容助理面板）與 LINE 內容區的 FAQ 建議卡。
 
-**待辦**：只剩 §2.1 的合併。合併後前端測試會從 288（main）變成合併後的總數（P5 branch 單獨跑是 admin-web 119 + apply-web 88 + 其餘 packages 81 = 288，因為 admin-web 從 69 漲到 119）。
+**驗收**：方案 CRUD／規則試算／內容助理測試與「新增方案不改 code 即可送件」驗收均通過。
 
 ### P6 `/v1` 與 outbound webhook（SPEC §10）
 
@@ -161,7 +138,7 @@ Commit 用 Conventional Commits、中文摘要，scope 例如 `api`、`line`、`
 
 | 項目 | 說明 |
 |---|---|
-| **OpenAPI 快照** | 改動任何端點後 `tests/test_openapi_snapshot.py` 就會紅。用 `UPDATE_OPENAPI=1` 重新產生並提交 `apps/api/openapi.json`。目前 `main` 就是紅的，因為 P4 加了端點。 |
+| **OpenAPI 快照** | 改動任何端點後 `tests/test_openapi_snapshot.py` 就會紅。用 `UPDATE_OPENAPI=1` 重新產生並提交 `apps/api/openapi.json`；目前快照已同步。 |
 | **`/api/admin/schemes/{code}/settings` 路由順序** | 必須註冊在 `/{code}/{kind}` 之前，否則 `settings` 會被當成子資源名稱。有測試釘住。 |
 | **seed 出來的 demo 案件查不到** | `scripts/seed.py` 寫入的 `HC-2026-9000xx` 末四碼 hash 綁在當時的 `SECRET_KEY`；換了 key 就驗不過。文件物件 key 也指向 MinIO 裡不存在的物件，後台檢視器會 404、顯示「第 0 版」。這是 seed 資料的預期行為，不是 bug。 |
 | **第一個管理者** | `scripts/seed.py` 會先建 tenant。閘門已改成「有沒有 active owner」（D26），所以 seed 之後仍可用 `POST /api/auth/bootstrap` 或 `BOOTSTRAP_OWNER_*` 環境變數建立第一個 owner。 |
@@ -179,7 +156,7 @@ Commit 用 Conventional Commits、中文摘要，scope 例如 `api`、`line`、`
 
 | 檔案 | 內容 |
 |---|---|
-| [`SPEC.md`](SPEC.md) | 唯一規格來源。§6 資料表、§7 狀態機、§8 功能規格、§9 Agent 規格與紅線、§10 API 契約、§11 安全隱私、§16 階段表、§18 決策 D1–D27 |
+| [`SPEC.md`](SPEC.md) | 唯一規格來源。§6 資料表、§7 狀態機、§8 功能規格、§9 Agent 規格與紅線、§10 API 契約、§11 安全隱私、§16 階段表、§18 決策 D1–D31 |
 | [`CLAUDE.md`](CLAUDE.md) | 工作規則、結構、開發指令、風格慣例 |
 | [`README.md`](README.md) | 專案概觀與快速上手 |
 | `docs/legacy/inventory-sop-tutor.md` | 舊專案 SOP_Tutor 的完整盤點（models、routers、services、ai 管線、docker）— 本專案的後端基底 |
@@ -194,11 +171,4 @@ Commit 用 Conventional Commits、中文摘要，scope 例如 `api`、`line`、`
 
 ## 7. Git 現況速查
 
-```
-main            be0f1a4  test(sop): P4 的 SOP 測試與 retrieval/session 修正
-                docs     b10790d  docs: 新增 HANDOFF.md（交接文件，這份）
-branch          ab67356  feat(admin-web): 方案管理區與內容助理面板
-                         worktree-agent-a9dac84b8568275d8，只差 §2.1 合併回 main
-```
-
-從 `3aff953`（只有 SPEC）到現在共約 42 個 commit。沒有任何 commit 被 push 過，遠端尚未設定。
+P5 merge commit 是 `83a13b9`；P4 收尾會以本文件所在的後續 commit 為準。工作樹中的 `.claude/` 是 Claude 的本機資料，不納入版本控制。遠端尚未設定，沒有任何 commit 被 push 過。

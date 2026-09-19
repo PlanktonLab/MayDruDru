@@ -23,13 +23,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import errors
 from ..ai.retrieval import locate as retrieval_locate
-from ..models import RejectionCode, Scheme, Tenant
+from ..models import DocumentType, DocumentTypeSopFlow, Flow, RejectionCode, Scheme, Tenant
 from . import sop_links
 from .content import load_snapshot, tenant_catalog
 from .guide import goal_for, locate_guidance, step_messages, step_rows
 from .policy import Policy
 
-__all__ = ["document_type_flows", "flow_steps", "locate", "platforms", "policy_for"]
+__all__ = ["document_type_flows", "document_types", "flow_steps", "locate", "platforms", "policy_for"]
 
 PUBLISHED = "published"
 
@@ -95,6 +95,28 @@ async def flows(db: AsyncSession, tenant_id: str, *, platform_id: str | None = N
 async def goals(db: AsyncSession, tenant_id: str) -> list[dict[str, Any]]:
     _, rows, _ = await tenant_catalog(db, tenant_id, PUBLISHED)
     return [dict(g) for g in rows if g.get("has_flows")]
+
+
+async def document_types(db: AsyncSession, tenant_id: str) -> list[dict[str, str]]:
+    """至少接到一條已發布流程的文件類型；相同 code 跨方案只列一次。"""
+    rows = (
+        await db.execute(
+            select(DocumentType.code, DocumentType.label)
+            .join(Scheme, Scheme.id == DocumentType.scheme_id)
+            .join(DocumentTypeSopFlow, DocumentTypeSopFlow.document_type_id == DocumentType.id)
+            .join(Flow, Flow.id == DocumentTypeSopFlow.flow_id)
+            .where(Scheme.tenant_id == tenant_id, Flow.status == PUBLISHED)
+            .order_by(DocumentType.sort_order, DocumentType.label, DocumentType.code)
+        )
+    ).all()
+    seen: set[str] = set()
+    out: list[dict[str, str]] = []
+    for code, label in rows:
+        if code in seen:
+            continue
+        seen.add(code)
+        out.append({"code": str(code), "label": str(label or code)})
+    return out
 
 
 # ------------------------------------------------------------------ 截圖定位

@@ -12,8 +12,15 @@ import type { DocProblem } from './DocField'
 import type { UploadedDoc } from './state'
 
 /** SOP 教學頁的連結；P4 才會有真正的步驟卡，先把 document_type 帶過去。 */
-export function sopHref(documentTypeCode: string | null | undefined): string {
-  return documentTypeCode ? `/sop?document_type=${encodeURIComponent(documentTypeCode)}` : '/sop'
+export function sopHref(
+  documentTypeCode: string | null | undefined,
+  context: { scheme?: string; rejectionCode?: string } = {},
+): string {
+  if (!documentTypeCode) return '/sop'
+  const params = new URLSearchParams({ document_type: documentTypeCode })
+  if (context.scheme) params.set('scheme', context.scheme)
+  if (context.rejectionCode) params.set('rejection_code', context.rejectionCode)
+  return `/sop?${params.toString()}`
 }
 
 /** 規則的 `config.rejection_code` 指向 `rejection_codes` 的哪一筆。 */

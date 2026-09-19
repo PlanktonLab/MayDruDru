@@ -91,7 +91,10 @@ export function SupplementPanel({ caseData, scheme, onDone }: SupplementPanelPro
               </p>
               <a
                 className="mt-1.5 inline-flex min-h-11 items-center text-[14px] text-accent underline"
-                href={sopHref(item.document_type_code)}
+                href={sopHref(item.document_type_code, {
+                  scheme: caseData.scheme.code,
+                  rejectionCode: item.rejection_code,
+                })}
               >
                 教我怎麼取得
               </a>

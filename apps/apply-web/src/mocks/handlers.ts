@@ -175,11 +175,55 @@ export function createHandlers(options: MockOptions = {}): HttpHandler[] {
       return HttpResponse.json([...rows].sort((a, b) => b.priority - a.priority))
     }),
 
+    http.get('/api/sop/catalog/document-types', () => HttpResponse.json([
+      { code: 'BILLING_STATEMENT', label: '信用卡帳單扣款紀錄' },
+      { code: 'TRANSACTION_DETAIL', label: '交易明細' },
+    ])),
+
+    http.get('/api/sop/catalog/platforms', () => HttpResponse.json([
+      { id: 'p-app', display_name: '示範銀行 App', brand: '示範銀行', channel: 'mobile_app' },
+      { id: 'p-web', display_name: '示範銀行網銀', brand: '示範銀行', channel: 'web' },
+    ])),
+
+    http.get('/api/sop/document-types/:code/flows', ({ params, request }) => {
+      const platform = new URL(request.url).searchParams.get('platform_id')
+      if (params.code !== 'BILLING_STATEMENT' || platform === 'p-web') return HttpResponse.json([])
+      return HttpResponse.json([{
+        flow_id: 'flow-bill', flow_name: '下載信用卡帳單',
+        platform: { id: 'p-app', display_name: '示範銀行 App', brand: '示範銀行', channel: 'mobile_app' },
+      }])
+    }),
+
+    http.get('/api/sop/flows/:flow/steps', ({ params }) => params.flow === 'flow-bill'
+      ? HttpResponse.json({
+          flow: { id: 'flow-bill', name: '下載信用卡帳單' }, version: 1,
+          steps: [
+            { index: 0, step_id: 'step-1', title: '打開帳務頁', instruction: '點選下方的帳務。' },
+            { index: 1, step_id: 'step-2', title: '下載帳單', instruction: '選擇月份後下載。' },
+          ],
+          messages: [
+            { kind: 'image', url: '/mock/step-1.png', number: 1, flow_id: 'flow-bill', step_id: 'step-1', title: '打開帳務頁', instruction: '點選下方的帳務。', alt: '步驟 1' },
+            { kind: 'image', url: '/mock/step-2.png', number: 2, flow_id: 'flow-bill', step_id: 'step-2', title: '下載帳單', instruction: '選擇月份後下載。', alt: '步驟 2' },
+          ],
+        })
+      : HttpResponse.json({ detail: { code: 'flow_not_published' } }, { status: 404 })),
+
+    http.post('/api/sop/locate', () => HttpResponse.json({
+      outcome: 'located',
+      step: { flow_id: 'flow-bill', step_id: 'step-2', confidence: 0.92 },
+      guidance: { advice: '看起來你已經到下載帳單這一步。' },
+      cards: [{ kind: 'image', url: '/mock/step-2.png', number: 1, flow_id: 'flow-bill', step_id: 'step-2', title: '下載帳單', instruction: '選擇月份後下載。', alt: '下載帳單' }],
+    })),
+
     // P2 的 contents；mock 直接回備援文案，讓「線上文案會覆蓋本地字串」這條路也走得到。
     http.get('/api/contents', ({ request }) => {
       const keys = (new URL(request.url).searchParams.get('keys') ?? '').split(',').filter(Boolean)
       const overlay: Record<string, string> = {}
       for (const key of keys) {
+        if (key === 'security.screenshot_notice') {
+          overlay[key] = '傳截圖前請先遮蔽卡號、密碼與完整身分證字號；圖片不會留存。'
+          continue
+        }
         const match = /^status\.([A-Z_]+)\.(public_label|next_action)$/.exec(key)
         if (!match) continue
         const status = match[1] as CaseStatus

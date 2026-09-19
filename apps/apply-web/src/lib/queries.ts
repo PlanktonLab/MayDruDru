@@ -98,6 +98,75 @@ export function useFaqs(query: string, scheme?: string) {
   })
 }
 
+/* ───────────────────────── SOP 教學 ───────────────────────── */
+
+export interface SopPlatform {
+  id: string
+  display_name: string
+  brand: string
+  channel: 'mobile_app' | 'web' | 'desktop'
+}
+
+export interface SopDocumentType { code: string; label: string }
+
+export interface SopFlow {
+  flow_id: string
+  flow_name: string
+  platform: SopPlatform | null
+}
+
+export interface SopMessage {
+  kind: 'image' | 'text'
+  url?: string
+  preview_url?: string
+  text?: string
+  alt?: string
+  number: number
+  flow_id: string
+  step_id: string
+  title: string
+  instruction: string
+}
+
+export interface SopSteps {
+  flow: { id: string; name: string; showing_steps_for?: string }
+  steps: { index: number; step_id: string; title: string; instruction: string }[]
+  messages: SopMessage[]
+}
+
+export interface SopLocateResult {
+  outcome: string
+  step: { flow_id: string | null; step_id: string | null; confidence: number | null }
+  guidance?: { advice?: string; flow_name?: string; step_title?: string; step_index?: number; total_steps?: number }
+  cards: SopMessage[]
+}
+
+export const fetchSopPlatforms = () => getJson<SopPlatform[]>('/api/sop/catalog/platforms')
+export const fetchSopDocumentTypes = () => getJson<SopDocumentType[]>('/api/sop/catalog/document-types')
+export const fetchSopFlows = (documentType: string, platformId = '', scheme = '', rejectionCode = '') => {
+  const params = new URLSearchParams()
+  if (platformId) params.set('platform_id', platformId)
+  if (scheme) params.set('scheme', scheme)
+  if (rejectionCode) params.set('rejection_code', rejectionCode)
+  const suffix = params.toString()
+  return getJson<SopFlow[]>(
+    `/api/sop/document-types/${encodeURIComponent(documentType)}/flows${suffix ? `?${suffix}` : ''}`,
+  )
+}
+export const fetchSopSteps = (flowId: string) =>
+  getJson<SopSteps>(`/api/sop/flows/${encodeURIComponent(flowId)}/steps`)
+
+export function locateSopScreenshot(file: File, scope: {
+  platform_id?: string
+  flow_id?: string
+  step_id?: string
+}) {
+  const form = new FormData()
+  form.append('file', file)
+  for (const [key, value] of Object.entries(scope)) if (value) form.append(key, value)
+  return postForm<SopLocateResult>('/api/sop/locate', form)
+}
+
 /* ───────────────────────── 寫入 ───────────────────────── */
 
 export function verifyCase(case_no: string, last4: string) {

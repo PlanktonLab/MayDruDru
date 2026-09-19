@@ -1,6 +1,6 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import { clsx } from 'clsx'
-import { BarChart3, Bell, BookOpen, ClipboardCheck, FileSearch, FlaskConical, FolderCog, HelpCircle, KeyRound, LayoutGrid, LogOut, MessageSquare, MessageSquareText, Moon, PanelLeftClose, PanelLeftOpen, SearchX, Sun, Users, Workflow } from 'lucide-react'
+import { BarChart3, Bell, BookOpen, ClipboardCheck, FileSearch, FlaskConical, FolderCog, HelpCircle, KeyRound, LayoutGrid, Link2, LogOut, MessageSquare, MessageSquareText, Moon, PanelLeftClose, PanelLeftOpen, SearchX, Sun, Users, Workflow } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useAuth } from '../lib/auth'
 import { ROLE_LABEL, type Capability } from '../lib/types'
@@ -42,6 +42,10 @@ const SCHEME_NAV: { to: string; label: string; icon: typeof Workflow }[] = [
   { to: '/schemes', label: '方案設定', icon: FolderCog },
 ]
 
+const SOP_NAV: { to: string; label: string; icon: typeof Workflow; cap?: Capability }[] = [
+  { to: '/sop/document-types', label: '文件類型對照', icon: Link2, cap: 'admin' },
+]
+
 const navLinkClass = (collapsed: boolean) => ({ isActive }: { isActive: boolean }) =>
   clsx('flex items-center gap-2 rounded-lg py-1.5 text-sm', collapsed ? 'justify-center px-0' : 'px-2.5',
     isActive ? 'bg-accent-bg text-accent font-medium' : 'text-muted hover:bg-background-lite hover:text-primary')
@@ -76,6 +80,14 @@ export default function AppShell() {
               <n.icon size={15} className="shrink-0" />{!collapsed && <span className="truncate">{n.label}</span>}
             </NavLink>
           ))}
+          <div className="mt-3 space-y-0.5 border-t border-border pt-3">
+            {!collapsed && <div className="px-2.5 pb-1 text-[11px] font-medium uppercase tracking-wide text-secondary">SOP</div>}
+            {SOP_NAV.filter((n) => !n.cap || can(n.cap)).map((n) => (
+              <NavLink key={n.to} to={n.to} title={collapsed ? n.label : undefined} aria-label={n.label} className={navLinkClass(collapsed)}>
+                <n.icon size={15} className="shrink-0" />{!collapsed && <span className="truncate">{n.label}</span>}
+              </NavLink>
+            ))}
+          </div>
           <div className="mt-3 space-y-0.5 border-t border-border pt-3">
             {!collapsed && <div className="px-2.5 pb-1 text-[11px] font-medium uppercase tracking-wide text-secondary">LINE 內容</div>}
             {LINE_NAV.map((n) => (
