@@ -80,7 +80,7 @@ const isImage = (f: File) => f.type.startsWith('image/')
 
 function Editor({ data }: { data: CanvasData }) {
   const { can } = useAuth()
-  const editable = can('edit')
+  const editable = can('sop_edit')
   const toast = useToast()
   const qc = useQueryClient()
 
@@ -276,7 +276,7 @@ function Editor({ data }: { data: CanvasData }) {
 
   /* -------------------------------------------------------------- publish */
   const publish = useCallback(async () => {
-    if (!flow || publishing || !can('review')) return
+    if (!flow || publishing || !can('sop_review')) return
     setPublishing(true)
     setPublishFailed(null)
     try {
@@ -505,7 +505,7 @@ function Editor({ data }: { data: CanvasData }) {
 
   const ctx = {
     data, flow, platform, scene, openFlow, selection, setSelection, selectAll,
-    editable, canReview: can('review'), isAdmin: can('admin'),
+    editable, canReview: can('sop_review'), isAdmin: can('admin'),
     actions,
     commitMove, setPositions, focusBox, justAdded, uploading, previews, dragging: drag !== null,
     createStepAt, appendAfter, connect, renameStep, setEndpoint, autoEndpoints: () => { void autoEndpoints() }, deleteSelection,

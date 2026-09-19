@@ -1,17 +1,20 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { get, post, setToken, getToken } from './api'
-import type { Role, User } from './types'
+import { ROLE_CAPS, type Capability, type User } from './types'
 
-const RANK: Record<Role, number> = { viewer: 0, reviewer: 1, editor: 2, admin: 3, owner: 4 }
-
+/**
+ * 授權一律問 `can(capability)`，不問角色排名（決策 D14）。
+ *
+ * 排名授權的問題在 P1 已經踩過：案件覆核者的排名比 SOP 編輯者高，於是他「順便」
+ * 拿到了 SOP 編輯權。改成 capability 之後，能不能按某個按鈕只取決於那個能力。
+ */
 interface AuthCtx {
   user: User | null
   loading: boolean
   login: (email: string, password: string) => Promise<void>
   logout: () => void
-  atLeast: (role: Role) => boolean
-  can: (action: 'edit' | 'review' | 'admin') => boolean
+  can: (capability: Capability) => boolean
   refresh: () => Promise<void>
 }
 
@@ -39,15 +42,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await refresh()
   }, [refresh])
   const logout = useCallback(() => { setToken(null); setUser(null) }, [])
-  const atLeast = useCallback((role: Role) => !!user && RANK[user.role] >= RANK[role], [user])
-  const can = useCallback((a: 'edit' | 'review' | 'admin') => {
-    if (!user) return false
-    if (a === 'admin') return RANK[user.role] >= RANK.admin
-    if (a === 'edit') return RANK[user.role] >= RANK.editor
-    return user.role === 'reviewer' || RANK[user.role] >= RANK.admin
-  }, [user])
+  // 後端若回了前端還不認得的角色，一律視為沒有任何能力——寧可少給，不可多給。
+  const can = useCallback((capability: Capability) => !!user && (ROLE_CAPS[user.role] ?? []).includes(capability), [user])
 
-  return <Ctx.Provider value={{ user, loading, login, logout, atLeast, can, refresh }}>{children}</Ctx.Provider>
+  return <Ctx.Provider value={{ user, loading, login, logout, can, refresh }}>{children}</Ctx.Provider>
 }
 
 export const useAuth = () => useContext(Ctx)
@@ -57,5 +55,13 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   const loc = useLocation()
   if (loading) return <div className="p-8 text-muted">載入中…</div>
   if (!user) return <Navigate to="/login" state={{ from: loc.pathname }} replace />
+  return <>{children}</>
+}
+
+/** 沒有這個能力就導回首頁；用在整頁都需要某個 capability 的路由上。 */
+export function RequireCap({ capability, children }: { capability: Capability; children: ReactNode }) {
+  const { can, loading } = useAuth()
+  if (loading) return <div className="p-8 text-muted">載入中…</div>
+  if (!can(capability)) return <Navigate to="/canvas" replace />
   return <>{children}</>
 }

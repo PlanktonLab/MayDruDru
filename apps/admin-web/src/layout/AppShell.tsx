@@ -1,25 +1,43 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import { clsx } from 'clsx'
-import { BarChart3, ClipboardCheck, FlaskConical, KeyRound, LogOut, MessageSquare, Moon, PanelLeftClose, PanelLeftOpen, Sun, Users, Workflow } from 'lucide-react'
+import { BarChart3, Bell, BookOpen, ClipboardCheck, FlaskConical, HelpCircle, KeyRound, LayoutGrid, LogOut, MessageSquare, MessageSquareText, Moon, PanelLeftClose, PanelLeftOpen, SearchX, Sun, Users, Workflow } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useAuth } from '../lib/auth'
-import { ROLE_LABEL } from '../lib/types'
+import { ROLE_LABEL, type Capability } from '../lib/types'
 
 const LS_NAV_COLLAPSED = 'sop_nav_collapsed'
 
-const NAV = [
+const NAV: { to: string; label: string; icon: typeof Workflow; cap?: Capability }[] = [
   { to: '/canvas', label: '流程', icon: Workflow },
   { to: '/review', label: '審核', icon: ClipboardCheck },
   { to: '/playground', label: '測試對話', icon: MessageSquare },
   { to: '/evals', label: '評測', icon: FlaskConical },
   { to: '/dashboard', label: '儀表板', icon: BarChart3 },
   // 平台 and Goal used to be pages of their own; both are edited inside Canvas now.
-  { to: '/members', label: '成員', icon: Users, admin: true },
-  { to: '/api-keys', label: 'API Key', icon: KeyRound, admin: true },
+  { to: '/members', label: '成員', icon: Users, cap: 'admin' },
+  { to: '/api-keys', label: 'API Key', icon: KeyRound, cap: 'admin' },
 ]
 
+/**
+ * LINE 內容（SPEC §8.2）。整組沒有 capability 閘門：要審案件就得先知道民眾在
+ * LINE 上看到什麼，所以每個登入的承辦人都讀得到；能不能改，由頁面裡的按鈕各自
+ * 問 `can('admin')`——把人擋在門外，他就只能改去問別人「那句話到底怎麼寫的」。
+ */
+const LINE_NAV: { to: string; label: string; icon: typeof Workflow }[] = [
+  { to: '/line/contents', label: '罐頭訊息', icon: MessageSquareText },
+  { to: '/line/faqs', label: '常見問題', icon: HelpCircle },
+  { to: '/line/knowledge', label: '知識文件', icon: BookOpen },
+  { to: '/line/richmenu', label: '圖文選單', icon: LayoutGrid },
+  { to: '/line/notifications', label: '推播紀錄', icon: Bell },
+  { to: '/line/unmatched', label: '未命中訊息', icon: SearchX },
+]
+
+const navLinkClass = (collapsed: boolean) => ({ isActive }: { isActive: boolean }) =>
+  clsx('flex items-center gap-2 rounded-lg py-1.5 text-sm', collapsed ? 'justify-center px-0' : 'px-2.5',
+    isActive ? 'bg-accent-bg text-accent font-medium' : 'text-muted hover:bg-background-lite hover:text-primary')
+
 export default function AppShell() {
-  const { user, logout, atLeast } = useAuth()
+  const { user, logout, can } = useAuth()
   const [dark, setDark] = useState(() => document.documentElement.classList.contains('dark'))
   useEffect(() => {
     document.documentElement.classList.toggle('dark', dark)
@@ -43,11 +61,19 @@ export default function AppShell() {
           </button>
         </div>
         <nav className="flex-1 space-y-0.5 px-2">
-          {NAV.filter((n) => !n.admin || atLeast('admin')).map((n) => (
+          {NAV.filter((n) => !n.cap || can(n.cap)).map((n) => (
             <NavLink key={n.to} to={n.to} title={collapsed ? n.label : undefined} aria-label={n.label} className={({ isActive }) => clsx('flex items-center gap-2 rounded-lg py-1.5 text-sm', collapsed ? 'justify-center px-0' : 'px-2.5', isActive ? 'bg-accent-bg text-accent font-medium' : 'text-muted hover:bg-background-lite hover:text-primary')}>
               <n.icon size={15} className="shrink-0" />{!collapsed && <span className="truncate">{n.label}</span>}
             </NavLink>
           ))}
+          <div className="mt-3 space-y-0.5 border-t border-border pt-3">
+            {!collapsed && <div className="px-2.5 pb-1 text-[11px] font-medium uppercase tracking-wide text-secondary">LINE 內容</div>}
+            {LINE_NAV.map((n) => (
+              <NavLink key={n.to} to={n.to} title={collapsed ? n.label : undefined} aria-label={n.label} className={navLinkClass(collapsed)}>
+                <n.icon size={15} className="shrink-0" />{!collapsed && <span className="truncate">{n.label}</span>}
+              </NavLink>
+            ))}
+          </div>
         </nav>
         <div className="border-t border-border p-3 text-xs">
           {collapsed ? (

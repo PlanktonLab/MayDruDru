@@ -9,15 +9,19 @@ import { ROLE_LABEL, type Role, type Tenant, type User } from '../lib/types'
 import { Badge, Button, Card, Empty, Field, Input, Modal, Select, Spinner, confirmDialog, errMsg, useToast } from '../components/ui'
 import { Notice, PageHeader, Table, Td, Th } from '../components/admin/shared'
 
-const ROLES: Role[] = ['owner', 'admin', 'editor', 'reviewer', 'viewer']
+const ROLES: Role[] = ['owner', 'admin', 'case_supervisor', 'case_reviewer', 'sop_reviewer', 'sop_editor', 'viewer']
+/** 描述的是「能做什麼」，不是排名——角色只是 capability 的組合（決策 D14）。 */
 const ROLE_DESC: Record<Role, string> = {
   owner: 'tenant 所有權限，管理計費與成員',
-  admin: '管理成員、API key、goal 清單、平台；可看未審核原圖；可用進階功能',
-  editor: '建立與編輯平台、flow、step；上傳截圖、框焦點、畫標註',
-  reviewer: '審核復刻結果、發布 flow',
+  admin: '管理成員、API key、平台；同時具備 SOP 與案件的全部能力',
+  case_supervisor: '審核案件，並可核定、註銷、撥款（case_review + case_supervise）',
+  case_reviewer: '審核案件、要求補件、覆寫規則判定（case_review）',
+  sop_reviewer: '審核復刻結果、發布 flow（sop_review）',
+  sop_editor: '建立與編輯平台、flow、step；上傳截圖、框焦點、畫標註（sop_edit）',
   viewer: '唯讀，含儀表板',
 }
-const roleTone = (r: Role): 'accent' | 'good' | 'warn' | 'muted' => (r === 'owner' ? 'accent' : r === 'admin' ? 'warn' : r === 'viewer' ? 'muted' : 'good')
+const roleTone = (r: Role): 'accent' | 'good' | 'warn' | 'muted' =>
+  r === 'owner' ? 'accent' : r === 'admin' ? 'warn' : r === 'viewer' ? 'muted' : 'good'
 
 export default function MembersPage() {
   const { user, can } = useAuth()

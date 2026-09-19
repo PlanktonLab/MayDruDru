@@ -14,7 +14,7 @@ import type { EvalRun } from '../lib/types'
 
 export default function EvalsPage() {
   const { can } = useAuth()
-  const canEdit = can('edit')
+  const canEdit = can('sop_edit')
   const platforms = usePlatforms()
   const goals = useGoals()
   const canvas = useCanvas()

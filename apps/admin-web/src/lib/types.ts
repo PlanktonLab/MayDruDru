@@ -1,6 +1,26 @@
 /** API types — mirror backend/app/schemas.py. */
 
-export type Role = 'owner' | 'admin' | 'editor' | 'reviewer' | 'viewer'
+/**
+ * 角色與 capability（SPEC §6.5、決策 D14）。
+ *
+ * 授權以 capability 為準，不以角色排名為準——SOP 製作與案件審核是兩條互不隸屬的線，
+ * 用排名授權會讓案件覆核者順手拿到 SOP 編輯權。這份對照表逐字對齊
+ * `apps/api/app/deps.py` 的 `ROLE_CAPS`。
+ */
+export type Role = 'owner' | 'admin' | 'case_supervisor' | 'case_reviewer' | 'sop_reviewer' | 'sop_editor' | 'viewer'
+export type Capability = 'sop_edit' | 'sop_review' | 'case_review' | 'case_supervise' | 'admin' | 'owner'
+
+const ADMIN_CAPS: Capability[] = ['sop_edit', 'sop_review', 'case_review', 'case_supervise', 'admin']
+
+export const ROLE_CAPS: Record<Role, Capability[]> = {
+  viewer: [],
+  sop_editor: ['sop_edit'],
+  sop_reviewer: ['sop_review'],
+  case_reviewer: ['case_review'],
+  case_supervisor: ['case_review', 'case_supervise'],
+  admin: ADMIN_CAPS,
+  owner: [...ADMIN_CAPS, 'owner'],
+}
 export interface User { id: string; tenant_id: string; email: string; name: string; role: Role; is_active: boolean; created_at?: string | null }
 export interface Tenant { id: string; name: string; slug: string; settings: Record<string, unknown> }
 export interface ApiKey { id: string; name: string; prefix: string; status: 'active' | 'disabled'; rate_limit_per_minute: number; last_used_at: string | null; created_at: string; plaintext?: string | null }
@@ -138,7 +158,15 @@ export interface DashboardSummary {
 }
 
 /** Status words live in canvas/status.ts (`STATUS[status].label`) so the whole product uses one vocabulary. */
-export const ROLE_LABEL: Record<Role, string> = { owner: 'Owner', admin: 'Admin', editor: 'Editor', reviewer: 'Reviewer', viewer: 'Viewer' }
+export const ROLE_LABEL: Record<Role, string> = {
+  owner: '擁有者',
+  admin: '管理者',
+  case_supervisor: '案件覆核人',
+  case_reviewer: '案件審核人',
+  sop_reviewer: 'SOP 審核者',
+  sop_editor: 'SOP 編輯者',
+  viewer: '唯讀',
+}
 export const CHANNEL_LABEL: Record<Channel, string> = { mobile_app: '手機 App', web: '網頁', desktop: '電腦' }
 export const ANNOTATION_LABEL: Record<AnnotationType, string> = { tap: '點按', capture: '截圖需包含', input: '輸入', gesture: '手勢', note: '說明' }
 export const ANNOTATION_COLOR: Record<AnnotationType, string> = { tap: 'var(--ann-tap)', capture: 'var(--ann-capture)', input: 'var(--ann-input)', gesture: 'var(--ann-gesture)', note: 'var(--ann-note)' }
@@ -242,3 +270,103 @@ export interface ChatTurnDebug {
   }
 }
 export interface ChatTurnResponse { chat_id: string; content_mode?: 'published' | 'draft'; messages: ChatTurnMessage[]; _debug?: ChatTurnDebug }
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * P2：LINE 內容（SPEC §8.2「LINE 內容」/ §8.6 罐頭訊息）
+ *
+ * 對應 `/api/admin/contents`、`/api/admin/faqs`、`/api/admin/knowledge`、
+ * `/api/admin/media`、`/api/admin/line/*`。刻意放在檔尾自成一區：上面那一大段
+ * 是 SOP Tutor 起家的型別，兩邊各自演化，混在一起反而找不到東西。
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+/** text：訊息本文。button：按鈕短標籤。label：卡片欄位名。flex：整張卡片。 */
+export type ContentType = 'text' | 'button' | 'label' | 'flex'
+
+/** 後台側邊欄的分類，順序就是後端 registry 的順序。 */
+export interface ContentCategory { id: string; label: string; icon: string; description: string }
+
+/**
+ * 一則罐頭訊息。`content` 是民眾現在看得到的、`draft` 是還沒發布的（null＝沒草稿），
+ * `default` 是程式內建值（「還原預設」會回到它）。`version` 給樂觀鎖用。
+ */
+export interface ContentView {
+  key: string; category: string; title: string; description: string
+  content: string; draft: string | null; default: string
+  content_type: ContentType; variables: string[]; sort_order: number; version: number
+  published_at: string | null; published_by: string | null
+  customised: boolean; has_draft: boolean; scheme_id: string | null
+  missing_variables: string[]
+}
+export interface ContentsList {
+  items: ContentView[]
+  categories: ContentCategory[]
+  stats: { total: number; registry: number; customised: number; drafts: number }
+}
+
+/** 一個真實畫面：`messages` 是原始的 LINE 訊息 JSON，由 `flexPreview` 走訪後畫出來。 */
+export interface PreviewSurface { id: string; messages: unknown[] }
+/**
+ * `rendered` 是代入範例變數後的字。`missing_variables`＝宣告了但文字裡沒用到
+ * （民眾會看到一段缺資訊的話）；`unknown_variables`＝文字裡有、但系統不會代入的。
+ */
+export interface ContentPreview {
+  key: string; kind: ContentType; rendered: string
+  sample_variables: Record<string, string>
+  missing_variables: string[]; unknown_variables: string[]
+  quick_replies: string[]; where: string
+  surfaces: PreviewSurface[]
+}
+
+export interface Faq {
+  id: string; code: string; category: string; question: string; answer: string
+  keywords: string[]; priority: number; active: boolean
+  scheme_id: string | null; source: string; version: number; updated_at: string
+}
+export interface FaqList { items: Faq[]; categories: string[] }
+
+export interface KnowledgeDoc {
+  id: string; code: string; title: string; content: string
+  source_url: string; source_type: string; tags: string[]
+  scheme_id: string | null; version: number; updated_at: string
+}
+
+export interface MediaItem { id: string; key: string; url: string; mime: string; size: number; alt: string; uploaded_by: string | null; created_at: string }
+
+/** 圖文選單的一格：畫布 2500×1686 上的絕對座標，`data` 是 postback 字串。 */
+export interface RichMenuTile {
+  action: string; label_key: string; label: string
+  bounds: { x: number; y: number; width: number; height: number }
+  data: string
+}
+/** `unknown`＝問不到 LINE（跟「不一樣」是兩件事，見 `services/line/richmenu.status`）。 */
+export type RichMenuState = 'synced' | 'different' | 'missing' | 'not_configured' | 'unknown'
+export interface RichMenuStatus {
+  state: RichMenuState
+  /** 差異代碼（`size`、`area_3_bounds`…），中文句子在 `pages/line/labels.ts`。 */
+  differences: string[]
+  remote: unknown[]; default_rich_menu_id: string
+  local: Record<string, unknown> | null
+  tiles: RichMenuTile[]
+  image_key: string; last_sync: string | null; checked_at?: string | null; error?: string
+}
+export interface LineSyncLog {
+  id: string; operation: string; status: string; remote_id: string | null
+  error: string | null; actor_id: string | null; created_at: string; completed_at: string | null
+}
+/** 同步失敗（502）時附的圖檔檢查結果；`problems` 同樣是代碼。 */
+export interface RichMenuImageInfo { width: number; height: number; bytes: number; problems: string[] }
+export interface RichMenuSyncFailure { message?: string; state?: string; error?: string; image?: RichMenuImageInfo }
+
+export type NotificationStatus = 'queued' | 'sent' | 'failed' | 'skipped'
+export interface LineNotification {
+  id: string; case_no: string; kind: string; content_key: string
+  status: NotificationStatus; error: string | null; transition_code: string
+  created_at: string; sent_at: string | null
+}
+
+/** 意圖分類器沒命中的自由文字。只留 userId hash 的前 8 碼，永遠不存 LINE user id。 */
+export interface UnmatchedMessage {
+  id: string; text: string
+  intent_result: { intent?: string; confidence?: number } | null
+  user_hash: string; created_at: string
+}
