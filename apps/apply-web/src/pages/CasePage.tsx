@@ -13,7 +13,7 @@ import { VerifyForm } from '../status/VerifyForm'
 import { ApiError, caseToken } from '../lib/api'
 import { dateTime, money, date } from '../lib/format'
 import { useCase, useContentOverlay, useScheme, withdrawCase } from '../lib/queries'
-import { STATUS_TONE, nextAction, publicLabel } from '../lib/status'
+import { STATUS_TONE, caseOverlay, nextAction, publicLabel } from '../lib/status'
 import type { CasePublic } from '../lib/types'
 
 function events(caseData: CasePublic, overlay: Record<string, string>): TimelineEvent[] {
@@ -38,9 +38,10 @@ export default function CasePage() {
   const [notice, setNotice] = useState('')
 
   const overlayQuery = useContentOverlay()
-  const overlay = overlayQuery.data ?? {}
   const caseQuery = useCase(caseNo, verified)
   const caseData = caseQuery.data
+  // 案件回應自帶目前狀態那兩句；contents 查詢回來之後蓋過去（它涵蓋每一個狀態）。
+  const overlay = { ...(caseData ? caseOverlay(caseData) : {}), ...(overlayQuery.data ?? {}) }
   const schemeQuery = useScheme(caseData?.scheme.code)
 
   const refresh = useCallback(() => {

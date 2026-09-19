@@ -186,7 +186,7 @@ export function createHandlers(options: MockOptions = {}): HttpHandler[] {
         const table = match[2] === 'public_label' ? STATUS_PUBLIC_LABEL : STATUS_NEXT_ACTION
         if (table[status]) overlay[key] = table[status]
       }
-      return HttpResponse.json(overlay)
+      return HttpResponse.json({ items: overlay })
     }),
   ]
 }

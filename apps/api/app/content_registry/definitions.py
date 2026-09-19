@@ -71,6 +71,7 @@ CONTENT_CATEGORIES: tuple[ContentCategory, ...] = (
     ContentCategory("button", "按鈕文字", "🔘", "按鈕與快速回覆上的顯示文字（不會改變按鈕功能）"),
     ContentCategory("status", "案件狀態文案", "🧭", "每個案件狀態的名稱、下一步說明與推播標題"),
     ContentCategory("rejection", "退件說明", "↩️", "承辦勾選退件原因時，市民看到的哪裡不對與怎麼修"),
+    ContentCategory("review", "審核判定說明", "🔎", "規則引擎判不出來時，案件頁那一行「為什麼」"),
     # 標籤刻意不叫「申請小幫手」——那是 apply 分類的名字，後台側邊欄不該出現兩個同名項目。
     ContentCategory("sop", "教學對話", "🧑‍🏫", "一步一圖教學對話裡的固定語句"),
 )
@@ -2404,6 +2405,99 @@ _LINE: tuple[ContentDefinition, ...] = (
     ),
 )
 
+# ---- 審核判定說明（`services/review.py` 的 `Finding.note`）
+# service 回的是 key 不是句子，字在這裡；後台案件頁與市民補件頁讀的是同一份。
+_REVIEW: tuple[ContentDefinition, ...] = (
+    _def(
+        "review.note.no_document",
+        "review",
+        "判定說明：要看的文件還沒上傳",
+        "規則引擎判不出來時，案件頁在這一條規則下顯示的原因。",
+        "這條規則要看的那份文件還沒有上傳。",
+        sort_order=10,
+    ),
+    _def(
+        "review.note.no_text",
+        "review",
+        "判定說明：文件辨識不到文字",
+        "規則引擎判不出來時，案件頁在這一條規則下顯示的原因。",
+        "這份文件沒有辨識到任何文字，可能是空白頁或影像太模糊。",
+        sort_order=20,
+    ),
+    _def(
+        "review.note.field_not_found",
+        "review",
+        "判定說明：文件上找不到欄位",
+        "規則引擎判不出來時，案件頁在這一條規則下顯示的原因。",
+        "在這份文件上找不到這條規則要的欄位。",
+        sort_order=30,
+    ),
+    _def(
+        "review.note.normalize_failed",
+        "review",
+        "判定說明：讀到值但轉不成標準格式",
+        "規則引擎判不出來時，案件頁在這一條規則下顯示的原因。",
+        "讀到了值，但轉不成標準格式，需要人工確認。",
+        sort_order=40,
+    ),
+    _def(
+        "review.note.bad_regex",
+        "review",
+        "判定說明：規則的 regex 無法編譯",
+        "規則引擎判不出來時，案件頁在這一條規則下顯示的原因。",
+        "這條規則的 regex 無法編譯，請到方案管理修正這條規則。",
+        sort_order=50,
+    ),
+    _def(
+        "review.note.amount_source_missing",
+        "review",
+        "判定說明：還沒讀到憑證金額",
+        "規則引擎判不出來時，案件頁在這一條規則下顯示的原因。",
+        "還沒有從憑證上讀到金額，沒辦法比對。",
+        sort_order=60,
+    ),
+    _def(
+        "review.note.amount_unreadable",
+        "review",
+        "判定說明：憑證金額看不出是多少",
+        "規則引擎判不出來時，案件頁在這一條規則下顯示的原因。",
+        "憑證上讀到的字看不出是多少錢，需要人工確認。",
+        sort_order=70,
+    ),
+    _def(
+        "review.note.amount_pending",
+        "review",
+        "判定說明：申請人還沒填申報金額",
+        "規則引擎判不出來時，案件頁在這一條規則下顯示的原因。",
+        "申請人還沒有填寫申報金額，填好之後才會比對。",
+        sort_order=80,
+    ),
+    _def(
+        "review.note.amount_mismatch",
+        "review",
+        "判定說明：金額差距超出容許範圍",
+        "規則引擎判不出來時，案件頁在這一條規則下顯示的原因。",
+        "憑證上的金額與申報金額差距超出容許範圍。",
+        sort_order=90,
+    ),
+    _def(
+        "review.note.missing_documents",
+        "review",
+        "判定說明：必要文件還沒收齊",
+        "規則引擎判不出來時，案件頁在這一條規則下顯示的原因。",
+        "還有必要文件沒有收到。",
+        sort_order=100,
+    ),
+    _def(
+        "review.note.unknown_rule_type",
+        "review",
+        "判定說明：規則類型系統看不懂",
+        "規則引擎判不出來時，案件頁在這一條規則下顯示的原因。",
+        "這條規則的類型系統還看不懂，需要人工確認。",
+        sort_order=110,
+    ),
+)
+
 CONTENT_REGISTRY: tuple[ContentDefinition, ...] = (
     *_HOME,
     *_CASE,
@@ -2418,6 +2512,7 @@ CONTENT_REGISTRY: tuple[ContentDefinition, ...] = (
     *_BUTTON,
     *_STATUS,
     *_REJECTION,
+    *_REVIEW,
     *_SOP,
     *_LINE,
 )

@@ -30,6 +30,7 @@ from ...models import (
 from ...pii import decrypt_phone, mask_name, mask_phone
 from ...services import application as case_service
 from ...services import audit, review
+from ...services import contents as contents_service
 from ...services import documents as documents_service
 from ...services import scheme as scheme_service
 from ...services.actors import Actor
@@ -202,11 +203,16 @@ def _finding_out(
     reviewer: User | None,
     superseded: bool,
     document_types: dict[str, str],
+    note_texts: dict[str, str],
 ) -> dict[str, Any]:
     """`review_findings` 的一列 → 契約 §Finding + 案件頁的落地欄位。
 
     `document_type_code` 沒有自己的欄位，由 `document_id` 反查——finding 指向的是
     某一個版本的文件，而不是某個類型。
+
+    `note` 是文案 key（`review.note.*`），`note_text` 是它渲染出來的字；規則引擎不組
+    句子，字在 `contents`（CLAUDE.md 規則 4）。key 不在 registry 裡（例如舊資料或
+    承辦人自己打的字）時 `note_text` 就是原字串。
     """
     return {
         "id": row.id,
@@ -220,11 +226,21 @@ def _finding_out(
         "bbox": dict(row.bbox) if row.bbox else None,
         "document_type_code": document_types.get(row.document_id or ""),
         "note": row.note or None,
+        "note_text": note_texts.get(row.note or "") or (row.note or None),
         "suggested_supplement": None,
         "source": row.source,
         "reviewer": _reviewer_out(reviewer),
         "decided_at": row.decided_at,
         "superseded": superseded,
+    }
+
+
+async def _note_texts(db: AsyncSession, tenant_id: str, notes: set[str]) -> dict[str, str]:
+    """`review.note.*` 的 key → 承辦人看到的句子。其餘字串原樣留著。"""
+    return {
+        key: await contents_service.t(db, tenant_id, key)
+        for key in sorted(notes)
+        if key.startswith(review.NOTE_PREFIX)
     }
 
 
@@ -243,10 +259,12 @@ async def _findings_payload(db: AsyncSession, app: Application) -> list[dict[str
     }
     current = [r for r in history if r.id in latest]
     older = [r for r in history if r.id not in latest]
+    note_texts = await _note_texts(db, app.tenant_id, {r.note or "" for r in history})
 
     def out(row: ReviewFinding, *, superseded: bool) -> dict[str, Any]:
         return _finding_out(row, reviewer=reviewers.get(row.reviewer_id or ""),
-                            superseded=superseded, document_types=document_types)
+                            superseded=superseded, document_types=document_types,
+                            note_texts=note_texts)
 
     return (
         [out(r, superseded=False) for r in sorted(current, key=lambda r: r.rule_code)]

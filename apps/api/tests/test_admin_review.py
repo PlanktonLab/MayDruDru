@@ -247,6 +247,31 @@ async def test_an_unreadable_field_is_indeterminate_not_a_rejection(admin_client
     assert body["verdict"] == "INDETERMINATE"
 
 
+async def test_a_note_key_comes_back_with_its_rendered_text(admin_client, auth_headers, db, rules, case):
+    """`note` 是 `review.note.*` 的 key，`note_text` 是它在 contents 裡的字。"""
+    from app.content_registry import get_default
+
+    await add_ocr(db, case, "這張帳單上什麼都沒有")
+    findings = (await admin_client.post(f"{CASES}/{case.case_no}/evaluate",
+                                        headers=auth_headers("case_reviewer"))).json()["findings"]
+    noted = [f for f in findings if (f["note"] or "").startswith("review.note.")]
+    assert noted, "這一組 fixture 應該至少有一條判不出來的規則"
+    for finding in noted:
+        assert finding["note_text"] == get_default(finding["note"])
+        assert finding["note_text"] != finding["note"]
+
+
+async def test_a_reviewer_note_is_passed_through_untouched(admin_client, auth_headers, db, rules, case):
+    """承辦人自己打的字不是 key，`note_text` 就是原字串。"""
+    await add_ocr(db, case, "金額 看不清楚")
+    await admin_client.post(f"{CASES}/{case.case_no}/evaluate", headers=auth_headers("case_reviewer"))
+    body = (await admin_client.put(f"{CASES}/{case.case_no}/findings/AMOUNT",
+                                   json={"status": "MATCH", "extracted_value": "6000", "note": "人工判讀"},
+                                   headers=auth_headers("case_reviewer"))).json()
+    current = [f for f in body["findings"] if not f["superseded"] and f["rule_code"] == "AMOUNT"]
+    assert current[0]["note_text"] == "人工判讀"
+
+
 # ----------------------------------------------------------- findings 覆寫
 
 async def test_an_override_appends_a_reviewer_row_and_keeps_the_history(admin_client, auth_headers, db,

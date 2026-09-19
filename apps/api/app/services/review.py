@@ -46,6 +46,7 @@ __all__ = [
     "NOTE_NO_DOCUMENT",
     "NOTE_NO_TEXT",
     "NOTE_NORMALIZE_FAILED",
+    "NOTE_PREFIX",
     "NOTE_UNKNOWN_RULE_TYPE",
     "RULE_TYPES",
     "ApplicationFacts",
@@ -86,6 +87,8 @@ FINDING_STATUSES = ("PENDING", "MATCH", "MISMATCH", "UNREADABLE")
 RULE_TYPES = ("keyword_extract", "regex_extract", "amount_tolerance", "required_doc")
 
 # note 的文案 key（SPEC §8.1「錯誤訊息說怎麼修」的字由 contents 提供）。
+# 每一個 key 在 `app/content_registry/` 都要有預設值，tests/test_review_note_keys.py 把關。
+NOTE_PREFIX = "review.note."
 NOTE_NO_DOCUMENT = "review.note.no_document"
 NOTE_NO_TEXT = "review.note.no_text"
 NOTE_FIELD_NOT_FOUND = "review.note.field_not_found"

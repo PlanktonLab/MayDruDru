@@ -53,19 +53,21 @@ export function useRequiredDocuments(code: string | undefined, input: RequiredDo
 }
 
 /**
- * 狀態文案的線上版本（P2 的 `contents`）。這支端點還沒上線時回空物件，
- * 畫面退回 `lib/status.ts` 的備援字串，不會讓市民看到狀態代號。
+ * 狀態文案的線上版本（P2 的 `contents`）。回應是 `{ items: { key: text } }`；
+ * 這支端點失敗時回空物件，畫面退回 `lib/status.ts` 的備援字串，不會讓市民看到狀態代號。
  */
 export function useContentOverlay() {
   return useQuery<ContentOverlay>({
     queryKey: ['apply', 'contents'],
     queryFn: async () => {
       try {
-        const rows = await getJson<Record<string, string> | { key: string; text: string }[]>(
+        const body = await getJson<{ items?: Record<string, string> }>(
           `/api/contents?keys=${encodeURIComponent(contentKeys().join(','))}`,
         )
-        if (Array.isArray(rows)) return Object.fromEntries(rows.map((row) => [row.key, row.text]))
-        return rows ?? {}
+        // 空字串代表「這個 key 沒有文案」，留著會蓋掉備援字串，變成一片空白。
+        return Object.fromEntries(
+          Object.entries(body?.items ?? {}).filter(([, text]) => (text ?? '').trim()),
+        )
       } catch {
         return {}
       }

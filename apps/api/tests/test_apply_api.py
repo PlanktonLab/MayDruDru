@@ -398,6 +398,33 @@ async def test_the_case_page_gives_content_keys_not_sentences(apply_client, db, 
     assert body["next_action"] == "status.UNDER_REVIEW.next_action"
 
 
+async def test_the_case_page_also_renders_those_keys(apply_client, db, tenant, scheme):
+    """key 旁邊附一份渲染好的字：第一次繪製就不必再問一次 `GET /api/contents`。
+
+    router 自己不組中文——字來自 registry 預設值，承辦人發布過就換成他發布的那一份。
+    """
+    from app.content_registry import get_default
+
+    app = await make_case(db, tenant, scheme)
+    token = await verified_token(apply_client, app)
+    body = (await apply_client.get(f"{APPLY}/applications/{app.case_no}", headers=bearer(token))).json()
+    assert body["public_label"] == get_default("status.UNDER_REVIEW.public_label")
+    assert body["next_action_text"] == get_default("status.UNDER_REVIEW.next_action")
+
+
+async def test_a_published_content_wins_over_the_registry_default(apply_client, db, tenant, scheme):
+    from app.services import contents as contents_service
+
+    app = await make_case(db, tenant, scheme)
+    await contents_service.get_or_create(db, tenant.id, "status.UNDER_REVIEW.next_action")
+    await contents_service.publish(db, tenant.id, "status.UNDER_REVIEW.next_action", "再等我們兩天。")
+    await db.commit()
+    token = await verified_token(apply_client, app)
+    body = (await apply_client.get(f"{APPLY}/applications/{app.case_no}", headers=bearer(token))).json()
+    assert body["next_action"] == "status.UNDER_REVIEW.next_action"
+    assert body["next_action_text"] == "再等我們兩天。"
+
+
 async def test_the_content_keys_follow_the_current_status(apply_client, db, tenant, scheme):
     app = await make_case(db, tenant, scheme)
     await drive(db, app, "T10")

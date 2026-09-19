@@ -180,9 +180,12 @@ class CasePublicOut(BaseModel):
     scheme: CaseSchemeOut
     status: str
     # 文案 key 而不是句子（CLAUDE.md 規則 4）：狀態的市民用語與「現在換你做什麼」都
-    # 存在 `contents`，由前端的 contents 層渲染；contents 還沒上線時前端有備援對照表。
+    # 存在 `contents`。key 留著（前端要嘛自己 overlay、要嘛拿去查 `GET /api/contents`），
+    # 旁邊再附一份伺服器已經渲染好的字，讓第一次繪製就不必再多一次往返。
     public_label_key: str | None = None
     next_action: str | None = None
+    public_label: str | None = None
+    next_action_text: str | None = None
     first_submitted_at: datetime | None = None
     last_submitted_at: datetime | None = None
     revision_count: int

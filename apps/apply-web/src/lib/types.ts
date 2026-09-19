@@ -145,6 +145,11 @@ export interface CasePublic {
   case_no: string
   scheme: { code: string; name: string }
   status: CaseStatus
+  /** `contents` 的 key；`public_label` / `next_action_text` 是伺服器已經渲染好的同一段字。 */
+  public_label_key?: string | null
+  next_action?: string | null
+  public_label?: string | null
+  next_action_text?: string | null
   first_submitted_at: string
   last_submitted_at: string
   revision_count: number

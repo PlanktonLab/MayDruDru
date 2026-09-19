@@ -86,6 +86,12 @@ def test_the_case_detail_response_carries_the_contract_fields(spec):
 
 
 def test_the_public_case_carries_the_content_keys(spec):
-    """市民端的狀態文案走 contents：API 給 key，不給句子（CLAUDE.md 規則 4）。"""
+    """市民端的狀態文案走 contents：API 給 key，也附上那個 key 渲染出來的字。"""
     schema = spec["components"]["schemas"]["CasePublicOut"]["properties"]
     assert "next_action" in schema and "public_label_key" in schema
+    assert "next_action_text" in schema and "public_label" in schema
+
+
+def test_a_finding_carries_both_the_note_key_and_its_text(spec):
+    schema = spec["components"]["schemas"]["app__routers__admin__schemas__FindingOut"]["properties"]
+    assert "note" in schema and "note_text" in schema

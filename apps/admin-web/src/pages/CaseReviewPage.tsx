@@ -231,7 +231,7 @@ export default function CaseReviewPage() {
           <FindingsPanel
             findings={caseData.findings.map((finding) => ({
               ...finding,
-              note: renderNote(finding.note),
+              note: finding.note_text || renderNote(finding.note),
             }))}
             rules={caseData.rules}
             focusedRuleCode={focus?.ruleCode ?? null}

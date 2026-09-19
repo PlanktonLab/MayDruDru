@@ -31,6 +31,7 @@ from ..models import Application, ApplicationDocument, ApplicationStatusEvent, S
 from ..redis_client import get_redis
 from ..security import CASE_TOKEN_MINUTES
 from ..services import application as case_service
+from ..services import contents as contents_service
 from ..services import documents as documents_service
 from ..services import faq as faq_service
 from ..services import review, tenancy
@@ -354,8 +355,10 @@ async def get_case(
 ) -> dict[str, Any]:
     """市民看得到的案件：時間軸、補件項目、目前版本的文件清單。沒有承辦人資訊。
 
-    `public_label_key` 與 `next_action` 給的是 `contents` 的 key，不是句子——這支
-    router 不組任何中文文案（CLAUDE.md 規則 4）。
+    `public_label_key` 與 `next_action` 給的是 `contents` 的 key；`public_label` 與
+    `next_action_text` 是同一組 key 由 `services/contents.t()` 渲染出來的字。router
+    自己不組任何中文文案（CLAUDE.md 規則 4）——那些字是承辦人在後台發布的，
+    伺服器只是把它讀出來，前端因此少一次 `GET /api/contents` 的往返。
     """
     app = await _case(db, caller, case_no)
     scheme = await db.get(Scheme, app.scheme_id)
@@ -374,12 +377,16 @@ async def get_case(
         )
     ).scalars().all()
     codes = {t.code for t in case_service.allowed_transitions(app.status)}
+    label_key = f"status.{app.status}.public_label"
+    action_key = f"status.{app.status}.next_action"
     return {
         "case_no": app.case_no,
         "scheme": {"code": scheme.code if scheme else "", "name": scheme.name if scheme else ""},
         "status": app.status,
-        "public_label_key": f"status.{app.status}.public_label",
-        "next_action": f"status.{app.status}.next_action",
+        "public_label_key": label_key,
+        "next_action": action_key,
+        "public_label": await contents_service.t(db, app.tenant_id, label_key),
+        "next_action_text": await contents_service.t(db, app.tenant_id, action_key),
         "first_submitted_at": app.first_submitted_at,
         "last_submitted_at": app.last_submitted_at,
         "revision_count": app.revision_count,

@@ -318,6 +318,8 @@ class FindingOut(BaseModel):
     bbox: dict[str, float] | None = None
     document_type_code: str | None = None
     note: str | None = None
+    # `note` 是 `review.note.*` 的文案 key；`note_text` 是它在 `contents` 裡的字。
+    note_text: str | None = None
     suggested_supplement: list[str] | None = None
     source: str
     reviewer: ReviewerOut | None = None

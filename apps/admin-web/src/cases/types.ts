@@ -85,6 +85,8 @@ export interface CaseFinding extends Omit<Finding, 'note'> {
    * `packages/review-rules` 的 TS 版產的是句子，兩種都吃得下。
    */
   note: string | null
+  /** 伺服器已經用 `contents` 渲染好的那一句；有就直接用，沒有才走本地備援表。 */
+  note_text?: string | null
   source: 'auto' | 'reviewer'
   reviewer: Reviewer | null
   decided_at: string | null

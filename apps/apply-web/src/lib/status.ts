@@ -83,3 +83,20 @@ export function publicLabel(status: CaseStatus, overlay: ContentOverlay = {}): s
 export function nextAction(status: CaseStatus, overlay: ContentOverlay = {}): string {
   return overlay[`status.${status}.next_action`] || STATUS_NEXT_ACTION[status] || ''
 }
+
+/**
+ * 案件回應裡已經渲染好的那兩句，當成一份只有兩個 key 的 overlay。
+ *
+ * `GET /api/contents` 還在路上時，第一次繪製就已經是承辦人發布的文案，而不是本地
+ * 備援；那支查詢回來之後蓋過去（它涵蓋所有狀態，時間軸上的每一格都要）。
+ */
+export function caseOverlay(source: {
+  status: CaseStatus
+  public_label?: string | null
+  next_action_text?: string | null
+}): ContentOverlay {
+  const overlay: ContentOverlay = {}
+  if (source.public_label) overlay[`status.${source.status}.public_label`] = source.public_label
+  if (source.next_action_text) overlay[`status.${source.status}.next_action`] = source.next_action_text
+  return overlay
+}

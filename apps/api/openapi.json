@@ -1493,6 +1493,17 @@
             ],
             "title": "Next Action"
           },
+          "next_action_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Action Text"
+          },
           "payment_date": {
             "anyOf": [
               {
@@ -1504,6 +1515,17 @@
               }
             ],
             "title": "Payment Date"
+          },
+          "public_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Public Label"
           },
           "public_label_key": {
             "anyOf": [
@@ -6796,6 +6818,17 @@
             ],
             "title": "Note"
           },
+          "note_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note Text"
+          },
           "reviewer": {
             "anyOf": [
               {
@@ -9382,7 +9415,7 @@
     },
     "/api/apply/applications/{case_no}": {
       "get": {
-        "description": "市民看得到的案件：時間軸、補件項目、目前版本的文件清單。沒有承辦人資訊。\n\n`public_label_key` 與 `next_action` 給的是 `contents` 的 key，不是句子——這支\nrouter 不組任何中文文案（CLAUDE.md 規則 4）。",
+        "description": "市民看得到的案件：時間軸、補件項目、目前版本的文件清單。沒有承辦人資訊。\n\n`public_label_key` 與 `next_action` 給的是 `contents` 的 key；`public_label` 與\n`next_action_text` 是同一組 key 由 `services/contents.t()` 渲染出來的字。router\n自己不組任何中文文案（CLAUDE.md 規則 4）——那些字是承辦人在後台發布的，\n伺服器只是把它讀出來，前端因此少一次 `GET /api/contents` 的往返。",
         "operationId": "get_case_api_apply_applications__case_no__get",
         "parameters": [
           {
