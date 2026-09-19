@@ -9,6 +9,8 @@
 
 import { ShieldCheck } from 'lucide-react'
 import { money, date } from '../lib/format'
+import { expandSlots } from './docGroups'
+import { documentTypesFor } from './GuideStep'
 import type { SchemePublic } from '../lib/types'
 import type { ApplyState } from './state'
 
@@ -39,7 +41,11 @@ export function SummaryAside({ scheme, state, requiredCodes }: SummaryAsideProps
     tier && Number.isFinite(amount) && amount > 0
       ? Math.min(Math.round(amount * tier.subsidy_rate), tier.cap_amount)
       : null
-  const uploaded = requiredCodes.filter((code) => state.docs[code]).length
+  // 份數要看展開後的欄位：申請多期時收據與繳款憑證每期各一份，
+  // 直接數 `requiredCodes` 會少算，側欄就跟上傳畫面的分段數字對不起來。
+  const periods = state.channel.billing_cycle === 'MONTHLY' ? state.channel.billing_periods : 1
+  const slots = expandSlots(documentTypesFor(scheme, requiredCodes), periods)
+  const uploaded = slots.filter((slot) => state.docs[slot.key]).length
 
   return (
     <aside
@@ -67,7 +73,7 @@ export function SummaryAside({ scheme, state, requiredCodes }: SummaryAsideProps
         <Row label="扣款金額" value={amount > 0 ? money(amount) : PENDING} />
         <Row
           label="上傳文件"
-          value={requiredCodes.length > 0 ? `${uploaded} / ${requiredCodes.length} 份` : PENDING}
+          value={slots.length > 0 ? `${uploaded} / ${slots.length} 份` : PENDING}
         />
       </dl>
 

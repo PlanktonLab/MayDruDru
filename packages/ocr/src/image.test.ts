@@ -121,10 +121,14 @@ describe('qualityIssue', () => {
     expect(qualityIssue(ok)).toBeNull()
   })
 
-  it('解析度不足優先報，且告訴市民怎麼做', () => {
+  it('小圖但字清楚不算問題——截圖與網銀下載的帳單本來就小', () => {
+    expect(qualityIssue({ ...ok, longEdge: 800 })).toBeNull()
+  })
+
+  it('小圖又模糊時，報的是模糊而不是解析度', () => {
     const note = qualityIssue({ ...ok, longEdge: 800, sharpness: 0.1 })
-    expect(note).toContain('解析度')
-    expect(note).toContain('重拍')
+    expect(note).toContain('模糊')
+    expect(note).not.toContain('解析度')
   })
 
   it('模糊、過暗、過亮各有一句話', () => {

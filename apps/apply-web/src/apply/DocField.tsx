@@ -5,7 +5,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { AlertTriangle, Camera, Check, FileUp, ImageIcon, RefreshCcw, ShieldCheck, X } from 'lucide-react'
+import { AlertTriangle, Camera, Check, FileUp, ImageIcon, RefreshCcw, X } from 'lucide-react'
 import { Badge, Button, Card, Spinner, cx } from '@maydru/ui'
 import { MaskEditor } from '@maydru/mask-editor'
 import { disposeAll, encodePages, prepareFile, recognizePages } from './pipeline'
@@ -233,12 +233,8 @@ export function DocField({
         ) : undefined
       }
     >
-      {docType.must_mask && (
-        <p className="mb-3 flex items-start gap-2 rounded-xl bg-accent-bg px-3 py-2 text-[13px] leading-5 text-accent">
-          <ShieldCheck size={15} aria-hidden className="mt-0.5 shrink-0" />
-          這份文件會先在你的手機上遮罩，遮好、你確認過之後才會上傳。原圖不會離開這支手機。
-        </p>
-      )}
+      {/* 遮罩的說明不放在這裡：遮罩編輯器打開時本來就會講一次，確認步驟送出前
+          再講一次，在每張卡片上先講第三次只是把畫面塞滿。 */}
 
       {/* 合格範例：傳之前可以點開對照，傳完就不再顯示——已經傳好的人不需要它。 */}
       {sample && !value && (

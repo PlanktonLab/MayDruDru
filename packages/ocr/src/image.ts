@@ -132,13 +132,15 @@ export function probeQuality(image: ImageData, originalLongEdge: number): Qualit
 }
 
 /**
- * 把量測值翻成一句話。順序刻意固定：解析度 → 模糊 → 太暗 → 太亮，
+ * 把量測值翻成一句話。順序刻意固定：模糊 → 太暗 → 太亮，
  * 一次只講一件事，講的是「怎麼修」。通過則回 null。
+ *
+ * 解析度不再提醒：手機截圖與網銀下載的帳單本來就常是小圖，但字是清楚的——
+ * 用長邊判斷會對這些完全正常的檔案發出假警報。真的看不清楚時，模糊那一條
+ * 會抓到。
  */
 export function qualityIssue(probe: QualityProbe): string | null {
   const t = QUALITY_THRESHOLDS
-  if (probe.longEdge < t.minLongEdge)
-    return '照片的解析度偏低，文字可能看不清楚。請拿近一點重拍，或改上傳原圖（不要用截圖再截圖）。'
   if (probe.sharpness < t.minSharpness)
     return '照片有點模糊。請把手機放穩、等畫面對到焦再按快門，文件四個角都要在畫面內。'
   if (probe.brightness < t.minBrightness)
