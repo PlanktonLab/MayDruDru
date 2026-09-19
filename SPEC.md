@@ -602,6 +602,8 @@ Cloudflare proxied；origin cert 需涵蓋三個名稱（萬用或重簽）。DN
 | D23 | `sop.template.*` 的預設值保留 Python `str.format` 的單大括號 `{placeholder}`，不改成 `{{var}}`，`variables` 一律留空 | 那些句子由 `services/policy.py` 以 `.format()` 代入；改寫語法等於要動 SOP 引擎，而承辦人在後台看到的仍然是同一段字 |
 | D24 | 「程式碼中不得硬編中文」的檢查以 AST 檢查**字串常數**，排除 docstring 與 `log.*()` 的訊息 | 規則要擋的是民眾會看到的文字；註解與日誌用團隊的語言寫，值班的人才不必先翻譯再除錯。grep 分不出這件事，AST 分得出來 |
 | D25 | LINE channel 是後端的一個模組（`services/line/` + `routers/line.py`），不是獨立服務；訊息在程式內一律是 LINE 的 JSON dict，只有真的要送出去時才轉成 SDK 型別 | 罐頭訊息、案件狀態、方案設定都在同一個程序裡，拆出去只會多一層 API 與一份不同步的設定；dict 讓 builder 不必認識 SDK，測試也能直接斷言 |
+| D26 | 「第一個管理者」的閘門是「任何 tenant 裡都沒有 `is_active` 的 owner」，不是「一個 tenant 都沒有」；`bootstrap-status`、`POST /api/auth/bootstrap` 與`_bootstrap_from_env()` 三處同一條判斷。tenant 已經存在時把 owner 掛上去，不另開機關 | `scripts/seed.py` 會先把機關與方案灌進去，所以「有 tenant、零使用者」是安裝流程裡真的會出現的狀態；用 tenant 數量當閘門會讓那台機器自稱已初始化——端點關著、沒有帳號，誰都進不去，而且沒有補救的路 |
+| D27 | `services/faq.py` 一個模組三個呼叫面：評分（`score`/`search`/`best`，LINE 聽懂一句話時用）、瀏覽（`browse`/`matches`，`/api/apply/faqs` 的清單）、CRUD（後台維護）。P3 原本叫 `search` 的瀏覽函式改名 `browse`，`search` 讓給帶分數的那一支 | 同一張表不該有兩個模組；兩邊的語意也真的不同——市民是在「翻」FAQ，翻到就該看得到，門檻與分數只對「bot 要不要主動回答」有意義。`search` 留給評分那一支，是因為 P4 的向量檢索要換的是它，接縫寫在一個名字上比較好找 |
 
 ---
 

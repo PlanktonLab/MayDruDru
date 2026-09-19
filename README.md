@@ -112,11 +112,24 @@ MATCH，否則回 `409 {code:"TRANSITION_NOT_ALLOWED", blockers:[…]}`。承辦
 `applications/{tenant}/{case_no}/{doc_type}/{revision}.{ext}`；影像永不經過 API 本體，
 只給 presigned URL。
 
-## LINE 開發（SPEC §8.4、§8.6、§8.7）
+## 罐頭訊息（SPEC §8.6）
 
-市民在 LINE 看到的每一個字都來自 `contents`，程式碼裡沒有任何硬編文案（測試會逐一
-檢查 `app/services/line/` 的字串常數）。出廠文案在 `app/content_registry/`，每次啟動
-與每次 `seed.py` 都會把缺的 key 補進資料庫，**但永遠不覆蓋承辦人改過的字**。
+市民看到的每一個字都來自 `contents`，程式碼裡沒有硬編的中文文案（測試以 AST 檢查
+`app/services/line/` 的字串常數，決策 D24）。出廠文案在 `app/content_registry/`，
+每次啟動與每次 `seed.py` 都會把缺的 key 補進資料庫，**但永遠不覆蓋承辦人改過的字**。
+承辦人在後台「LINE 內容 → 罐頭訊息」改；草稿與已發布分開，發布才會換掉線上的字。
+
+| 端點 | 做什麼 |
+|---|---|
+| `GET /api/contents?keys=…` | 匿名可讀的已發布文案，回 `{items:{key:text}}`；apply-web 的狀態說明走這裡 |
+| `POST /api/contents/render` | key + 變數 → 文字或 Flex（與 `/v1/contents/render` 同一個 service） |
+| `GET /api/admin/contents`、`PUT …`、`POST …/publish`、`POST …/reset` | 後台的列表、草稿、發布與還原 |
+
+`/api/apply/*` 與 `/api/admin/applications/*` 回應裡的文案一律是 **key + 已渲染的字**
+兩欄並存（`next_action` / `next_action_text`、`note` / `note_text`）：前端要嘛直接用，
+要嘛自己拿 key 去 overlay，兩種都不必在前端複製一份中文。
+
+## LINE 開發（SPEC §8.4、§8.7）
 
 **離線開發**：`LINE_SENDER=noop`（`.env.example` 的預設值）不會連任何網路，送出的
 訊息只記在記憶體裡。這時候可以用測試端點直接餵一個 LINE 事件進來，拿回 bot 會回
@@ -167,7 +180,9 @@ npm test                      # vitest
 npm run build                 # tsc -b && vite build
 ```
 
-CI（`.github/workflows/ci.yml`）跑同一組指令，另加 `docker buildx`（linux/arm64 + linux/amd64），只有 main 的 push 會推 GHCR。e2e job 先保留形狀，P3 才會有劇本。
+目前的數量：後端 1006、admin-web 69、apply-web 88、五個 package 合計 131。
+
+CI（`.github/workflows/ci.yml`）跑同一組指令，另加 `docker buildx`（linux/arm64 + linux/amd64），只有 main 的 push 會推 GHCR。
 
 ### API client 型別
 
@@ -185,6 +200,14 @@ npm run generate -w @maydru/api-client -- ./openapi.json
 - **ruff**：`pyproject.toml` 的 `extend-ignore` 列出九條規則（`E701`/`E702` 的緊湊單行是 SOP_Tutor 的既有風格，`B008` 是 FastAPI 的 `Depends()` 慣用法，其餘為 prompt/HTML 長字串與測試裡的 lambda）。`uv run ruff check --fix` 已套用過一次 import 排序。
 - **mypy**：分兩層。第一層是連預設模式都過不了的 19 個模組（`ignore_errors`），第二層是過得了預設模式但過不了 strict 的 8 個模組（只放寬 strict 旗標）。兩份清單都寫在 `pyproject.toml` 且只會變短；新模組一律 strict。
 - **openapi-typescript** 仍把 typescript peer 鎖在 `^5.x`，root `package.json` 用 `overrides` 放行（它只在 codegen 腳本裡跑）。
+
+## 第一次啟動（SPEC §10.2、決策 D26）
+
+還沒有任何 owner 帳號時，`GET /api/auth/bootstrap-status` 回 `needs_bootstrap: true`，
+後台登入頁就變成「建立第一個管理者」。閘門看的是**有沒有還在用的 owner**，不是有沒有
+機關——`seed.py` 會先把機關灌進去，所以那台機器上機關早就在了，這時 bootstrap 會把
+owner 掛到既有機關上，不再開第二個。`BOOTSTRAP_*` 三個環境變數則讓容器啟動時自動做完
+同一件事。
 
 ## 隱私紅線（SPEC §11）
 
