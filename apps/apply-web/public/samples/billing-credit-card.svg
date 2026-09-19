@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 520" width="760" height="520" role="img">
+  <g>
+  <rect width="760" height="520" fill="#ffffff"/>
+  <rect width="760" height="64" fill="#1e3a5f"/>
+  <text x="28" y="40" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="19" font-weight="700" fill="#fff">竹光商業銀行</text>
+  <text x="732" y="40" text-anchor="end" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="13" fill="#b9cbe0">信用卡電子帳單</text>
+
+  <text x="28" y="100" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12" fill="#6b7280">持卡人</text>
+  <text x="28" y="122" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="15" font-weight="600" fill="#111827">CHEN, YI-CHUN</text>
+  <text x="300" y="100" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12" fill="#6b7280">卡號</text>
+  <text x="300" y="122" font-family="ui-monospace, 'Cascadia Mono', Consolas, monospace" font-size="15" fill="#111827">**** **** **** 4915</text>
+  <rect x="296" y="104" width="180" height="24" fill="none" stroke="#dc2626" stroke-width="2.5" rx="4"/>
+         <rect x="296" y="83" width="79" height="19" fill="#dc2626" rx="3"/>
+         <text x="303" y="97" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12" font-weight="700" fill="#fff">卡號末四碼</text>
+  <text x="560" y="100" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12" fill="#6b7280">帳單期間</text>
+  <text x="560" y="122" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="14" fill="#111827">2026/08/01–08/31</text>
+
+  <line x1="28" y1="144" x2="732" y2="144" stroke="#e5e7eb" stroke-width="1"/>
+  <text x="28" y="172" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="14" font-weight="700" fill="#111827">本期交易明細</text>
+
+  <rect x="28" y="188" width="704" height="30" fill="#f3f4f6"/>
+  <text x="40"  y="208" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12" font-weight="600" fill="#4b5563">消費日期</text>
+  <text x="150" y="208" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12" font-weight="600" fill="#4b5563">消費明細</text>
+  <text x="430" y="208" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12" font-weight="600" fill="#4b5563">外幣金額</text>
+  <text x="720" y="208" text-anchor="end" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12" font-weight="600" fill="#4b5563">臺幣入帳金額</text>
+
+  <rect x="28" y="218" width="704" height="38" fill="#fffbeb"/>
+  <text x="40"  y="242" font-family="ui-monospace, 'Cascadia Mono', Consolas, monospace" font-size="13" fill="#111827">2026/08/14</text>
+  <text x="150" y="242" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="13" font-weight="600" fill="#111827">OPENAI CHATGPT SUBSCR</text>
+  <text x="430" y="242" font-family="ui-monospace, 'Cascadia Mono', Consolas, monospace" font-size="13" fill="#111827">USD 20.00</text>
+  <text x="720" y="242" text-anchor="end" font-family="ui-monospace, 'Cascadia Mono', Consolas, monospace" font-size="14" font-weight="700" fill="#111827">641</text>
+  <rect x="36" y="224" width="108" height="26" fill="none" stroke="#dc2626" stroke-width="2.5" rx="4"/>
+         <rect x="36" y="203" width="66" height="19" fill="#dc2626" rx="3"/>
+         <text x="43" y="217" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12" font-weight="700" fill="#fff">扣款日期</text>
+  <rect x="146" y="224" width="276" height="26" fill="none" stroke="#dc2626" stroke-width="2.5" rx="4"/>
+         <rect x="146" y="203" width="66" height="19" fill="#dc2626" rx="3"/>
+         <text x="153" y="217" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12" font-weight="700" fill="#fff">消費項目</text>
+  <rect x="600" y="226" width="132" height="26" fill="none" stroke="#dc2626" stroke-width="2.5" rx="4"/>
+         <rect x="600" y="205" width="66" height="19" fill="#dc2626" rx="3"/>
+         <text x="607" y="219" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12" font-weight="700" fill="#fff">臺幣金額</text>
+
+  <text x="40"  y="286" font-family="ui-monospace, 'Cascadia Mono', Consolas, monospace" font-size="13" fill="#6b7280">2026/08/03</text>
+  <text x="150" y="286" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="13" fill="#6b7280">全聯福利中心 新竹店</text>
+  <text x="720" y="286" text-anchor="end" font-family="ui-monospace, 'Cascadia Mono', Consolas, monospace" font-size="13" fill="#6b7280">482</text>
+  <text x="40"  y="316" font-family="ui-monospace, 'Cascadia Mono', Consolas, monospace" font-size="13" fill="#6b7280">2026/08/21</text>
+  <text x="150" y="316" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="13" fill="#6b7280">台灣大車隊</text>
+  <text x="720" y="316" text-anchor="end" font-family="ui-monospace, 'Cascadia Mono', Consolas, monospace" font-size="13" fill="#6b7280">215</text>
+
+  <line x1="28" y1="342" x2="732" y2="342" stroke="#e5e7eb"/>
+  <text x="28" y="372" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="13" fill="#4b5563">本期應繳總額</text>
+  <text x="732" y="372" text-anchor="end" font-family="ui-monospace, 'Cascadia Mono', Consolas, monospace" font-size="16" font-weight="700" fill="#111827">NT$ 1,338</text>
+  <text x="28" y="398" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12" fill="#9ca3af">繳款截止日 2026/09/15</text>
+
+  
+  </g>
+  
+  <defs>
+    <pattern id="wm" width="260" height="150" patternUnits="userSpaceOnUse" patternTransform="rotate(-24)">
+      <text x="0" y="40" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="30" font-weight="700"
+            fill="#dc2626" fill-opacity="0.16" letter-spacing="3">範例 SAMPLE</text>
+    </pattern>
+  </defs>
+  <rect x="0" y="0" width="760" height="520" fill="url(#wm)"/></svg>

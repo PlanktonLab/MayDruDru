@@ -56,6 +56,12 @@ export function SummaryAside({ scheme, state, requiredCodes }: SummaryAsideProps
         <Row label="申請工具" value={state.tool.name || PENDING} />
         <Row label="申請人" value={state.identity.applicant_name || PENDING} />
         <Row label="申請身分" value={tier?.label ?? PENDING} />
+        <Row
+          label="繳費制度"
+          value={
+            state.channel.billing_cycle === 'ANNUAL' ? '年費' : `月費（${state.channel.billing_periods} 期）`
+          }
+        />
         <Row label="繳費方式" value={channel?.label ?? PENDING} />
         <Row label="購買日期" value={state.channel.purchase_date ? date(state.channel.purchase_date) : PENDING} />
         <Row label="扣款金額" value={amount > 0 ? money(amount) : PENDING} />

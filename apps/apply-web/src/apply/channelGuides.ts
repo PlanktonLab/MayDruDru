@@ -21,6 +21,10 @@ export interface ChannelGuide {
   steps: GuideStepItem[]
   /** 送出前要確認看得到的欄位；這是最常被退件的那幾項。 */
   mustShow: string[]
+  /** 合格範例圖（`public/samples/`）。民眾是在對照，不是在閱讀——
+   *  一張標好必要欄位的圖比整段文字有效得多。 */
+  sampleImage: string
+  sampleCaption: string
 }
 
 export const CHANNEL_GUIDES: ChannelGuide[] = [
@@ -51,6 +55,8 @@ export const CHANNEL_GUIDES: ChannelGuide[] = [
       '（帳單）購買品項名稱',
       '（帳單）臺幣金額',
     ],
+    sampleImage: '/samples/billing-credit-card.svg',
+    sampleCaption: '合格範例：帳單扣款紀錄的四個必要欄位',
   },
   {
     channel: 'TELECOM',
@@ -70,6 +76,8 @@ export const CHANNEL_GUIDES: ChannelGuide[] = [
       },
     ],
     mustShow: ['繳款人', '電話末三碼', '購買品項名稱', '臺幣金額'],
+    sampleImage: '/samples/billing-telecom.svg',
+    sampleCaption: '合格範例：電信帳單的四個必要欄位',
   },
   {
     channel: 'E_PAYMENT',
@@ -89,6 +97,8 @@ export const CHANNEL_GUIDES: ChannelGuide[] = [
       },
     ],
     mustShow: ['支付帳戶持有人姓名', '付款日期', '付款金額', '購買品項名稱'],
+    sampleImage: '/samples/billing-epayment.svg',
+    sampleCaption: '合格範例：交易明細的三個必要欄位',
   },
   {
     channel: 'OTHER',
@@ -107,6 +117,8 @@ export const CHANNEL_GUIDES: ChannelGuide[] = [
       },
     ],
     mustShow: ['付款帳戶持有人姓名', '付款日期', '付款金額', '購買品項名稱'],
+    sampleImage: '/samples/manual-assist.svg',
+    sampleCaption: '特殊格式一律走人工，不會被系統擋住',
   },
 ]
 

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 620 300" width="620" height="300" role="img"><rect width="620" height="300" fill="#fff"/>
+  <rect x="30" y="40" width="560" height="210" rx="12" fill="#f8fafc" stroke="#cbd5e1" stroke-dasharray="6 4"/>
+  <circle cx="310" cy="120" r="34" fill="#dbeafe"/>
+  <text x="310" y="132" text-anchor="middle" font-size="30">🧑‍💼</text>
+  <text x="310" y="190" text-anchor="middle" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="15" font-weight="700" fill="#1e3a5f">特殊格式一律走人工</text>
+  <text x="310" y="218" text-anchor="middle" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12.5" fill="#475569">上傳任何能證明付款的文件即可，系統不會因為格式不認得而擋住你。</text>
+  <text x="310" y="242" text-anchor="middle" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12.5" fill="#475569">承辦人員會直接檢視。</text>
+  <text x="310" y="278" text-anchor="middle" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="11.5" fill="#94a3b8">SPEC-B §2.4 人工出口（必備）</text></svg>
