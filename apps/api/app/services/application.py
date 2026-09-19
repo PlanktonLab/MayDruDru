@@ -163,11 +163,15 @@ async def create_application(
     case_no: str | None = None,
     now: datetime | None = None,
     actor: Actor | None = None,
+    auto_start_review: bool = True,
 ) -> Application:
     """建一件新案：配號、雜湊個資、寫文件列，然後 SUBMITTED → T1 → UNDER_REVIEW。
 
     T1 由系統立刻執行（SPEC §7 的圖），所以送件完成的案子一律已經在審查佇列裡，
     排序用的 `first_submitted_at` 就是這一刻。
+
+    `auto_start_review=False` 讓案件停在 SUBMITTED——只給 seed 與搬遷用，真正的
+    送件路徑永遠收件即進審查。
     """
     stamp = now or datetime.now(UTC)
     app = Application(
@@ -204,7 +208,8 @@ async def create_application(
     system = Actor.system()
     await _write_event(db, app, None, "SUBMITTED", "T0", actor or system,
                        payload={"intake_channel": intake_channel}, now=stamp)
-    await transition(db, app, "T1", actor=system, now=stamp)
+    if auto_start_review:
+        await transition(db, app, "T1", actor=system, now=stamp)
     return app
 
 

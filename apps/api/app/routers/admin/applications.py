@@ -12,6 +12,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from ...db import get_db
 from ...deps import CurrentUser, require_cap
@@ -56,8 +57,11 @@ def _row(app: Application) -> ApplicationOut:
     )
 
 
-async def _load(db: AsyncSession, tenant_id: str, case_no: str) -> Application:
+async def _load(db: AsyncSession, tenant_id: str, case_no: str, *, with_documents: bool = False) -> Application:
+    """非同步 session 不能延遲載入關聯，要哪些子資料就在這裡一次講清楚。"""
     q = select(Application).where(Application.tenant_id == tenant_id, Application.case_no == case_no)
+    if with_documents:
+        q = q.options(selectinload(Application.documents))
     app = (await db.execute(q)).scalar_one_or_none()
     if app is None:
         raise HTTPException(404, NOT_FOUND)
@@ -88,7 +92,7 @@ async def get_application(
     user: CurrentUser = Depends(require_cap("case_review")),
     db: AsyncSession = Depends(get_db),
 ):
-    app = await _load(db, user.tenant_id, case_no)
+    app = await _load(db, user.tenant_id, case_no, with_documents=True)
     scheme = await scheme_service.get_scheme_by_id(db, user.tenant_id, app.scheme_id)
 
     events = (

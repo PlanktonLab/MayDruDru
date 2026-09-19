@@ -1,5 +1,185 @@
+"""測試環境與共用 fixture（SPEC §14 / 決策 D15）。
+
+環境變數在最上面設定，而且必須在任何 `app.*` 匯入之前生效——`get_settings()` 有
+`lru_cache`，第一次讀到什麼就是什麼。測試永不連真實 LINE 或 LLM。
+
+資料庫是 aiosqlite in-memory：`Base.metadata.create_all` 建整份 schema，所以新表的
+清單欄位一律 JSON 而不是 Postgres ARRAY。embedding 欄位型別 SQLite 收得下，只是
+測試從不寫入向量。
+"""
+
 import os
 
 os.environ.setdefault("LLM_PROVIDER", "fake")
+os.environ.setdefault("LINE_SENDER", "noop")
 os.environ.setdefault("SECRET_KEY", "test-secret")
 os.environ.setdefault("PUBLIC_MEDIA_BASE_URL", "http://m")
+
+from collections.abc import AsyncIterator, Callable  # noqa: E402
+from typing import Any  # noqa: E402
+
+import pytest  # noqa: E402
+import pytest_asyncio  # noqa: E402
+from app.db import Base, get_db  # noqa: E402
+from app.main import create_app  # noqa: E402
+from app.models import ROLES, Scheme, Tenant, User  # noqa: E402
+from app.security import create_token  # noqa: E402
+from app.services import review  # noqa: E402
+from httpx import ASGITransport, AsyncClient  # noqa: E402
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine  # noqa: E402
+
+TEST_TENANT_ID = "t" * 32
+
+
+# ----------------------------------------------------------------- 資料庫
+
+@pytest_asyncio.fixture
+async def engine() -> AsyncIterator[Any]:
+    """每個測試一顆全新的 in-memory 資料庫。
+
+    `StaticPool` + 同一條連線，否則 `:memory:` 對每個連線都是不同的資料庫。
+    """
+    from sqlalchemy.pool import StaticPool
+
+    eng = create_async_engine(
+        "sqlite+aiosqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    async with eng.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield eng
+    await eng.dispose()
+
+
+@pytest_asyncio.fixture
+async def db(engine: Any) -> AsyncIterator[AsyncSession]:
+    maker = async_sessionmaker(engine, expire_on_commit=False)
+    async with maker() as session:
+        yield session
+
+
+@pytest_asyncio.fixture
+async def tenant(db: AsyncSession) -> Tenant:
+    t = Tenant(id=TEST_TENANT_ID, name="測試機關", slug="test")
+    db.add(t)
+    await db.commit()
+    return t
+
+
+@pytest_asyncio.fixture
+async def users(db: AsyncSession, tenant: Tenant) -> dict[str, User]:
+    """每個角色一個帳號，鍵就是角色名（D14 的七個角色）。"""
+    made = {}
+    for role in ROLES:
+        u = User(
+            id=f"u{role}".ljust(32, "0")[:32],
+            tenant_id=tenant.id,
+            email=f"{role}@example.gov.tw",
+            name=role,
+            role=role,
+            password_hash="x",
+        )
+        db.add(u)
+        made[role] = u
+    await db.commit()
+    return made
+
+
+@pytest.fixture
+def auth_headers(users: dict[str, User]) -> Callable[[str], dict[str, str]]:
+    def make(role: str) -> dict[str, str]:
+        u = users[role]
+        return {"Authorization": f"Bearer {create_token(u.id, u.tenant_id, u.role)}"}
+
+    return make
+
+
+@pytest_asyncio.fixture
+async def client(db: AsyncSession) -> AsyncIterator[AsyncClient]:
+    """走 ASGI transport 的 httpx client，`get_db` 換成測試 session。
+
+    不啟動 lifespan：那會去戳 MinIO 與 bootstrap，測試環境兩個都不該碰。
+    """
+    app = create_app()
+
+    async def _get_db() -> AsyncIterator[AsyncSession]:
+        yield db
+
+    app.dependency_overrides[get_db] = _get_db
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        yield c
+    app.dependency_overrides.clear()
+
+
+# ------------------------------------------------------------------ Redis
+
+class FakeRedis:
+    """夠用就好的 in-memory 替身：查詢驗證只需要 incr / expire / get / delete。
+
+    `expire` 記下 TTL 但不真的到期——測試要驗的是「第 6 次被擋下來」，不是時鐘。
+    """
+
+    def __init__(self) -> None:
+        self.values: dict[str, int] = {}
+        self.ttls: dict[str, int] = {}
+
+    async def incr(self, key: str) -> int:
+        self.values[key] = self.values.get(key, 0) + 1
+        return self.values[key]
+
+    async def expire(self, key: str, seconds: int) -> bool:
+        self.ttls[key] = seconds
+        return True
+
+    async def get(self, key: str) -> bytes | None:
+        value = self.values.get(key)
+        return None if value is None else str(value).encode()
+
+    async def delete(self, *keys: str) -> int:
+        return sum(1 for k in keys if self.values.pop(k, None) is not None)
+
+
+@pytest.fixture
+def fake_redis() -> FakeRedis:
+    return FakeRedis()
+
+
+# ------------------------------------------------------------------ 方案
+
+@pytest_asyncio.fixture
+async def scheme(db: AsyncSession, tenant: Tenant) -> Scheme:
+    """測試用的小方案：兩個級距、四種文件、兩個管道，夠跑完必要文件矩陣。"""
+    from app.models import DocumentType, PaymentChannel, SchemeTier
+
+    s = Scheme(
+        tenant_id=tenant.id, code="TEST115", name="測試補助",
+        retention_days=90, supplement_days=14, max_revisions=2,
+    )
+    db.add(s)
+    await db.flush()
+    db.add_all([
+        SchemeTier(tenant_id=tenant.id, scheme_id=s.id, code="GENERAL", label="一般", subsidy_rate=0.5,
+                   cap_amount=3000, required_proof_doc_types=[], sort_order=1),
+        SchemeTier(tenant_id=tenant.id, scheme_id=s.id, code="LOW_INCOME", label="特定對象", subsidy_rate=0.9,
+                   cap_amount=6000, required_proof_doc_types=["SPECIAL_STATUS_PROOF"], sort_order=2),
+        DocumentType(tenant_id=tenant.id, scheme_id=s.id, code="ID_CARD_FRONT", required=True, sort_order=1),
+        DocumentType(tenant_id=tenant.id, scheme_id=s.id, code="BILLING_STATEMENT", must_mask=True, sort_order=2),
+        DocumentType(tenant_id=tenant.id, scheme_id=s.id, code="TELECOM_BILL", must_mask=True, sort_order=3),
+        DocumentType(tenant_id=tenant.id, scheme_id=s.id, code="PROXY_AFFIDAVIT", required_when="proxy", sort_order=4),
+        DocumentType(tenant_id=tenant.id, scheme_id=s.id, code="SPECIAL_STATUS_PROOF", sort_order=5),
+        PaymentChannel(tenant_id=tenant.id, scheme_id=s.id, code="CREDIT_CARD",
+                       required_document_type_codes=["BILLING_STATEMENT"], sort_order=1),
+        PaymentChannel(tenant_id=tenant.id, scheme_id=s.id, code="TELECOM",
+                       required_document_type_codes=["TELECOM_BILL"], sort_order=2),
+    ])
+    await db.commit()
+    await db.refresh(s)
+    return s
+
+
+@pytest.fixture(autouse=True)
+def reset_blockers():
+    """核准前置條件是模組層的掛鉤；裝過就要拆掉，不然會滲進下一個測試。"""
+    yield
+    review.reset_approval_blockers()
