@@ -54,8 +54,8 @@ export default function AppShell() {
         <div className={clsx('flex items-center py-4', collapsed ? 'justify-center px-2' : 'justify-between pl-4 pr-2')}>
           {!collapsed && (
             <div className="min-w-0">
-              <div className="truncate text-base font-bold tracking-tight">SOP Tutor</div>
-              <div className="text-[11px] text-muted">後台管理</div>
+              <div className="truncate text-base font-bold tracking-tight">MayDru 後台</div>
+              <div className="text-[11px] text-muted">承辦人作業區</div>
             </div>
           )}
           <button onClick={() => setCollapsed((c) => !c)} className="rounded-md p-1.5 text-muted hover:bg-background-lite hover:text-primary" title={collapsed ? '展開選單' : '收合選單'} aria-label={collapsed ? '展開選單' : '收合選單'} aria-expanded={!collapsed}>

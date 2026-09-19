@@ -62,7 +62,7 @@ export function ApiUsageGuide() {
             </ul>
           </div>
           <Notice tone="accent">
-            <strong>隱私：</strong>民眾上傳的截圖只在記憶體中處理，SOP Tutor 不落地、不寫 log、不進入評測集或追蹤資料。呼叫方應直接轉傳圖片內容，不需先存檔。
+            <strong>隱私：</strong>民眾上傳的截圖只在記憶體中處理，MayDru 不落地、不寫 log、不進入評測集或追蹤資料。呼叫方應直接轉傳圖片內容，不需先存檔。
             external_user_id 由呼叫方提供，只以雜湊保存。
           </Notice>
           <Notice>Step Card 圖片以公開、不可猜、含內容雜湊的 URL 提供（同時給原圖與預覽圖），可長期快取，適合 LINE 圖片訊息。</Notice>

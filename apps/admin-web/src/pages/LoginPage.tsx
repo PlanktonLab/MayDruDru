@@ -33,11 +33,12 @@ export default function LoginPage() {
     <div className="flex h-full items-center justify-center p-6">
       <form onSubmit={submit} className="w-full max-w-sm space-y-4 rounded-2xl border border-border bg-canvas p-6" style={{ boxShadow: 'var(--shadow-float)' }}>
         <div>
-          <div className="text-lg font-bold">SOP Tutor</div>
-          <div className="text-xs text-muted">{needsBootstrap ? '第一次啟動：建立 tenant 與 owner 帳號' : '登入後台'}</div>
+          <div className="text-lg font-bold">MayDru 後台</div>
+          <div className="text-xs text-muted">{needsBootstrap ? '第一次啟動：建立第一個管理者帳號' : '登入後台'}</div>
         </div>
         {needsBootstrap && (<>
-          <Field label="機關名稱（tenant）"><Input value={form.tenant_name} onChange={set('tenant_name')} required placeholder="新竹市政府" /></Field>
+          {/* 灌過 seed 的機器機關已經在了，後端會把管理者掛上去，這兩欄就不會被用到（決策 D26）。 */}
+          <Field label="機關名稱（tenant）" hint="機關已經建立過的話，這一欄不會生效"><Input value={form.tenant_name} onChange={set('tenant_name')} required placeholder="新竹市政府" /></Field>
           <Field label="代號（slug）"><Input value={form.tenant_slug} onChange={set('tenant_slug')} placeholder="hsinchu" /></Field>
           <Field label="Owner 姓名"><Input value={form.owner_name} onChange={set('owner_name')} /></Field>
         </>)}
