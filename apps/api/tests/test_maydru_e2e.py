@@ -108,7 +108,9 @@ async def test_submit_reject_line_sop_supplement_approve_push(
     pushed = line_sender.last("push")
     teach_action = pushed[1]["contents"]["footer"]["contents"][0]["action"]["data"]
     lesson = await inbound(line_postback(teach_action))
-    assert any(message.get("type") == "image" for message in lesson)
+    # 完整 SOP 以可左右滑動的 Flex carousel 呈現，每一步的卡片在 bubble hero。
+    carousels = [message for message in lesson if message.get("type") == "flex"]
+    assert carousels and carousels[0]["contents"]["contents"][0]["hero"]["type"] == "image"
 
     verified = await apply_client.post("/api/apply/verify", json={"case_no": case_no, "last4": "5678"})
     assert verified.status_code == 200

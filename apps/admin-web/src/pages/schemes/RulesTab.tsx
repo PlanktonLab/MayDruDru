@@ -301,6 +301,9 @@ export default function RulesTab({ code, rules, docTypes, canWrite, reload }: {
 
   return (
     <div className="space-y-4">
+      <Notice tone="accent">
+        這裡設定的「看哪份文件、找哪些關鍵字或格式」會隨方案設定送到申請頁；使用者上傳後只在瀏覽器執行 OCR 比對。找不到時只提示，不會把前端辨識當成最終審核結果。
+      </Notice>
       <ChildTab<ReviewRuleRow>
         code={code}
         kind="review-rules"
@@ -311,7 +314,7 @@ export default function RulesTab({ code, rules, docTypes, canWrite, reload }: {
                  active: true, severity: 'error', 'config.value_after_keyword': true }}
         canWrite={canWrite}
         reload={reload}
-        addLabel="新增規則"
+        addLabel="新增規則（期望欄位）"
         empty="這個方案還沒有審核規則。沒有規則的案件只能純人工判讀。"
         toForm={(row) => unfoldConfig(row as unknown as Record<string, unknown>)}
         fromForm={foldConfig}

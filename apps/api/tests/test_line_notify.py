@@ -73,6 +73,27 @@ async def test_a_supplement_notification_remembers_which_document(db, tenant, sc
     assert row.payload["document_code"] == "BILLING_STATEMENT"
 
 
+async def test_demo_missing_notification_targets_bound_users_without_changing_status(db, tenant, scheme, line_sender):
+    app = await bound_case(db, tenant, scheme)
+    status = app.status
+    rows = await notify.enqueue_demo_missing_notification(db, app)
+    await db.commit()
+    assert len(rows) == 1 and rows[0].kind == "demo_missing_document"
+    assert rows[0].status == "queued" and rows[0].line_user_id == USER
+    assert app.status == status
+
+
+async def test_demo_missing_message_opens_credit_record_sop_and_feedback(db, tenant, scheme, line_sender):
+    app = await bound_case(db, tenant, scheme)
+    row = (await notify.enqueue_demo_missing_notification(db, app))[0]
+    messages = await notify.build_messages(db, row)
+    assert [message["type"] for message in messages] == ["text", "flex"]
+    buttons = messages[1]["contents"]["footer"]["contents"]
+    assert buttons[0]["action"]["label"] == "不會獲取信用卡消費紀錄嗎？"
+    assert buttons[0]["action"]["data"].startswith("action=demo_sop")
+    assert buttons[1]["action"]["data"].startswith("action=feedback_start")
+
+
 # ------------------------------------------------------------------ 送出
 
 async def test_the_worker_pushes_through_the_sender_and_marks_it_sent(db, tenant, scheme, line_sender, monkeypatch):

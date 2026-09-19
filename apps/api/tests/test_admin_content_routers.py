@@ -7,7 +7,7 @@ Router 是薄殼，所以這裡驗的是殼該負責的三件事：誰能進來�
 from __future__ import annotations
 
 import pytest
-from app.models import Faq, KnowledgeDocument, UnmatchedMessage
+from app.models import CaseVerification, Faq, KnowledgeDocument, LineFeedback, Notification, UnmatchedMessage
 from sqlalchemy import select
 
 READERS = ["case_reviewer", "sop_editor", "viewer"]
@@ -284,6 +284,49 @@ async def test_notifications_can_be_filtered_by_status(client, tenant, scheme, a
     await drive(db, app, "T3")
     assert (await client.get("/api/admin/line/notifications?status=sent",
                              headers=auth_headers("admin"))).json()["items"] == []
+
+
+async def test_admin_can_trigger_demo_notification_for_a_linked_case(client, tenant, scheme, auth_headers, db):
+    from tests.test_state_machine import make_case
+
+    app = await make_case(db, tenant, scheme)
+    db.add(CaseVerification(tenant_id=tenant.id, application_id=app.id, line_user_id="Udemo"))
+    await db.commit()
+    response = await client.post(
+        "/api/admin/line/notifications/demo",
+        json={"case_no": app.case_no, "document_code": "BILLING_STATEMENT"},
+        headers=auth_headers("admin"),
+    )
+    assert response.status_code == 200 and response.json()["queued"] == 1
+    row = (await db.execute(select(Notification).where(Notification.kind == "demo_missing_document"))).scalars().one()
+    assert row.line_user_id == "Udemo" and row.payload["document_code"] == "BILLING_STATEMENT"
+
+
+@pytest.mark.parametrize("role", NON_ADMINS)
+async def test_only_admin_may_trigger_demo_notification(client, tenant, auth_headers, role):
+    response = await client.post(
+        "/api/admin/line/notifications/demo",
+        json={"case_no": "HC-1"},
+        headers=auth_headers(role),
+    )
+    assert response.status_code == 403
+
+
+async def test_line_feedback_is_listed_without_the_user_id(client, tenant, scheme, auth_headers, db):
+    from tests.test_state_machine import make_case
+
+    app = await make_case(db, tenant, scheme)
+    db.add(LineFeedback(
+        tenant_id=tenant.id,
+        application_id=app.id,
+        line_user_id_hash="b" * 64,
+        context="sop",
+        text="圖片教學很清楚",
+    ))
+    await db.commit()
+    item = (await client.get("/api/admin/line/feedback", headers=auth_headers("viewer"))).json()["items"][0]
+    assert item["case_no"] == app.case_no and item["text"] == "圖片教學很清楚"
+    assert item["user_hash"] == "b" * 8 and "line_user_id" not in item
 
 
 async def test_unmatched_messages_are_listed_without_the_user_id(client, tenant, auth_headers, db):

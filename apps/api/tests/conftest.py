@@ -236,6 +236,7 @@ def fake_storage(monkeypatch) -> FakeStorage:
     fake = FakeStorage()
     monkeypatch.setattr(storage, "put", fake.put)
     monkeypatch.setattr(storage, "delete", fake.delete)
+    monkeypatch.setattr(storage, "exists", lambda _bucket, key: key in fake.objects)
     monkeypatch.setattr(storage, "put_private", lambda key, data, ct="": fake.put("private", key, data, ct))
     monkeypatch.setattr(storage, "get", fake.get)
     monkeypatch.setattr(storage, "get_private", lambda key: fake.get("private", key))

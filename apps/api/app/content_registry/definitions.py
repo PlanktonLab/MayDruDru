@@ -1079,6 +1079,16 @@ _NOTIFY: tuple[ContentDefinition, ...] = (
         variables=("headline", "case_no"),
         sort_order=25,
     ),
+    _def(
+        "notify.demo_missing",
+        "notify",
+        "Demo：缺少信用卡消費紀錄",
+        "後台按 Demo 發送時，推播給已綁定該案件的 LINE 使用者。",
+        "📎 {{scheme}}案件 {{case_no}} 還需要一份信用卡消費紀錄。\n"
+        "如果你不知道怎麼從銀行 App 取得，點下方按鈕，我會直接帶你走完整流程。",
+        variables=("case_no", "scheme"),
+        sort_order=26,
+    ),
 )
 
 # ---- 防詐檢查與敏感提醒
@@ -2429,6 +2439,22 @@ _SOP: tuple[ContentDefinition, ...] = (
         "請問你要準備哪一份文件？",
         sort_order=108,
     ),
+    _def(
+        "feedback.prompt",
+        "sop",
+        "邀請用戶輸入回饋",
+        "民眾點 Feedback 後，邀請他直接輸入一段文字。",
+        "謝謝你願意幫忙！請直接輸入使用心得或遇到的問題，我們會把回饋交給團隊改善。",
+        sort_order=109,
+    ),
+    _def(
+        "feedback.thanks",
+        "sop",
+        "回饋送出完成",
+        "系統保存 LINE 回饋後顯示。",
+        "已收到你的 Feedback，謝謝你幫我們把服務做得更好 🙌",
+        sort_order=110,
+    ),
 )
 
 # ---- LINE 教學對話的快速回覆按鈕
@@ -2487,6 +2513,24 @@ _LINE: tuple[ContentDefinition, ...] = (
         "前往補件",
         content_type="button",
         sort_order=31,
+    ),
+    _def(
+        "button.demo_credit_record_help",
+        "button",
+        "Demo：信用卡消費紀錄教學",
+        "Demo 缺件通知上的主要按鈕，開啟該文件的完整 SOP。",
+        "不會獲取信用卡消費紀錄嗎？",
+        content_type="button",
+        sort_order=32,
+    ),
+    _def(
+        "button.feedback",
+        "button",
+        "提供 Feedback",
+        "功能完成後邀請民眾留下文字回饋。",
+        "提供 Feedback",
+        content_type="button",
+        sort_order=33,
     ),
     # 圖文選單本身的兩段字。LINE 對長度有限制：名稱 300 字、聊天列 14 字。
     _def(

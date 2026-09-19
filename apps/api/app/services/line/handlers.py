@@ -46,6 +46,7 @@ from ...models import (
     DocumentType,
     Faq,
     Flow,
+    LineFeedback,
     LineUser,
     Scheme,
     UnmatchedMessage,
@@ -68,6 +69,7 @@ type Handler = Callable[[_Context], Awaitable[list[dict[str, Any]]]]
 VERIFY_FLOW = "case_verify"
 SESSION_FLOW = sop_service.SESSION_FLOW
 PICKER_FLOW = sop_service.PICKER_FLOW
+FEEDBACK_FLOW = "feedback"
 STEP_CASE_NO = "case_no"
 STEP_LAST4 = "last4"
 PICKER_LIMIT = 12
@@ -362,6 +364,41 @@ async def _act_sop_prepare(ctx: _Context) -> list[dict[str, Any]]:
     return messages
 
 
+async def _act_demo_sop(ctx: _Context) -> list[dict[str, Any]]:
+    """Demo 通知的教學入口；只有已綁定該案件的人可以打開。"""
+    case_no = ctx.params.get("case_no", "")
+    application = await _linked_application(ctx.db, ctx.tenant_id, ctx.user_id, case_no)
+    if application is None:
+        return await ctx.say("case.verify_failed")
+    doc = ctx.params.get("doc", "") or "BILLING_STATEMENT"
+    label = await _document_label(ctx.db, ctx.tenant_id, doc)
+    return await sop_service.open_for_document(ctx.sop, doc, document_label=label)
+
+
+async def _act_feedback_start(ctx: _Context) -> list[dict[str, Any]]:
+    state = await conversation.get(ctx.db, ctx.tenant_id, ctx.user_id, now=ctx.now)
+    if state.flow == SESSION_FLOW:
+        await sop_service.close(ctx.sop, state)
+    case_no = ctx.params.get("case_no", "")
+    if case_no and await _linked_application(ctx.db, ctx.tenant_id, ctx.user_id, case_no) is None:
+        return await ctx.say("case.verify_failed")
+    await conversation.set_state(
+        ctx.db,
+        ctx.tenant_id,
+        ctx.user_id,
+        FEEDBACK_FLOW,
+        "input",
+        {"context": ctx.params.get("context", "general")[:40], "case_no": case_no},
+        now=ctx.now,
+    )
+    return [
+        flex.text_message(
+            await ctx.t("feedback.prompt"),
+            await flex.cancel_quick_reply(ctx.db, ctx.tenant_id),
+        )
+    ]
+
+
 async def _act_checklist(ctx: _Context) -> list[dict[str, Any]]:
     scheme = await _scheme(ctx.db, ctx.tenant_id, ctx.params.get("scheme", ""))
     if scheme is None:
@@ -460,12 +497,14 @@ ACTIONS: dict[str, Handler] = {
     "sop_open": _act_sop_open,
     "sop_choose": _act_sop_choose,
     "sop_prepare": _act_sop_prepare,
+    "demo_sop": _act_demo_sop,
     "sop_next": _act_sop_session,
     "sop_stuck": _act_sop_session,
     "sop_switch": _act_sop_session,
     "sop_exit": _act_sop_exit,
     "checklist": _act_checklist,
     "apply_toggle": _act_apply_toggle,
+    "feedback_start": _act_feedback_start,
     "contact": _act_contact,
     "cancel": _act_cancel,
     "security_check": _act_security,
@@ -517,6 +556,10 @@ async def _handle_text(
                 ctx.sop, str(state.value("platform", "") or "")
             )
         return await sop_service.open_for_flow(ctx.sop, flow, document_label=flow.name)
+    if state.flow == FEEDBACK_FLOW:
+        if intent_rules.classify_rules(text).intent == "cancel":
+            return await _act_cancel(ctx)
+        return await _save_feedback(ctx, state, text)
 
     decision = await intent_rules.classify(
         db, tenant_id, text, mode="idle", candidates=await _idle_candidates(db, tenant_id),
@@ -538,6 +581,27 @@ async def _handle_text(
 
     await _record_unmatched(db, tenant_id, user_id, text, decision)
     return await ctx.say_with_menu("home.unknown")
+
+
+async def _save_feedback(
+    ctx: _Context, state: conversation.State, text: str
+) -> list[dict[str, Any]]:
+    case_no = str(state.value("case_no", "") or "")
+    application = await _linked_application(ctx.db, ctx.tenant_id, ctx.user_id, case_no) if case_no else None
+    cleaned = text.strip()
+    if not cleaned:
+        return await ctx.say("feedback.prompt")
+    ctx.db.add(
+        LineFeedback(
+            tenant_id=ctx.tenant_id,
+            application_id=application.id if application else None,
+            line_user_id_hash=hash_user_id(ctx.user_id),
+            context=str(state.value("context", "general") or "general")[:40],
+            text=cleaned[:2000],
+        )
+    )
+    await conversation.clear(ctx.db, ctx.tenant_id, ctx.user_id)
+    return await ctx.say_with_menu("feedback.thanks")
 
 
 async def _idle_candidates(db: AsyncSession, tenant_id: str) -> list[intent_rules.IntentCandidate]:

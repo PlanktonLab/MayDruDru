@@ -37,7 +37,7 @@ DEFAULT_TTL_MINUTES = 30
 # `idle` 不會寫進資料庫——沒有列就是 idle。
 # `sop_pending` 是 P2 的中繼狀態，P4 起退件推播直接開 session，不再經過它；
 # 名字留著是因為升級時資料表裡可能還有舊的列，讀到它就等於沒有狀態。
-FLOWS = ("idle", "case_verify", "checklist", "sop_pending", "sop_session")
+FLOWS = ("idle", "case_verify", "checklist", "sop_pending", "sop_session", "feedback")
 
 #: `(tenant_id, session_id)` → 把 Redis 裡那個 SOP session 刪掉。
 type SessionDropper = Callable[[str, str], Awaitable[None]]

@@ -68,13 +68,14 @@ describe('ConfirmStep', () => {
     )
     // 送出按鈕本身畫在 `ApplyPage` 的導覽列，這裡只驗問題的說明。
     expect(screen.getByText('帳單上的金額與你填寫的金額不一致')).toBeTruthy()
-    expect(screen.getByText('尚未通過檢查')).toBeTruthy()
+    expect(screen.getByText('等待你的確認')).toBeTruthy()
+    expect(screen.getByRole('button', { name: /忽略 OCR 提示/ })).toBeTruthy()
     expect(screen.getByRole('link', { name: '教我怎麼取得' }).getAttribute('href')).toBe(
       '/sop?document_type=BILLING_STATEMENT',
     )
   })
 
-  it('勾了「請人工協助審核」之後不再顯示「尚未通過檢查」', () => {
+  it('忽略 OCR 提示之後不再顯示「等待你的確認」', () => {
     render(
       <Providers>
         <ConfirmStep
@@ -86,7 +87,7 @@ describe('ConfirmStep', () => {
         />
       </Providers>,
     )
-    expect(screen.queryByText('尚未通過檢查')).toBeNull()
+    expect(screen.queryByText('等待你的確認')).toBeNull()
     expect(screen.getByText(/需人工檢視/)).toBeTruthy()
   })
 
@@ -103,7 +104,7 @@ describe('ConfirmStep', () => {
       </Providers>,
     )
     expect(screen.queryByText('有文件需要先處理')).toBeNull()
-    expect(screen.queryByText('尚未通過檢查')).toBeNull()
+    expect(screen.queryByText('等待你的確認')).toBeNull()
   })
 
   it('預估補助金額依級距與上限計算', () => {

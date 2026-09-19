@@ -87,12 +87,12 @@ export function ConfirmStep({
 
       {view?.verdict === 'FAIL' && (
         <>
-          <div className="rounded-xl border border-danger/30 bg-danger-bg p-4">
+          <div className="rounded-xl border border-warn/30 bg-warn-bg p-4">
             <div className="flex items-start gap-2.5">
-              <AlertTriangle size={17} aria-hidden className="mt-0.5 shrink-0 text-danger" />
+              <AlertTriangle size={17} aria-hidden className="mt-0.5 shrink-0 text-warn" />
               <div className="min-w-0">
-                <p className="text-[15px] font-semibold text-danger">請先確認以下文件問題</p>
-                <p className="mt-1 text-[13px] leading-relaxed text-danger">修正後即可重新檢查，可以少一次補件。</p>
+                <p className="text-[15px] font-semibold text-warn">OCR 可能沒找到以下資料</p>
+                <p className="mt-1 text-[13px] leading-relaxed text-warn">這只是前端初審提示，辨識可能不準確；你可以換檔，或確認原圖有資料後忽略提示繼續送出。</p>
               </div>
             </div>
 
@@ -102,7 +102,7 @@ export function ConfirmStep({
                 return (
                   <li
                     key={finding.rule_code}
-                    className="rounded-xl border border-danger/20 bg-canvas p-3 text-[13px] leading-5"
+                    className="rounded-xl border border-warn/20 bg-canvas p-3 text-[13px] leading-5"
                   >
                     <p className="font-semibold text-primary">{problem.what_wrong}</p>
                     <p className="mt-0.5 text-muted">{problem.how_to_fix}</p>
@@ -126,11 +126,11 @@ export function ConfirmStep({
               <LifeBuoy size={16} aria-hidden className="mt-0.5 shrink-0 text-accent" />
               <span className="min-w-0">
                 <span className="block text-[14px] font-semibold text-primary">
-                  我的文件格式比較特殊，需要人工協助
+                  忽略 OCR 提示，繼續送出
                 </span>
                 <span className="mt-0.5 block text-[13px] leading-relaxed text-muted">
-                  如果你確定文件沒問題、是系統看不懂，可以直接送出。承辦人員會人工檢視，
-                  不會因為系統不認得就退件。
+                  如果你已確認原圖包含需要的欄位，可以繼續下一步。承辦人員仍會人工檢視，
+                  不會把這次前端辨識當成最終判定。
                 </span>
               </span>
             </button>
@@ -142,8 +142,8 @@ export function ConfirmStep({
         <div className="flex items-start gap-2 rounded-xl border border-accent/30 bg-accent-bg p-3.5">
           <LifeBuoy size={16} aria-hidden className="mt-0.5 shrink-0 text-accent" />
           <p className="text-[13px] leading-relaxed text-accent">
-            已標記為<span className="font-semibold">需人工檢視</span>
-            。承辦人員會直接看你上傳的文件，不會因為系統判讀不出來而退件。
+            已忽略前端 OCR 提示並標記為<span className="font-semibold">需人工檢視</span>
+            。承辦人員會直接看你上傳的文件，不會只依前端辨識結果退件。
           </p>
         </div>
       )}
@@ -156,8 +156,8 @@ export function ConfirmStep({
 
       {blocked && (
         <p className="flex items-center gap-2 text-[13px] text-muted">
-          <Badge tone="danger">尚未通過檢查</Badge>
-          修好上面的問題，或勾選「請人工協助審核」之後就能送出。
+          <Badge tone="warn">等待你的確認</Badge>
+          換一份文件，或按「忽略 OCR 提示，繼續送出」。
         </p>
       )}
 

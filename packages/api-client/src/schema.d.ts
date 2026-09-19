@@ -474,6 +474,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/line/feedback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Feedback */
+        get: operations["feedback_api_admin_line_feedback_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/line/notifications": {
         parameters: {
             query?: never;
@@ -485,6 +502,26 @@ export interface paths {
         get: operations["notifications_api_admin_line_notifications_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/line/notifications/demo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send Demo Notification
+         * @description 不改案件狀態，向已綁定該案件的 LINE 使用者送出 Demo 缺件提醒。
+         */
+        post: operations["send_demo_notification_api_admin_line_notifications_demo_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4314,6 +4351,16 @@ export interface components {
              */
             value: string;
         };
+        /** DemoNotificationIn */
+        DemoNotificationIn: {
+            /** Case No */
+            case_no: string;
+            /**
+             * Document Code
+             * @default BILLING_STATEMENT
+             */
+            document_code: string;
+        };
         /** DocumentIn */
         DocumentIn: {
             /**
@@ -7710,6 +7757,39 @@ export interface operations {
             };
         };
     };
+    feedback_api_admin_line_feedback_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     notifications_api_admin_line_notifications_get: {
         parameters: {
             query?: {
@@ -7722,6 +7802,41 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    send_demo_notification_api_admin_line_notifications_demo_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DemoNotificationIn"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {

@@ -140,7 +140,7 @@ async def test_picking_a_document_with_one_flow_starts_the_session(db, tenant, m
     assert await say(db, tenant, "security.screenshot_notice") in body
     assert images(messages), "完整步驟應該放在 carousel"
     assert quick_actions(images(messages)[0]) == [
-        "action=sop_stuck", "action=sop_switch", "action=sop_exit",
+        "action=sop_stuck", "action=sop_switch", "action=sop_exit", "action=feedback_start&context=sop",
     ]
     bubbles = images(messages)[0]["contents"]["contents"]
     assert len(bubbles) == 2

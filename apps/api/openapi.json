@@ -2196,6 +2196,28 @@
         "title": "DemoDataField",
         "type": "object"
       },
+      "DemoNotificationIn": {
+        "properties": {
+          "case_no": {
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Case No",
+            "type": "string"
+          },
+          "document_code": {
+            "default": "BILLING_STATEMENT",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Document Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "case_no"
+        ],
+        "title": "DemoNotificationIn",
+        "type": "object"
+      },
       "DocumentIn": {
         "properties": {
           "code": {
@@ -9445,6 +9467,52 @@
         ]
       }
     },
+    "/api/admin/line/feedback": {
+      "get": {
+        "operationId": "feedback_api_admin_line_feedback_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Feedback Api Admin Line Feedback Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Feedback",
+        "tags": [
+          "admin-line"
+        ]
+      }
+    },
     "/api/admin/line/notifications": {
       "get": {
         "operationId": "notifications_api_admin_line_notifications_get",
@@ -9518,6 +9586,50 @@
           }
         },
         "summary": "Notifications",
+        "tags": [
+          "admin-line"
+        ]
+      }
+    },
+    "/api/admin/line/notifications/demo": {
+      "post": {
+        "description": "不改案件狀態，向已綁定該案件的 LINE 使用者送出 Demo 缺件提醒。",
+        "operationId": "send_demo_notification_api_admin_line_notifications_demo_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DemoNotificationIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Send Demo Notification Api Admin Line Notifications Demo Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Send Demo Notification",
         "tags": [
           "admin-line"
         ]

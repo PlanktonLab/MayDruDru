@@ -32,6 +32,7 @@ __all__ = [
     "case_timeline_bubble",
     "case_timeline_message",
     "checklist_message",
+    "demo_missing_messages",
     "main_menu_labels",
     "main_menu_quick_reply",
     "my_cases_message",
@@ -164,7 +165,11 @@ async def main_menu_labels(db: AsyncSession, tenant_id: str) -> list[str]:
 
 
 async def main_menu_quick_reply(db: AsyncSession, tenant_id: str) -> dict[str, Any]:
-    return quick_reply([(await _t(db, tenant_id, key), postback(action)) for action, key in MAIN_MENU])
+    items = [(await _t(db, tenant_id, key), postback(action)) for action, key in MAIN_MENU]
+    # Demo 期間每段功能收尾都會回到這組 quick reply，因此在這裡統一提供回饋入口；
+    # rich menu 仍維持原本六格，不需要重做圖面與座標。
+    items.append((await _t(db, tenant_id, "button.feedback"), postback("feedback_start", context="feature")))
+    return quick_reply(items)
 
 
 async def cancel_quick_reply(db: AsyncSession, tenant_id: str) -> dict[str, Any]:
@@ -190,6 +195,7 @@ async def sop_support_quick_reply(db: AsyncSession, tenant_id: str) -> dict[str,
             (await _t(db, tenant_id, "line.quickreply.stuck"), postback("sop_stuck")),
             (await _t(db, tenant_id, "line.quickreply.switch"), postback("sop_switch")),
             (await _t(db, tenant_id, "line.quickreply.exit"), postback("sop_exit")),
+            (await _t(db, tenant_id, "button.feedback"), postback("feedback_start", context="sop")),
         ]
     )
 
@@ -583,6 +589,42 @@ async def notification_messages(
         }
     messages.append(timeline)
     return messages
+
+
+async def demo_missing_messages(
+    db: AsyncSession,
+    tenant_id: str,
+    application: Application,
+    *,
+    scheme_name: str = "",
+    document_code: str = "BILLING_STATEMENT",
+) -> list[dict[str, Any]]:
+    """黑客松 Demo 缺件提醒：不改狀態，直接提供信用卡消費紀錄教學入口。"""
+    body = await _t(
+        db,
+        tenant_id,
+        "notify.demo_missing",
+        case_no=application.case_no,
+        scheme=scheme_name,
+    )
+    timeline = await case_timeline_message(db, tenant_id, application, scheme_name=scheme_name)
+    timeline["contents"]["footer"] = {
+        "type": "box",
+        "layout": "vertical",
+        "spacing": "sm",
+        "contents": [
+            _button(
+                await _t(db, tenant_id, "button.demo_credit_record_help"),
+                postback("demo_sop", case_no=application.case_no, doc=document_code),
+            ),
+            _button(
+                await _t(db, tenant_id, "button.feedback"),
+                postback("feedback_start", context="notification", case_no=application.case_no),
+                style="secondary",
+            ),
+        ],
+    }
+    return [text_message(body), timeline]
 
 
 # ------------------------------------------------------------------ step card

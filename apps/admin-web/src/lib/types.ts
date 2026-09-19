@@ -365,6 +365,11 @@ export interface LineNotification {
   created_at: string; sent_at: string | null
 }
 
+export interface LineFeedback {
+  id: string; case_no: string; context: string; text: string
+  user_hash: string; created_at: string
+}
+
 /** 意圖分類器沒命中的自由文字。只留 userId hash 的前 8 碼，永遠不存 LINE user id。 */
 export interface UnmatchedMessage {
   id: string; text: string

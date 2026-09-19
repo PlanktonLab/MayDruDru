@@ -34,6 +34,7 @@ __all__ = [
     "Faq",
     "KnowledgeDocument",
     "LineConversation",
+    "LineFeedback",
     "LineRichMenu",
     "LineSyncLog",
     "LineUser",
@@ -140,6 +141,25 @@ class LineConversation(TsMixin, Base):
     data: Mapped[dict] = mapped_column(JSON, default=dict)
     sop_session_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
+
+
+class LineFeedback(Base):
+    """民眾在 LINE 完成功能後留下的文字回饋。
+
+    LINE user id 只留不可逆雜湊；後台可以看內容與情境，不能反推出帳號。
+    """
+
+    __tablename__ = "line_feedback"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    tenant_id: Mapped[str] = mapped_column(String(32), index=True)
+    application_id: Mapped[str | None] = mapped_column(
+        ForeignKey("applications.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    line_user_id_hash: Mapped[str] = mapped_column(String(64), default="")
+    context: Mapped[str] = mapped_column(String(40), default="general", index=True)
+    text: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, index=True)
 
 
 class LineRichMenu(TsMixin, Base):
