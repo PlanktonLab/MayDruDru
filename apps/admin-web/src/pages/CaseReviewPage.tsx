@@ -247,6 +247,15 @@ export default function CaseReviewPage() {
             onReRecognise={can('case_review') ? (doc) => void reRecognise(doc) : undefined}
             recognising={recognising}
             recogniseProgress={recogniseProgress}
+            reviewContext={{
+              caseNo: caseData.case_no,
+              applicant: caseData.applicant_name,
+              scheme: caseData.scheme_name,
+              status: STATUS_STAFF_LABEL[caseData.status],
+              amount: money(caseData.purchase_amount),
+              reviewer: caseData.assigned_reviewer?.name ?? '未指派',
+              missingCount: missingDocuments.length,
+            }}
           />
         </section>
 

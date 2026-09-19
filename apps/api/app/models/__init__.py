@@ -38,6 +38,7 @@ from .content import (
     Faq,
     KnowledgeDocument,
     LineConversation,
+    LineFeedback,
     LineRichMenu,
     LineSyncLog,
     LineUser,
@@ -105,6 +106,6 @@ __all__ = [
     # content (§6.4)
     "CONTENT_TYPES", "NOTIFICATION_STATUSES", "SUGGESTION_STATUSES",
     "AuditLog", "Content", "CopilotSuggestion", "Faq",
-    "KnowledgeDocument", "LineConversation", "LineRichMenu", "LineSyncLog", "LineUser",
+    "KnowledgeDocument", "LineConversation", "LineFeedback", "LineRichMenu", "LineSyncLog", "LineUser",
     "Media", "Notification", "UnmatchedMessage", "WebhookDelivery", "WebhookSubscription",
 ]

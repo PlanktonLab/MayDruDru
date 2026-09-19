@@ -33,6 +33,7 @@ __all__ = [
     "build_messages",
     "content_key_for",
     "deliver",
+    "enqueue_demo_missing_notification",
     "enqueue_status_notification",
     "outbound_webhook_hook",
 ]
@@ -95,6 +96,48 @@ async def enqueue_status_notification(
     return rows
 
 
+async def enqueue_demo_missing_notification(
+    db: AsyncSession,
+    application: Application,
+    *,
+    document_code: str = "BILLING_STATEMENT",
+) -> list[Notification]:
+    """排入 Demo 缺件提醒，不改案件狀態。
+
+    收件人沿用已驗證／關注這件案件的 LINE 綁定；因此 Demo 按鈕不會廣播給
+    同機關的其他民眾，也不會偽造一筆狀態轉移。
+    """
+    bound = (
+        await db.execute(
+            select(CaseVerification.line_user_id).where(CaseVerification.application_id == application.id)
+        )
+    ).scalars().all()
+    payload = {
+        "case_no": application.case_no,
+        "transition_code": "DEMO_MISSING",
+        "document_code": document_code,
+    }
+    rows = [
+        Notification(
+            tenant_id=application.tenant_id,
+            application_id=application.id,
+            line_user_id=line_user_id,
+            kind="demo_missing_document",
+            content_key="notify.demo_missing",
+            payload=payload,
+            status="queued" if line_user_id else "skipped",
+            error="" if line_user_id else "no_linked_line_user",
+        )
+        for line_user_id in (bound or [""])
+    ]
+    db.add_all(rows)
+    await db.flush()
+    for row in rows:
+        if row.status == "queued":
+            await _enqueue_job(row.id)
+    return rows
+
+
 def _first_document_code(application: Application) -> str:
     for item in application.supplement_items or []:
         if isinstance(item, dict) and item.get("document_type_code"):
@@ -124,6 +167,14 @@ async def build_messages(db: AsyncSession, notification: Notification) -> list[d
         return []
     scheme = await db.get(Scheme, application.scheme_id)
     payload = notification.payload or {}
+    if notification.kind == "demo_missing_document":
+        return await flex.demo_missing_messages(
+            db,
+            notification.tenant_id,
+            application,
+            scheme_name=scheme.name if scheme else "",
+            document_code=str(payload.get("document_code", "BILLING_STATEMENT")),
+        )
     return await flex.notification_messages(
         db,
         notification.tenant_id,

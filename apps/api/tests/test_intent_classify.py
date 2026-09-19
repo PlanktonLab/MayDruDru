@@ -244,7 +244,7 @@ async def test_an_unknown_intent_offers_the_quick_reply_menu(db, tenant, scheme,
     await db.commit()
     assert messages[0]["text"] == await contents.t(db, tenant.id, "home.unknown")
     labels = [i["action"]["label"] for i in messages[0]["quickReply"]["items"]]
-    assert len(labels) == len(flex.MAIN_MENU)
+    assert len(labels) == len(flex.MAIN_MENU) + 1
 
 
 async def test_the_unmatched_row_records_which_layer_gave_up(db, tenant, scheme, monkeypatch):

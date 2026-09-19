@@ -66,6 +66,15 @@ export interface DocumentViewerProps {
   onReRecognise?: (document: CaseDocument) => void
   recognising?: boolean
   recogniseProgress?: number
+  reviewContext?: {
+    caseNo: string
+    applicant: string
+    scheme: string
+    status: string
+    amount: string
+    reviewer: string
+    missingCount: number
+  }
 }
 
 export function DocumentViewer({
@@ -78,6 +87,7 @@ export function DocumentViewer({
   onReRecognise,
   recognising = false,
   recogniseProgress = 0,
+  reviewContext,
 }: DocumentViewerProps) {
   const current = documents.filter((doc) => doc.is_current)
   const history = documents.filter((doc) => !doc.is_current)
@@ -396,6 +406,21 @@ export function DocumentViewer({
         onPointerLeave={endDrag}
         style={{ cursor: dragRef.current ? 'grabbing' : 'grab' }}
       >
+        {reviewContext && (
+          <div className="pointer-events-none absolute left-3 top-3 z-30 max-w-[min(360px,calc(100%-24px))] rounded-xl border border-white/70 bg-canvas/90 p-3 text-xs shadow-lg backdrop-blur" aria-label="畫布案件資訊">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-mono font-semibold text-primary">{reviewContext.caseNo}</span>
+              <Badge tone="accent">{reviewContext.status}</Badge>
+              {reviewContext.missingCount > 0 && <Badge tone="warn">缺 {reviewContext.missingCount} 份文件</Badge>}
+            </div>
+            <div className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-muted">
+              <span>申請人</span><span className="truncate text-primary">{reviewContext.applicant}</span>
+              <span>方案</span><span className="truncate text-primary">{reviewContext.scheme}</span>
+              <span>申報</span><span className="text-primary">{reviewContext.amount}</span>
+              <span>審核人</span><span className="truncate text-primary">{reviewContext.reviewer}</span>
+            </div>
+          </div>
+        )}
         {loading && (
           <div className="absolute inset-0 flex items-center justify-center">
             <Spinner label="取得文件連結…" />
@@ -445,7 +470,11 @@ export function DocumentViewer({
                   height: `${box.height}%`,
                   background: box.emphasis ? 'rgba(255, 224, 0, 0.48)' : 'rgba(255, 232, 75, 0.26)',
                 }}
-              />
+              >
+                <span className="absolute bottom-full left-0 mb-1 max-w-48 truncate rounded bg-amber-500 px-1.5 py-0.5 text-[10px] font-semibold leading-4 text-slate-950 shadow-sm">
+                  {box.label}
+                </span>
+              </span>
             ))}
           </div>
         )}

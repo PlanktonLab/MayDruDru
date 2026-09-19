@@ -9,16 +9,23 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...db import get_db
 from ...deps import CurrentUser, current_user, require_cap
-from ...models import Application, Notification, UnmatchedMessage
+from ...models import Application, LineFeedback, Notification, UnmatchedMessage
+from ...services import audit, notify
 from ...services.actors import Actor
 from ...services.line import richmenu
 
 router = APIRouter(prefix="/api/admin/line", tags=["admin-line"])
+
+
+class DemoNotificationIn(BaseModel):
+    case_no: str = Field(min_length=1, max_length=40)
+    document_code: str = Field(default="BILLING_STATEMENT", min_length=1, max_length=80)
 
 
 @router.get("/richmenu")
@@ -121,6 +128,73 @@ async def notifications(
                 "sent_at": r.sent_at,
             }
             for r in rows
+        ]
+    }
+
+
+@router.post("/notifications/demo")
+async def send_demo_notification(
+    body: DemoNotificationIn,
+    user: CurrentUser = Depends(require_cap("admin")),
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, Any]:
+    """不改案件狀態，向已綁定該案件的 LINE 使用者送出 Demo 缺件提醒。"""
+    application = (
+        await db.execute(
+            select(Application).where(
+                Application.tenant_id == user.tenant_id,
+                Application.case_no == body.case_no.strip(),
+            )
+        )
+    ).scalar_one_or_none()
+    if application is None:
+        raise HTTPException(404, "找不到這件案件")
+    rows = await notify.enqueue_demo_missing_notification(
+        db, application, document_code=body.document_code.strip()
+    )
+    await audit.log(
+        db,
+        Actor.staff(user),
+        "demo_notify",
+        "application",
+        application.id,
+        {"recipient_count": len([row for row in rows if row.line_user_id])},
+        tenant_id=user.tenant_id,
+    )
+    await db.commit()
+    return {
+        "case_no": application.case_no,
+        "queued": len([row for row in rows if row.status == "queued"]),
+        "skipped": len([row for row in rows if row.status == "skipped"]),
+    }
+
+
+@router.get("/feedback")
+async def feedback(
+    limit: int = Query(default=100, le=500),
+    user: CurrentUser = Depends(current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, Any]:
+    rows = (
+        await db.execute(
+            select(LineFeedback, Application.case_no)
+            .outerjoin(Application, Application.id == LineFeedback.application_id)
+            .where(LineFeedback.tenant_id == user.tenant_id)
+            .order_by(LineFeedback.created_at.desc())
+            .limit(limit)
+        )
+    ).all()
+    return {
+        "items": [
+            {
+                "id": row.id,
+                "case_no": case_no or "",
+                "context": row.context,
+                "text": row.text,
+                "user_hash": (row.line_user_id_hash or "")[:8],
+                "created_at": row.created_at,
+            }
+            for row, case_no in rows
         ]
     }
 

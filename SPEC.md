@@ -304,7 +304,7 @@ SUBMITTED | UNDER_REVIEW | NEEDS_REVISION ──T10(applicant)──▶ WITHDRAW
   1. `packages/ocr`：讀檔（HEIC 明確失敗訊息）→ 縮至長邊 2400 → 品質探測（模糊/過暗警告）→ PDF 以 pdf.js 轉前 5 頁。
   2. `must_mask` 文件強制進 `packages/mask-editor`：自動偵測卡號（tesseract.js + Luhn）→ 使用者手動塗黑 → 必須勾選確認。遮罩後的圖才進下一步；原圖不離開瀏覽器。
   3. tesseract.js（chi_tra+eng）辨識 → 產出標準 OCR 結果。
-  4. `packages/review-rules` 用 scheme 的 `review_rules` 做 **即時 precheck**：PASS / FAIL（阻擋，顯示 rejection_code 的公開說明與對應 SOP 連結）/ INDETERMINATE（放行，標記）。
+  4. `packages/review-rules` 用 scheme 的 `review_rules` 做 **即時 precheck**：PASS / FAIL / INDETERMINATE；FAIL 顯示 rejection_code 的公開說明與對應 SOP 連結，但只作提示，使用者確認原圖含有所需欄位後可忽略並繼續送出。
   5. 送出：圖 + OCR 結果（`source=applicant`）+ precheck 結果一起 POST。**伺服器重新跑規則引擎**，不信任前端結果。
 - **查詢驗證**：`case_no` + `phone_last4`（或 `id_last4`），伺服器比對 hash；5 次失敗鎖 15 分鐘（Redis）。驗證成功發短效 token（30 分鐘，僅限該案件）供後續補件/撤回。
 - **補件**：只顯示 `supplement_items` 列出的文件類型；上傳流程同上；送出觸發 T4。
@@ -317,9 +317,9 @@ SUBMITTED | UNDER_REVIEW | NEEDS_REVISION ──T10(applicant)──▶ WITHDRAW
 
 | 區 | 頁面 | 來源 |
 |---|---|---|
-| **LINE 內容** | 罐頭訊息（分類樹、draft/publish/reset、變數提示、LINE 預覽渲染）、FAQ、知識文件、rich menu（版面、圖片、同步與同步日誌）、推播紀錄、未命中訊息（含內容助理建議） | youth-line-bot admin 重寫為 React |
+| **LINE 內容** | 罐頭訊息（分類樹、draft/publish/reset、變數提示、LINE 預覽渲染）、FAQ、知識文件、rich menu（版面、圖片、同步與同步日誌）、推播紀錄（含案件綁定用戶 Demo 缺件通知按鈕）、用戶 Feedback、未命中訊息（含內容助理建議） | youth-line-bot admin 重寫為 React |
 | **SOP** | Canvas（沿用）、審核佇列（sop_reviewer）、Playground、平台/目標管理、**文件類型對照**（document_type ↔ flow） | SOP_Tutor |
-| **案件審核** | 「審查作業」獨立導覽含案件總覽與資料重點設定；總覽依 first_submitted_at 排隊並可篩選狀態/方案/審核人，案件頁左側為文件 pan/zoom + OCR／finding 高亮，右側為申請資料、規則 findings（自動判定 + 人工覆寫 + 備註）、比對、決策列與事件時間軸；資料重點設定依方案管理查核欄位、適用文件、關鍵字／格式、必要性並可試算；「重新辨識」在承辦人瀏覽器跑 tesseract.js，`source=reviewer` | submit-flow staff + proreview 互動 |
+| **案件審核** | 「審查作業」獨立導覽含案件總覽與資料重點設定；總覽依 first_submitted_at 排隊並可篩選狀態/方案/審核人，案件頁左側為文件 pan/zoom + OCR／finding 高亮，畫布固定顯示案件、申請人、方案、金額、審核人與缺件摘要，右側為規則 findings（自動判定 + 人工覆寫 + 備註）、比對、決策列與事件時間軸；資料重點設定依方案管理查核欄位、適用文件、關鍵字／格式、必要性並可試算；「重新辨識」在承辦人瀏覽器跑 tesseract.js，`source=reviewer` | submit-flow staff + proreview 互動 |
 | **方案管理** | schemes CRUD、tiers、document_types、payment_channels、review_rules（規則編輯器：四種 rule_type 表單）、rejection_codes、eligible_tools（待審工具佇列）、內容助理 (c) 一鍵產生方案文案草稿 | 新 |
 | **系統** | Dashboard（案件統計、SOP 使用、LLM 用量）、成員、API keys、webhook 訂閱、稽核日誌 | SOP_Tutor + 新 |
 
@@ -349,7 +349,9 @@ SUBMITTED | UNDER_REVIEW | NEEDS_REVISION ──T10(applicant)──▶ WITHDRAW
   - `idle`：postback 走 action 表；自由文字 → §9.1 intent → 罐頭/FAQ/quick reply；圖片 → §9.2 locate → 命中則開 `sop_session` 並回 step card，未命中回「認不出來，你要準備哪份文件？」quick reply。
   - `case_verify`：案件編號 → 手機末四碼 → 綁定 `case_verifications` → 回案件時間軸 Flex。
   - `sop_session`：綁 `sop_session_id`（SOP_Tutor Session API）；文字 → intent（next / stuck / switch / exit / unknown）；圖片 → session locate；step card 以 image + quick reply（下一步 / 我卡住了 / 換流程 / 結束）回覆。**退出**：完成、`exit` 意圖、任一 rich menu postback、30 分鐘無互動（`expires_at`）。
+  - `feedback`：功能完成後由快速回覆進入；下一則文字存入 `line_feedback`，LINE user id 只留不可逆雜湊，後台可依情境與案件查看。
 - **推播**：狀態變更 → `services/notify.py` → 對已綁定該案件的 LINE 使用者 push；退件推播附兩個按鈕：「教我準備」（postback 開對應 SOP session）與「前往補件」（apply-web 連結，帶 `case_no`）。
+- **Demo 推播**：後台可對指定案件送出不改狀態的缺件提醒；只通知已綁定該案件的使用者，按「不會獲取信用卡消費紀錄嗎？」後開啟對應銀行／平台的完整 SOP，完成後可留下 Feedback。
 - **綁定入口**：apply-web 送件成功頁的 LINE deep link（`?case=HC-…`）→ Bot 收到後直接進 `case_verify` 只需手機末四碼。
 - **敏感提醒**：進 `sop_session` 或 idle 收到圖片前的第一則回覆包含 `security.screenshot_notice` 文案（請勿含卡號等資訊；網頁上傳可先遮罩）。
 
@@ -377,6 +379,7 @@ SUBMITTED | UNDER_REVIEW | NEEDS_REVISION ──T10(applicant)──▶ WITHDRAW
 - 內容：`contents` 的 `notify.{transition}` 模板 + 狀態 `notify_headline`；Flex 附案件時間軸與動作按鈕。
 - 記錄：`notifications`（status: queued/sent/failed，錯誤保留）；worker 重試 3 次。
 - 外部：同時觸發 outbound webhook（§10.3）。
+- Demo 缺件通知是明確的人工作業，不建立虛構狀態事件；仍寫入 `notifications` 並走同一個 worker／重試機制。
 
 ---
 
@@ -619,6 +622,7 @@ Cloudflare proxied；origin cert 需涵蓋三個名稱（萬用或重簽）。DN
 | D39 | LINE 平台只有一條已發布 SOP 時直接進入完整教學；兩條以上才顯示操作指引清單 | 避免只有唯一答案時多問一題，縮短民眾取得教學的路徑 |
 | D40 | 推翻原本「不存完整身分證字號」的規定：改為**加密**保存完整身分證字號（Fernet，與完整手機同一把 `PII_ENCRYPTION_KEY`），末四碼 hash 仍保留供查詢驗證。解密受 `application.read_pii` 能力控管，每次解密寫稽核日誌；列表與一般案件頁一律只顯示末四碼 | 補助核銷要造冊報府，承辦人手上必須有完整字號，否則得另外用紙本或 email 收一次——那比放在系統裡更不安全。加密而非明文、能力控管而非全員可見、解密留痕，是在「承辦真的需要」與「不製造一份裸的個資表」之間的折衷 |
 | D41 | apply-web 將已發布 SOP 嵌入上傳步驟的文件卡，以 modal 在原地逐步播放；單一對應流程直接開始，多個流程才選平台，最後一步回到該文件上傳。獨立 `/sop` 頁保留完整瀏覽與截圖定位 | 使用者真正需要幫助的時刻是在某份文件前卡住。把教學貼著任務呈現可保留已填資料與注意力，也符合 §15 的順從內容、行動優先與「需要時才出現」；獨立頁則承接較進階的定位需求 |
+| D42 | 黑客松 Demo 缺件通知不改案件狀態，只對 `case_verifications` 已綁定用戶建立 `notifications(kind=demo_missing_document)`；信用卡紀錄按鈕沿用 document type → published flow 對照開完整 SOP。Feedback 僅存 user id hash、情境與可選案件關聯。前端 OCR FAIL 是可忽略提示，伺服器規則與人工審核仍為最終判定 | Demo 能重複演示而不污染不可變狀態時間軸；沿用真實通知、SOP 與規則資料可避免做一條只在舞台上有效的假流程；回饋資料遵守最小化，OCR 不準時也不會把使用者鎖死 |
 
 ---
 

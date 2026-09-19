@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import io
 import json
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from app.models import Application, ApplicationDocument, DocumentOcrResult, Faq, ReviewFinding, ReviewRule
@@ -258,7 +258,8 @@ async def test_missing_documents_come_back_as_a_supplement_suggestion(apply_clie
 
 
 async def test_a_closed_scheme_refuses_submissions(apply_client, scheme, db):
-    scheme.application_end = date.today() - timedelta(days=1)
+    # 正式判定以 UTC 日界為準；測試機若剛過本地午夜，date.today() 會早八小時翻日。
+    scheme.application_end = datetime.now(UTC).date() - timedelta(days=1)
     await db.commit()
     data, files = multipart([], application=application_payload())
     r = await apply_client.post(f"{APPLY}/applications", data=data, files=files)

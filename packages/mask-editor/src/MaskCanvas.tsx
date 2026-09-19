@@ -50,7 +50,33 @@ export function MaskCanvas({ source, masks, onChange, disabled = false }: Props)
   const surfaceRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const interaction = useRef<Interaction | null>(null)
+  const pendingMasks = useRef<MaskRect[] | null>(null)
+  const changeFrame = useRef<number | null>(null)
   const selectedIndex = selected !== null && selected < masks.length ? selected : null
+
+  useEffect(() => () => {
+    if (changeFrame.current !== null) cancelAnimationFrame(changeFrame.current)
+  }, [])
+
+  /** 拖曳最多每個 animation frame 更新一次，避免高解析圖片上每個 pointer event 都重繪 React。 */
+  const scheduleChange = (next: MaskRect[]) => {
+    pendingMasks.current = next
+    if (changeFrame.current !== null) return
+    changeFrame.current = requestAnimationFrame(() => {
+      changeFrame.current = null
+      const value = pendingMasks.current
+      pendingMasks.current = null
+      if (value) onChange(value)
+    })
+  }
+
+  const flushChange = () => {
+    if (changeFrame.current !== null) cancelAnimationFrame(changeFrame.current)
+    changeFrame.current = null
+    const value = pendingMasks.current
+    pendingMasks.current = null
+    if (value) onChange(value)
+  }
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -177,7 +203,7 @@ export function MaskCanvas({ source, masks, onChange, disabled = false }: Props)
     if (active.kind === 'move') {
       const x = clamp(active.original.x + point.x - active.x, 0, 1 - active.original.w)
       const y = clamp(active.original.y + point.y - active.y, 0, 1 - active.original.h)
-      onChange(masks.map((mask, index) => (index === active.index ? { ...mask, x, y } : mask)))
+      scheduleChange(masks.map((mask, index) => (index === active.index ? { ...mask, x, y } : mask)))
       return
     }
     let left = active.original.x
@@ -188,13 +214,14 @@ export function MaskCanvas({ source, masks, onChange, disabled = false }: Props)
     if (active.corner.includes('s')) bottom = clamp(point.y, top + MIN_MASK_HEIGHT, 1)
     if (active.corner.includes('w')) left = clamp(point.x, 0, right - MIN_MASK_WIDTH)
     if (active.corner.includes('e')) right = clamp(point.x, left + MIN_MASK_WIDTH, 1)
-    onChange(masks.map((mask, index) => (
+    scheduleChange(masks.map((mask, index) => (
       index === active.index ? { ...mask, x: left, y: top, w: right - left, h: bottom - top } : mask
     )))
   }
 
   const endInteraction = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (!interaction.current) return
+    flushChange()
     try {
       stageRef.current?.releasePointerCapture?.(event.pointerId)
     } catch {
@@ -289,6 +316,8 @@ export function MaskCanvas({ source, masks, onChange, disabled = false }: Props)
             width: `${width}px`, height: `${height}px`,
             transform: `translate(-50%, -50%) translate(${pan.x}px, ${pan.y}px)`,
             visibility: fitSize ? 'visible' : 'hidden',
+            willChange: 'transform',
+            contain: 'layout paint',
           }}
         >
           <canvas ref={canvasRef} data-testid="mask-canvas" className="pointer-events-none block h-full w-full" />

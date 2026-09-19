@@ -15,6 +15,7 @@ import type {
   FaqList,
   KnowledgeDoc,
   LineNotification,
+  LineFeedback,
   LineSyncLog,
   MediaItem,
   RichMenuStatus,
@@ -128,6 +129,12 @@ export const fetchSyncLogs = (limit = 20) => get<{ items: LineSyncLog[] }>(`/api
 
 export const fetchNotifications = (p: { status?: string; case_no?: string; limit?: number } = {}) =>
   get<{ items: LineNotification[] }>(`/api/admin/line/notifications${qs(p)}`)
+
+export const sendDemoNotification = (body: { case_no: string; document_code?: string }) =>
+  post<{ case_no: string; queued: number; skipped: number }>('/api/admin/line/notifications/demo', body)
+
+export const fetchFeedback = (limit = 100) =>
+  get<{ items: LineFeedback[] }>(`/api/admin/line/feedback${qs({ limit })}`)
 
 export const fetchUnmatched = (limit = 100) => get<{ items: UnmatchedMessage[] }>(`/api/admin/line/unmatched${qs({ limit })}`)
 

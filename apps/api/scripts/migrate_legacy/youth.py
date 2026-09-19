@@ -45,6 +45,7 @@ from app.pii import decrypt_phone, encrypt_phone, hash_last4  # noqa: E402
 from sqlalchemy import select  # noqa: E402
 from sqlalchemy.ext.asyncio import AsyncSession  # noqa: E402
 
+
 # 在 monorepo checkout 中，parents[5] 是放著所有專案的那層目錄；正式映像則把
 # apps/api 直接複製到 /app，沒有這麼多父層。命令列明確傳入路徑時也不能因為計算
 # 不會使用到的預設值而在 import 階段失敗。

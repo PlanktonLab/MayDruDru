@@ -13,7 +13,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 from app.content_registry import get_default
-from app.models import CaseVerification, LineUser, UnmatchedMessage
+from app.models import CaseVerification, LineFeedback, LineUser, UnmatchedMessage
 from app.services import contents
 from app.services.line import conversation, flex, handlers
 from sqlalchemy import select
@@ -238,6 +238,28 @@ async def test_sop_prepare_without_a_mapped_flow_says_so(db, tenant, scheme):
     app = await make_case(db, tenant, scheme)
     messages = await reply(db, tenant, postback_event("sop_prepare", case_no=app.case_no, doc="ID_CARD_FRONT"))
     assert await say(db, tenant, "line.sop.no_flow", document="ID_CARD_FRONT") in texts(messages)
+
+
+async def test_demo_sop_refuses_a_case_the_user_did_not_link(db, tenant, scheme):
+    app = await make_case(db, tenant, scheme)
+    messages = await reply(db, tenant, postback_event("demo_sop", case_no=app.case_no, doc="BILLING_STATEMENT"))
+    assert texts(messages) == await say(db, tenant, "case.verify_failed")
+
+
+async def test_feedback_flow_prompts_then_saves_anonymous_text(db, tenant, scheme):
+    app = await verified_case(db, tenant, scheme)
+    prompted = await reply(
+        db, tenant, postback_event("feedback_start", context="notification", case_no=app.case_no)
+    )
+    assert texts(prompted) == await say(db, tenant, "feedback.prompt")
+    assert (await conversation.get(db, tenant.id, USER)).flow == handlers.FEEDBACK_FLOW
+
+    thanked = await reply(db, tenant, text_event("步驟很清楚，但希望圖片再大一點"))
+    assert texts(thanked) == await say(db, tenant, "feedback.thanks")
+    row = (await db.execute(select(LineFeedback))).scalars().one()
+    assert row.context == "notification" and row.application_id == app.id
+    assert row.text == "步驟很清楚，但希望圖片再大一點"
+    assert row.line_user_id_hash and USER not in row.line_user_id_hash
     assert (await conversation.get(db, tenant.id, USER)).is_idle
 
 
@@ -322,7 +344,7 @@ async def test_security_check_keeps_the_hotline(db, tenant):
 async def test_an_unknown_action_falls_back_to_the_main_menu(db, tenant):
     messages = await reply(db, tenant, postback_event("no_such_action"))
     assert texts(messages) == await say(db, tenant, "home.unknown")
-    assert len(quick_labels(messages[0])) == len(flex.MAIN_MENU)
+    assert len(quick_labels(messages[0])) == len(flex.MAIN_MENU) + 1
 
 
 # ------------------------------------------------------------------ 文字路由
@@ -394,7 +416,7 @@ async def test_an_unmatched_message_is_stored_with_a_hashed_user_id(db, tenant):
 async def test_an_unmatched_message_still_offers_the_menu(db, tenant):
     messages = await reply(db, tenant, text_event("我想問一件完全無關的事情"))
     assert texts(messages) == await say(db, tenant, "home.unknown")
-    assert len(quick_labels(messages[0])) == len(flex.MAIN_MENU)
+    assert len(quick_labels(messages[0])) == len(flex.MAIN_MENU) + 1
 
 
 # ------------------------------------------------------------- 案件查詢流程
