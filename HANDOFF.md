@@ -171,4 +171,4 @@ Commit 用 Conventional Commits、中文摘要，scope 例如 `api`、`line`、`
 
 ## 7. Git 現況速查
 
-P5 merge commit 是 `83a13b9`；P4 收尾會以本文件所在的後續 commit 為準。工作樹中的 `.claude/` 是 Claude 的本機資料，不納入版本控制。遠端尚未設定，沒有任何 commit 被 push 過。
+P5 merge 是 `83a13b9`，P4 收尾是 `257e1a1`，P6 是 `0c25232`，P8 是 `20062bc`。工作樹中的 `.claude/` 是 Claude 的本機資料，不納入版本控制。`origin` 指向 `PlanktonLab/MayDru`；本機 main 目前尚未推送這批整合 commits。
