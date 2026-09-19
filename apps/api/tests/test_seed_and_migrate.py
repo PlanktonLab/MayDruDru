@@ -38,6 +38,10 @@ import seed_data  # noqa: E402
 from scripts.migrate_legacy import youth  # noqa: E402
 
 
+def test_youth_default_db_supports_shallow_container_path() -> None:
+    assert youth._default_db(Path("/app/scripts/migrate_legacy/youth.py")) == Path("/data/youth.db")
+
+
 @pytest.fixture
 def session_factory(engine, monkeypatch):
     """把腳本用的 sessionmaker 指向測試資料庫。"""

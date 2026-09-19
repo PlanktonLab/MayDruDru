@@ -45,9 +45,18 @@ from app.pii import decrypt_phone, encrypt_phone, hash_last4  # noqa: E402
 from sqlalchemy import select  # noqa: E402
 from sqlalchemy.ext.asyncio import AsyncSession  # noqa: E402
 
-# apps/api/scripts/migrate_legacy/youth.py → parents[5] 是放著所有專案的那層目錄，
-# 也就是從 apps/api 看出去的 `../../../`。
-DEFAULT_DB = Path(__file__).resolve().parents[5] / "youth-line-bot" / "data" / "youth.db"
+# 在 monorepo checkout 中，parents[5] 是放著所有專案的那層目錄；正式映像則把
+# apps/api 直接複製到 /app，沒有這麼多父層。命令列明確傳入路徑時也不能因為計算
+# 不會使用到的預設值而在 import 階段失敗。
+def _default_db(source_path: Path) -> Path:
+    return (
+        source_path.parents[5] / "youth-line-bot" / "data" / "youth.db"
+        if len(source_path.parents) > 5
+        else Path("/data/youth.db")
+    )
+
+
+DEFAULT_DB = _default_db(Path(__file__).resolve())
 
 # 決策 D13：舊狀態 → SPEC §7 狀態。
 STATUS_MAP: dict[str, str] = {
