@@ -4,7 +4,7 @@
 
 完整規格在 [`SPEC.md`](SPEC.md)（v1.0，唯一規格來源）；工作規則在 [`CLAUDE.md`](CLAUDE.md)。
 
-目前階段：**P0 骨架**（SPEC §16）。後端、renderer 與承辦人後台自 `SOP_Tutor` 搬入並可跑通；送件、審核、LINE、方案管理等產品功能在 P1–P5。
+目前階段：**P1 資料層**（SPEC §16）。§6 的資料表、案件狀態機、方案服務、seed 與舊資料搬遷都已就緒；LINE、送件與審核介面在 P2–P5。
 
 ## 版面
 
@@ -55,6 +55,29 @@ npm run dev:apply             # http://localhost:5174
 
 `LLM_PROVIDER=fake` 與 `LINE_SENDER=noop` 可完全離線跑通，測試環境永不連真實 LINE / LLM。
 
+## 資料層（SPEC §6、§7、§12）
+
+方案是純資料：級距、文件類型、繳費管道、審核規則、退件碼與合格工具都存在資料庫裡，
+新增一個方案不需要改任何程式碼。案件的狀態只能由 `app/services/application.py` 的
+`transition()` 改變，每一次轉移都留下一筆**不可變**的事件。
+
+在 `apps/api/` 下，先 `alembic upgrade head`，再：
+
+```bash
+# 新竹市 AI 工具補助的完整設定 + 5 筆示範案件（每個狀態一筆，資料全是假的）
+uv run --package maydru-api python scripts/seed.py
+
+# youth-line-bot 的 SQLite 搬進來（唯讀讀來源；路徑可省略，預設在隔壁專案）
+uv run --package maydru-api python scripts/migrate_legacy/youth.py [youth.db]
+```
+
+兩支腳本都冪等，跑幾次結果都一樣，結束時印出 inserted / updated / skipped（搬遷另有
+failed）報表。SOP_Tutor 的 Postgres 與 MinIO 是整份接手，不需要腳本，程序寫在
+`apps/api/scripts/migrate_legacy/sop_tutor.md`。
+
+排程工作由 worker 執行：補件逾期每小時檢查一次（T8），終態案件滿保存期限後在每天
+03:00 硬刪證明文件——刪的是影像、OCR 與標註座標，申請主檔與事件時間軸永遠留著。
+
 ## 品質門檻（SPEC §14）
 
 ```bash
@@ -82,7 +105,7 @@ npm run generate -w @maydru/api-client -- ./openapi.json
 
 ## 已知取捨（P0 技術債）
 
-從 SOP_Tutor 原樣搬入的程式碼尚未達到 SPEC §14 的靜態門檻。與其改寫 219 個測試涵蓋的既有行為，P0 選擇把例外明確列在設定裡，讓門檻對**新程式碼**是真的：
+從 SOP_Tutor 原樣搬入的程式碼尚未達到 SPEC §14 的靜態門檻。與其改寫既有測試涵蓋的行為，P0 選擇把例外明確列在設定裡，讓門檻對**新程式碼**是真的：
 
 - **ruff**：`pyproject.toml` 的 `extend-ignore` 列出九條規則（`E701`/`E702` 的緊湊單行是 SOP_Tutor 的既有風格，`B008` 是 FastAPI 的 `Depends()` 慣用法，其餘為 prompt/HTML 長字串與測試裡的 lambda）。`uv run ruff check --fix` 已套用過一次 import 排序。
 - **mypy**：分兩層。第一層是連預設模式都過不了的 19 個模組（`ignore_errors`），第二層是過得了預設模式但過不了 strict 的 8 個模組（只放寬 strict 旗標）。兩份清單都寫在 `pyproject.toml` 且只會變短；新模組一律 strict。

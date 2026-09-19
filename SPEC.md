@@ -245,6 +245,10 @@ MayDru/
 - `admin`：以上全部 + 方案設定 + 內容發布 + rich menu。
 - `owner`：admin + 成員與 API key。
 
+授權判斷以 **capability** 為準，不以角色高低為準（決策 D14）：每個端點宣告自己需要
+`sop_edit`、`sop_review`、`case_review`、`case_supervise`、`admin` 或 `owner`，角色只是
+capability 的組合。另保留 `viewer` 作為舊資料的唯讀層級，UI 不再提供。
+
 ---
 
 ## 7. 案件狀態機
@@ -444,7 +448,7 @@ API key scopes：`read`, `apply`, `review`, `sop`, `contents`, `webhooks`, `admi
 | 承辦人 SOP 原圖 | Fernet 加密、審後硬刪、`ORIGINAL_TTL_DAYS` 兜底 |
 | Step card | public bucket、content-hash 檔名不可猜、去識別化且無 PII |
 | LINE webhook | 簽章必驗；缺憑證即拒絕；`raw body` 驗簽 |
-| Admin | bcrypt（constant-time on unknown email）、JWT、密碼變更使舊 token 失效、登入限流、六角色 RBAC、稽核日誌 |
+| Admin | bcrypt（constant-time on unknown email）、JWT、密碼變更使舊 token 失效、登入限流、capability-based RBAC（§6.5 / D14）、稽核日誌 |
 | API key | hash 儲存、scope、per-key rate limit、可撤銷 |
 | 案件查詢 | 編號 + 末四碼、5 次失敗鎖 15 分鐘、短效 token |
 | 外送資料清單 | 送 LLM 供應商：市民 SOP 截圖、承辦人 SOP 截圖、罐頭草稿上下文、未命中訊息文字（去 LINE userId）。**不送**：證明文件、申請人個資、案件內容 |
@@ -584,6 +588,11 @@ Cloudflare proxied；origin cert 需涵蓋三個名稱（萬用或重簽）。DN
 | D10 | 通知只用 LINE 推播 | 產品負責人決定；email/簡訊列為未來 |
 | D11 | 保存期限 90 天，方案可覆寫 | 產品負責人決定 |
 | D12 | 兩個前端同用 Vite/React/Tailwind，共用 packages/ui | 一套工具鏈；申請頁無 SEO 需求 |
+| D13 | youth-line-bot 舊狀態對映到 §7：submitted→SUBMITTED、eligibility_review/document_review→UNDER_REVIEW、supplement_required→NEEDS_REVISION、review_completed/approved→APPROVED（payment_status 為 pending/processing 時落 DISBURSING）、rejected→REJECTED、paid→DISBURSED；舊 8 位數 `case_id` 原樣沿用為 `case_no`，`intake_channel=LEGACY`，補件項目字串轉成 `rejection_code=OTHER` 的結構列 | 舊系統的階段比 §7 細，合併到同一組狀態才有單一狀態機；案號沿用讓民眾手上的截圖還查得到 |
+| D14 | 角色改為 viewer / sop_editor / sop_reviewer / case_reviewer / case_supervisor / admin / owner，授權以 capability（sop_edit、sop_review、case_review、case_supervise、admin、owner）為準而非角色排名；舊 editor→sop_editor、reviewer→sop_reviewer | SOP 製作與案件審核是兩條互不隸屬的線，用排名授權會讓案件覆核者順手拿到 SOP 編輯權 |
+| D15 | 測試用 aiosqlite in-memory；新表的清單欄位一律 JSON 而非 ARRAY；事件不可變同時以 Postgres trigger 與 SQLAlchemy event listener 落實 | 測試不需要真的資料庫也能涵蓋整個 schema；同一條不變式在兩種引擎上都成立 |
+| D16 | 案件編號 `HC-YYYY-NNNNNN`，流水號依 tenant 與年度各自累加（`case_no_counters` 一列一年，Postgres 取號時列鎖）；舊系統的 8 位數編號照舊 | 對民眾好唸、對承辦好查；跨年度自動歸零，跨機關不互相干擾 |
+| D17 | 查詢的第二因子是手機或身分證**末四碼**（不是完整號碼）；連續 5 次失敗鎖 15 分鐘，案號與來源 IP 各自計數；查無此案與末四碼錯誤的回應完全一致 | 末四碼即可驗證又不必再傳一次完整個資；雙軸計數同時擋單案猜測與整批掃號；回應一致才不會讓錯誤訊息變成查詢介面 |
 
 ---
 

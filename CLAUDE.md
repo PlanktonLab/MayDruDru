@@ -16,7 +16,7 @@ MayDru：政府申辦流程協助平台。一個 FastAPI 後端、兩個 Vite �
 
 ## 結構
 
-- `apps/api/`：FastAPI 後端（自 SOP_Tutor/backend 起家）。`app/routers/` 薄殼、`app/services/` 業務邏輯、`app/ai/` LangChain/LangGraph、`app/content_registry/` 罐頭訊息預設值、`app/worker/` arq。
+- `apps/api/`：FastAPI 後端（自 SOP_Tutor/backend 起家）。`app/routers/` 薄殼、`app/services/` 業務邏輯、`app/models/` 資料表（core / scheme / application / content 四個模組）、`app/ai/` LangChain/LangGraph、`app/content_registry/` 罐頭訊息預設值、`app/worker/` arq、`scripts/` seed 與搬遷。
 - `apps/renderer/`：Playwright HTML→PNG 服務。
 - `apps/admin-web/`：承辦人後台（自 SOP_Tutor/frontend 起家）。
 - `apps/apply-web/`：市民送件網頁（自 submit-flow 搬遷）。
@@ -25,7 +25,7 @@ MayDru：政府申辦流程協助平台。一個 FastAPI 後端、兩個 Vite �
 
 ## 開發須知
 
-- Python 用 `uv`（workspace root 在 `pyproject.toml`，成員 `apps/api`、`apps/renderer`）：根目錄 `uv sync` 建出單一 `.venv`；測試在 `apps/api/` 下跑 `uv run --package maydru-api pytest -q`（219 測試）。
+- Python 用 `uv`（workspace root 在 `pyproject.toml`，成員 `apps/api`、`apps/renderer`）：根目錄 `uv sync` 建出單一 `.venv`；測試在 `apps/api/` 下跑 `uv run --package maydru-api pytest -q`。
 - 靜態門檻在根目錄跑：`uv run ruff check`、`uv run mypy`、`uv run lint-imports --config pyproject.toml`。ruff / mypy 的既有例外清單寫在 `pyproject.toml`，只會變短，不得新增。
 - JS 用 npm workspaces：根目錄 `npm install`，`npm run dev:admin`（5173）/ `npm run dev:apply`（5174）；`npm run typecheck`、`npm run lint`、`npm test`、`npm run build` 會 fan out 到所有 workspace。
 - 全套本機環境：`docker compose up -d --build`（api 8200、admin-web 8201、apply-web 8202、renderer 8101、postgres 5433、redis 6380、minio 9002/9003；連接埠刻意與 SOP_Tutor 錯開）。`docker compose down` 保留 volume。
