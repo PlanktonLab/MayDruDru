@@ -318,7 +318,7 @@ SUBMITTED | UNDER_REVIEW | NEEDS_REVISION ──T10(applicant)──▶ WITHDRAW
 |---|---|---|
 | **LINE 內容** | 罐頭訊息（分類樹、draft/publish/reset、變數提示、LINE 預覽渲染）、FAQ、知識文件、rich menu（版面、圖片、同步與同步日誌）、推播紀錄、未命中訊息（含內容助理建議） | youth-line-bot admin 重寫為 React |
 | **SOP** | Canvas（沿用）、審核佇列（sop_reviewer）、Playground、平台/目標管理、**文件類型對照**（document_type ↔ flow） | SOP_Tutor |
-| **案件審核** | 佇列（依 first_submitted_at；篩選狀態/方案/審核人）、案件頁（左：文件檢視器 pan/zoom + OCR 高亮；右：申請資料卡、規則 findings 卡（自動判定 + 人工覆寫 + 備註）、比對面板（申請金額 vs 辨識金額）、決策列（依角色顯示可用轉移）、事件時間軸）、「重新辨識」（在承辦人瀏覽器跑 tesseract.js，`source=reviewer`） | submit-flow staff + proreview 互動 |
+| **案件審核** | 「審查作業」獨立導覽含案件總覽與資料重點設定；總覽依 first_submitted_at 排隊並可篩選狀態/方案/審核人，案件頁左側為文件 pan/zoom + OCR／finding 高亮，右側為申請資料、規則 findings（自動判定 + 人工覆寫 + 備註）、比對、決策列與事件時間軸；資料重點設定依方案管理查核欄位、適用文件、關鍵字／格式、必要性並可試算；「重新辨識」在承辦人瀏覽器跑 tesseract.js，`source=reviewer` | submit-flow staff + proreview 互動 |
 | **方案管理** | schemes CRUD、tiers、document_types、payment_channels、review_rules（規則編輯器：四種 rule_type 表單）、rejection_codes、eligible_tools（待審工具佇列）、內容助理 (c) 一鍵產生方案文案草稿 | 新 |
 | **系統** | Dashboard（案件統計、SOP 使用、LLM 用量）、成員、API keys、webhook 訂閱、稽核日誌 | SOP_Tutor + 新 |
 
@@ -612,6 +612,7 @@ Cloudflare proxied；origin cert 需涵蓋三個名稱（萬用或重簽）。DN
 | D33 | outbound webhook 以 `webhook_deliveries` 作 transactional outbox；領域 service 只在同一交易建立 delivery，worker 每分鐘補排 pending，單筆工作以 arq 最多重試五次 | 案件成功但 Redis 短暫失效時事件不會消失；HTTP 失敗不回滾業務交易，重送與稽核都以同一 delivery id 為準 |
 | D34 | `packages/api-client/src/schema.d.ts` 是 OpenAPI 的可重現生成物並提交進 git；CI 重新生成後用 `git diff --exit-code` 驗證 | PR 可以直接審契約差異，前端不必在安裝時啟動 API；漏更新 schema 會在 CI 立即失敗 |
 | D35 | P8 的可及性門檻以 axe 的 WCAG A/AA serious/critical violations 為自動化 gate；顏色對比另由 token 設計與人工檢視負責（jsdom 無法計算實際樣式）。稽核 UI 只讀 `audit_logs.diff`，不展開案件與文件 | 自動測試抓得到名稱、語意、結構等嚴重退步，又不製造 jsdom canvas 的假訊號；稽核畫面不成為第二份個資資料庫 |
+| D36 | 將既有 ProReview 能力在後台收斂為「審查作業」導覽：案件總覽與實際審核沿用單一案件／finding 資料；另提供獨立「資料重點設定」入口，但仍直接編輯方案的 `review_rules`，不建立第二份規則 | 承辦人能按工作流程找到設定與審核，不必先知道規則藏在方案管理；共用同一份 API、規則引擎與稽核紀錄可避免設定漂移 |
 
 ---
 

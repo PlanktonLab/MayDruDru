@@ -5,8 +5,8 @@
  */
 
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, Inbox, Search } from 'lucide-react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { ChevronLeft, ChevronRight, Inbox, ListChecks, Search } from 'lucide-react'
 import { Badge, Button, EmptyState, Input, Select, Spinner } from '@maydru/ui'
 import { DEFAULT_FILTERS, useCaseQueue, type QueueFilters } from '../cases/api'
 import { QUEUE_STATUSES, STATUS_STAFF_LABEL, STATUS_TONE, VERDICT_LABEL, dateTime, money } from '../cases/labels'
@@ -15,7 +15,11 @@ import { PageHeader, Table, Td, Th } from '../components/admin/shared'
 
 export default function CasesQueuePage() {
   const navigate = useNavigate()
-  const [filters, setFilters] = useState<QueueFilters>(DEFAULT_FILTERS)
+  const [params] = useSearchParams()
+  const [filters, setFilters] = useState<QueueFilters>(() => ({
+    ...DEFAULT_FILTERS,
+    scheme: params.get('scheme') ?? '',
+  }))
   const query = useCaseQueue(filters)
   const rows = query.data?.items ?? []
   const total = query.data?.total ?? 0
@@ -28,7 +32,11 @@ export default function CasesQueuePage() {
 
   return (
     <div className="mx-auto max-w-[1200px] px-6 py-8">
-      <PageHeader title="案件審核" description="依第一次送件時間排序；補件不會重新排隊。" />
+      <PageHeader
+        title="案件總覽"
+        description="清楚查看每件申請的狀態、規則判定與負責人；依第一次送件時間排序，補件不會重新排隊。"
+        actions={<Link to={filters.scheme ? `/review-settings?scheme=${encodeURIComponent(filters.scheme)}` : '/review-settings'}><Button><ListChecks size={14} /> 資料重點設定</Button></Link>}
+      />
 
       <div className="mt-4 flex flex-wrap items-end gap-2">
         <label className="flex min-w-[220px] flex-1 flex-col gap-1 text-[13px] text-muted">

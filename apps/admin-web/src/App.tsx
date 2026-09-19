@@ -22,6 +22,7 @@ import SchemesPage from './pages/schemes/SchemesPage'
 import SchemeEditorPage from './pages/schemes/SchemeEditorPage'
 import SopMappingsPage from './pages/schemes/SopMappingsPage'
 import AuditLogsPage from './pages/AuditLogsPage'
+import ReviewSettingsPage from './pages/ReviewSettingsPage'
 
 export default function App() {
   return (
@@ -35,6 +36,7 @@ export default function App() {
           {/* 案件審核區（SPEC §8.2）：整區都需要 case_review 能力（決策 D14）。 */}
           <Route path="/cases" element={<RequireCap capability="case_review"><CasesQueuePage /></RequireCap>} />
           <Route path="/cases/:case_no" element={<RequireCap capability="case_review"><CaseReviewPage /></RequireCap>} />
+          <Route path="/review-settings" element={<ReviewSettingsPage />} />
           <Route path="/playground" element={<PlaygroundPage />} />
           <Route path="/evals" element={<EvalsPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />

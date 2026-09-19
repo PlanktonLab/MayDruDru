@@ -9,7 +9,7 @@
 import { useCallback, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, ShieldAlert } from 'lucide-react'
+import { ArrowLeft, ListChecks, ShieldAlert } from 'lucide-react'
 import { Badge, Card, Select, Spinner, Timeline, type TimelineEvent } from '@maydru/ui'
 import { createOcrWorker, recognize } from '@maydru/ocr'
 import { ComparePanel } from '../cases/ComparePanel'
@@ -144,6 +144,9 @@ export default function CaseReviewPage() {
           description={`${caseData.scheme_name} · 第一次送件 ${dateTime(caseData.first_submitted_at)}`}
           actions={
             <span className="flex flex-wrap items-center gap-2">
+              <Link to={`/review-settings?scheme=${encodeURIComponent(caseData.scheme_code)}`} className="inline-flex min-h-8 items-center gap-1 rounded-lg border border-border px-2.5 text-[13px] text-muted hover:bg-background-lite hover:text-primary">
+                <ListChecks size={13} /> 資料重點設定
+              </Link>
               <Badge tone={STATUS_TONE[caseData.status]}>{STATUS_STAFF_LABEL[caseData.status]}</Badge>
               {caseData.verdict && (
                 <span className="text-[13px] text-muted">{VERDICT_LABEL[caseData.verdict] ?? caseData.verdict}</span>
