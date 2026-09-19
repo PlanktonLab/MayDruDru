@@ -169,6 +169,8 @@ async def flow_picker_for_platform(ctx: SopTurn, platform_id: str) -> list[dict[
     ).scalars().all()
     if not flows:
         return await begin_platform_picker(ctx, key="line.sop.platform_not_found")
+    if len(flows) == 1:
+        return await open_for_flow(ctx, flows[0], document_label=flows[0].name)
     await conversation.set_state(
         ctx.db, ctx.tenant_id, ctx.user_id, PICKER_FLOW, "flow",
         {"platform": platform.id}, now=ctx.now,

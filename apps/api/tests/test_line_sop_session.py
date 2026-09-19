@@ -118,9 +118,17 @@ async def test_application_helper_lists_every_published_guide_for_the_selected_p
 async def test_application_helper_accepts_a_typed_platform_name(db, tenant, mapped_flow):
     await reply(db, tenant, postback_event("sop_start"))
     platform = await db.get(Platform, mapped_flow.platform_id)
-    listed = await reply(db, tenant, text_event(platform.display_name))
-    assert mapped_flow.name in texts(listed)
-    assert (await state_of(db, tenant)).step == "flow"
+    tutorial = await reply(db, tenant, text_event(platform.display_name))
+    assert await say(db, tenant, "line.sop.all_steps_started", document=mapped_flow.name) in texts(tutorial)
+    assert images(tutorial)
+    assert (await state_of(db, tenant)).flow == sop.SESSION_FLOW
+
+
+async def test_a_platform_with_one_guide_skips_the_guide_picker(db, tenant, mapped_flow):
+    messages = await reply(db, tenant, postback_event("sop_platform", platform=mapped_flow.platform_id))
+    assert await say(db, tenant, "line.sop.all_steps_started", document=mapped_flow.name) in texts(messages)
+    assert images(messages)
+    assert not any(action.startswith("action=sop_open") for action in quick_actions(messages[-1]))
 
 
 async def test_picking_a_document_with_one_flow_starts_the_session(db, tenant, mapped_flow, line_sender):
