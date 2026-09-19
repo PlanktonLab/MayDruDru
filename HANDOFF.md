@@ -113,6 +113,8 @@ docker compose up -d postgres redis minio renderer
 
 舊資料也已完成搬遷：SOP_Tutor Postgres 經一致性 dump 還原後由 `0010` 升到 `0016`；MinIO `sop-private` 202 個與 `sop-public` 204 個物件的數量和 bytes 均與來源一致；youth SQLite 匯入後重跑一次為 `0 inserted / 0 updated / 179 skipped / 0 failed`。雲端的 youth 暫存快照已刪除，本機原始檔保留。搬遷前、舊 SOP 與搬遷後三份 Postgres 備份都在 VM 的 `/home/ubuntu/MayDru/backups/`（mode 600），舊 `sop-tutor` stack 仍保持運行以供回退。
 
+搬遷舊 SOP bucket 時，VM `.env` 必須保留 `S3_BUCKET_PRIVATE=sop-private` 與 `S3_BUCKET_PUBLIC=sop-public`。這兩個值已由 compose 傳入 API／worker；若遺漏，程式會退回 `maydru-*` 預設 bucket，後台既有 SOP replica 會顯示為找不到圖片。2026-09-19 已以 owner 權限驗證一張既有 replica 成功回傳 `200 image/png`。
+
 尚未完成：
 
 - 三個 `maydru*.xamjiang.com` DNS 尚無記錄，因此外網還不能解析；Oracle VM 公網 IP 是 `161.33.23.146`。
