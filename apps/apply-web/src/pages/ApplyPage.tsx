@@ -252,7 +252,12 @@ export default function ApplyPage() {
             />
           )}
           {stepKey === 'guide' && (
-            <GuideStep scheme={scheme} requiredCodes={requiredCodes} loading={requiredQuery.isLoading} />
+            <GuideStep
+              scheme={scheme}
+              requiredCodes={requiredCodes}
+              channelCode={state.channel.payment_channel_code}
+              loading={requiredQuery.isLoading}
+            />
           )}
           {stepKey === 'docs' && (
             <DocsStep
@@ -295,7 +300,8 @@ export default function ApplyPage() {
               // `flex-1` 而不是 `block`：`block` 是 `w-full`，會算成「整列的寬度」，
               // 旁邊還有一顆上一步時就會把自己推出卡片外。
               <Button variant="primary" size="lg" onClick={goNext} className="min-w-0 flex-1">
-                下一步
+                {/* 準備指引那一步的下一步是「去開相機」，講明白比「下一步」更像一個決定。 */}
+                {stepKey === 'guide' ? '我準備好了，開始上傳' : '下一步'}
                 <ArrowRight size={16} aria-hidden />
               </Button>
             )}

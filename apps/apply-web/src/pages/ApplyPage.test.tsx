@@ -21,7 +21,9 @@ function open() {
   return renderAt(<ApplyPage />, '/apply/:scheme', '/apply/HCAI115')
 }
 
-const next = () => fireEvent.click(screen.getByRole('button', { name: /下一步/ }))
+const next = () =>
+  // 準備指引那一步的主要動作叫「我準備好了，開始上傳」，其餘都是「下一步」。
+  fireEvent.click(screen.getByRole('button', { name: /下一步|開始上傳/ }))
 const back = () => fireEvent.click(screen.getByRole('button', { name: /上一步/ }))
 
 /** 第一步的工具是下拉選單：先打開，再點選項（選項是 role="option"，不是 button）。
@@ -172,9 +174,27 @@ describe('ApplyPage', () => {
     await screen.findByRole('heading', { name: '購買明細' })
     fillChannel()
     next()
-    expect(await screen.findByRole('heading', { name: '要準備哪些文件' })).toBeTruthy()
+    expect(await screen.findByRole('heading', { name: '準備申請文件' })).toBeTruthy()
     await waitFor(() => expect(screen.getAllByRole('link', { name: '教我怎麼取得' }).length).toBe(6))
     expect(screen.getByText('電信帳單')).toBeTruthy()
+  })
+
+  it('準備指引的教學依繳費方式分流，不是同一套說明', async () => {
+    open()
+    await pickTool()
+    next()
+    await screen.findByLabelText(/聯絡電話/)
+    fillIdentity()
+    next()
+    await screen.findByRole('heading', { name: '購買明細' })
+    fillChannel() // 電信繳費
+    next()
+    await screen.findByRole('heading', { name: '準備申請文件' })
+    // 電信的教學講電信帳單，不會出現信用卡那一套。
+    expect(await screen.findByText('電信繳費：怎麼拿到電信帳單')).toBeTruthy()
+    // 步驟裡講一次、「送出前確認」再列一次，所以會有兩處。
+    expect(screen.getAllByText(/電話末三碼/).length).toBeGreaterThan(0)
+    expect(screen.queryByText('信用卡繳費：要準備兩份憑證')).toBeNull()
   })
 
   it('第五步缺件時不能進確認，補齊之後可以送出並拿到案件編號', async () => {
@@ -187,7 +207,7 @@ describe('ApplyPage', () => {
     await screen.findByRole('heading', { name: '購買明細' })
     fillChannel()
     next()
-    await screen.findByRole('heading', { name: '要準備哪些文件' })
+    await screen.findByRole('heading', { name: '準備申請文件' })
     await waitFor(() => expect(screen.getAllByRole('link', { name: '教我怎麼取得' }).length).toBe(6))
     next()
     await screen.findByRole('heading', { name: '上傳文件' })

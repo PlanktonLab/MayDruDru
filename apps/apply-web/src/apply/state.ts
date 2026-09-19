@@ -25,7 +25,7 @@ export const STEP_TITLE: Record<StepKey, string> = {
   tool: '確認申請工具',
   identity: '填寫申請人資料',
   channel: '購買明細',
-  guide: '要準備哪些文件',
+  guide: '準備申請文件',
   docs: '上傳文件',
   confirm: '確認並送出',
 }
