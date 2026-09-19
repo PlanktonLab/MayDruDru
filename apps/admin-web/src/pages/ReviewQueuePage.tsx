@@ -1,6 +1,7 @@
 /** /review — a plain list of variants waiting for review (SPEC §6.4). */
 import { useQuery } from '@tanstack/react-query'
-import { ChevronRight } from 'lucide-react'
+import { ChevronRight, Inbox } from 'lucide-react'
+import { EmptyState } from '@maydru/ui'
 import { useNavigate } from 'react-router-dom'
 import { sinceText } from '../components/variant/hooks'
 import { THEME_LABEL } from '../canvas/status'
@@ -22,7 +23,11 @@ export default function ReviewQueuePage() {
       ) : q.error ? (
         <p className="mt-8 text-sm text-danger">{errMsg(q.error)}</p>
       ) : items.length === 0 ? (
-        <p className="mt-16 text-center text-sm text-muted">目前沒有待審核</p>
+        <EmptyState
+          icon={<Inbox size={20} />}
+          title="目前沒有待審核"
+          hint="有人送出新的變體時會出現在這裡。"
+        />
       ) : (
         <ul className="mt-4 divide-y divide-border rounded-xl border border-border bg-canvas">
           {items.map((it) => (

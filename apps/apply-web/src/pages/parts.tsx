@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { Card } from '@maydru/ui'
 
 /** 一頁一個主要標題 + 一段說明，其餘內容放在下面（SPEC §15）。 */
 export function Page({ title, lead, children }: { title: string; lead: string; children?: ReactNode }) {
@@ -14,9 +15,8 @@ export function Page({ title, lead, children }: { title: string; lead: string; c
 /** P0 佔位卡片：說明這一段在哪個階段長出來，不放任何假資料。 */
 export function Placeholder({ phase, items }: { phase: string; items: string[] }) {
   return (
-    <div className="rounded-2xl border border-border bg-canvas p-5 shadow-[var(--shadow-card)]">
-      <p className="text-xs font-medium uppercase tracking-wide text-muted">{phase}</p>
-      <ul className="mt-3 space-y-2 text-[15px]">
+    <Card subtitle={phase}>
+      <ul className="space-y-2 text-[15px]">
         {items.map((item) => (
           <li key={item} className="flex gap-2">
             <span aria-hidden className="mt-2 size-1.5 shrink-0 rounded-full bg-tertiary" />
@@ -24,6 +24,6 @@ export function Placeholder({ phase, items }: { phase: string; items: string[] }
           </li>
         ))}
       </ul>
-    </div>
+    </Card>
   )
 }
