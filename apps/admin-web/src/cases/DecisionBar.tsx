@@ -55,7 +55,9 @@ export function DecisionBar({
     }
   }
 
-  const blocked = blockers.length > 0
+  // 只有在「核定」真的按得到的時候才解釋為什麼按不下去。案件已經在補件或已結案時
+  // 再列一次擋住核定的規則，只是在講一件現在不相干的事。
+  const blocked = blockers.length > 0 && transitions.some((t) => t.code === APPROVE_CODE)
 
   return (
     <Card title="決策" subtitle="每一次轉移都會寫一筆事件，無法刪改。">
@@ -214,6 +216,13 @@ function SupplementModal({
             <Input {...props} type="date" value={deadline} onChange={(event) => setDeadline(event.target.value)} />
           )}
         </Field>
+
+        {items.length === 0 && (
+          // 一份都列不出來時要說清楚，否則按鈕只會回一句「請至少勾選一份」卻沒得勾。
+          <p className="rounded-xl bg-warn-bg px-3 py-2.5 text-[13px] leading-5 text-warn">
+            這件案子的方案還沒有設定必要文件，沒有可以要求補件的項目。請先到方案管理補上文件類型。
+          </p>
+        )}
 
         <ul className="space-y-2">
           {items.map((item) => (

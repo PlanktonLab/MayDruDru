@@ -340,6 +340,35 @@ describe('DecisionBar', () => {
     expect(screen.getByText('帳單上有換算後的臺幣金額')).toBeTruthy()
   })
 
+  it('核定根本不在可用轉移裡時，不再解釋為什麼不能核定', () => {
+    render(
+      <DecisionBar
+        transitions={transitions.filter((t) => t.code !== 'T3')}
+        blockers={blockers}
+        rejectionCodes={REJECTION_CODES}
+        documentTypes={DOCUMENT_TYPES}
+        supplementDays={14}
+        onSubmit={vi.fn(async (_input: TransitionInput) => {})}
+      />,
+    )
+    expect(screen.queryByText(/還不能核定/)).toBeNull()
+  })
+
+  it('方案沒有任何文件類型時，補件表單直說沒得勾', async () => {
+    render(
+      <DecisionBar
+        transitions={transitions}
+        blockers={[]}
+        rejectionCodes={REJECTION_CODES}
+        documentTypes={[]}
+        supplementDays={14}
+        onSubmit={vi.fn(async (_input: TransitionInput) => {})}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: '要求補件' }))
+    expect(await screen.findByText(/還沒有設定必要文件/)).toBeTruthy()
+  })
+
   it('沒有可用轉移時說明是權限問題，而不是留一排死按鈕', () => {
     render(
       <DecisionBar

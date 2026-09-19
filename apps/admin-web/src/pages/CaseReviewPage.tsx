@@ -26,21 +26,13 @@ import {
   useCaseDetail,
   useReviewers,
 } from '../cases/api'
-import { STATUS_STAFF_LABEL, STATUS_TONE, VERDICT_LABEL, date, dateTime, money } from '../cases/labels'
+import { STATUS_STAFF_LABEL, STATUS_TONE, VERDICT_LABEL, actorLabel, date, dateTime, money } from '../cases/labels'
 import { useAuth } from '../lib/auth'
 import { ROLE_LABEL, type Role } from '../lib/types'
 import { errMsg, useToast } from '../components/ui'
 import { PageHeader } from '../components/admin/shared'
 import type { BoundingBox } from '@maydru/review-rules'
-import type { CaseDocument, CaseEvent, DocumentTypeOption } from '../cases/types'
-
-/** 誰做的。承辦有名字（`actor_name`），系統與市民沒有——那不是缺資料，是本來就沒有人。 */
-export function actorLabel(event: Pick<CaseEvent, 'actor_type' | 'actor_name'>): string | null {
-  if (event.actor_name) return `由 ${event.actor_name}`
-  if (event.actor_type === 'SYSTEM') return '由系統自動執行'
-  if (event.actor_type === 'APPLICANT') return '由申請人'
-  return null
-}
+import type { CaseDocument, DocumentTypeOption } from '../cases/types'
 
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (

@@ -5,7 +5,7 @@
  */
 
 import type { BadgeTone } from '@maydru/ui'
-import type { CaseStatus, FindingStatus } from './types'
+import type { CaseEvent, CaseStatus, FindingStatus } from './types'
 
 export const STATUS_STAFF_LABEL: Record<CaseStatus, string> = {
   SUBMITTED: '已送件',
@@ -98,4 +98,12 @@ export function dateTime(value: string | null | undefined): string {
 export function deadlineFromToday(days: number, today = new Date()): string {
   const target = new Date(today.getTime() + days * 86_400_000)
   return `${target.getFullYear()}-${String(target.getMonth() + 1).padStart(2, '0')}-${String(target.getDate()).padStart(2, '0')}`
+}
+
+/** 誰做的。承辦有名字（`actor_name`），系統與市民沒有——那不是缺資料，是本來就沒有人。 */
+export function actorLabel(event: Pick<CaseEvent, 'actor_type' | 'actor_name'>): string | null {
+  if (event.actor_name) return `由 ${event.actor_name}`
+  if (event.actor_type === 'SYSTEM') return '由系統自動執行'
+  if (event.actor_type === 'APPLICANT') return '由申請人'
+  return null
 }

@@ -141,10 +141,11 @@ export default function CasesQueuePage() {
                     <Td>{row.scheme_name}</Td>
                     <Td>{row.tool_name}</Td>
                     <Td className="tabular-nums">{money(row.purchase_amount)}</Td>
-                    <Td>
+                    {/* 狀態是一顆標籤，不是一段文字：方案名稱再長也不該把「已撥款」折成兩行。 */}
+                    <Td className="whitespace-nowrap">
                       <Badge tone={STATUS_TONE[row.status]}>{STATUS_STAFF_LABEL[row.status]}</Badge>
                     </Td>
-                    <Td>
+                    <Td className="whitespace-nowrap">
                       {row.verdict ? (
                         <span className="text-[12.5px] text-muted">{VERDICT_LABEL[row.verdict] ?? row.verdict}</span>
                       ) : (
