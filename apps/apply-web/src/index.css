@@ -31,3 +31,110 @@
 @media (prefers-reduced-motion: reduce) {
   .md-risein { animation: none; }
 }
+
+/* ── 桌面版外殼 ─────────────────────────────────────────────────────────
+   手機仍是原本的單欄 + 底部選單；從 lg 起換成「頁首橫列 + 內容置中 + 側欄摘要」
+   的資訊網站排版：白色頁首、淺灰底、寬留白、細框線、單一強調色。
+   斷點統一用 --apply-lg（1024px），跟 Tailwind 的 lg 對齊。 */
+
+.apply-shell {
+  /* 內容最寬 1120px，兩側至少留 48px；窄於此就把剩下的空間全部讓給內容。 */
+  --apply-gutter: 16px;
+  --apply-max: 1120px;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--background);
+}
+
+.apply-gutter {
+  width: 100%;
+  max-width: calc(var(--apply-max) + var(--apply-gutter) * 2);
+  margin-inline: auto;
+  padding-inline: var(--apply-gutter);
+}
+
+@media (min-width: 1024px) {
+  .apply-shell { --apply-gutter: 48px; }
+}
+
+/* 頁首：手機上不佔空間（導覽在底部），桌面才出現。 */
+.apply-header {
+  display: none;
+  background: var(--canvas);
+  border-bottom: 1px solid var(--border);
+}
+
+@media (min-width: 1024px) {
+  .apply-header { display: block; }
+}
+
+/* 步驟列：手機沿用 Stepper 元件自己的緊湊排版；桌面把它推到標題右邊，
+   去掉卡片外框，讓它讀起來像頁首的一部分而不是另一張卡。 */
+@media (min-width: 1024px) {
+  .apply-flow-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 32px;
+  }
+  .apply-flow-header > :first-child { flex: 1; min-width: 0; }
+  .apply-flow-header > :last-child { flex: 0 0 52%; max-width: 620px; }
+}
+
+/* 手機的步驟列自成一張淺色卡片，序號與標籤上下排；桌面才攤成一條橫線。
+   （對齊 meichuhackathon 的 .apply-steps。） */
+.apply-steps {
+  padding: 14px 8px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: color-mix(in oklab, var(--canvas) 70%, transparent);
+}
+
+@media (min-width: 1024px) {
+  .apply-steps { padding: 6px 0; border: 0; background: transparent; }
+}
+
+/* 送件流程在桌面是「表單 + 摘要側欄」兩欄；摘要在手機上不顯示
+   （同樣的資訊在最後一步的確認頁完整出現一次，不需要重複佔畫面）。 */
+.apply-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; align-items: start; }
+
+@media (min-width: 1024px) {
+  .apply-grid { grid-template-columns: minmax(0, 1fr) 300px; }
+  .apply-aside { position: sticky; top: 24px; }
+}
+
+/* 桌面版的表單面板：留白比手機大一圈，框線淡到幾乎看不見。 */
+@media (min-width: 1024px) {
+  .apply-panel {
+    padding: 28px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    background: var(--canvas);
+  }
+}
+
+/* 清單型頁面（方案列表、查詢、常見問題、送件成功）在桌面不該撐滿 1120px：
+   一行字太長就讀不下去，而且「開始申請」這種按鈕拉成一整條會失去按鈕的樣子。
+   內容收在 720px 的單欄裡，靠左對齊頁首的 logo，不置中——置中會讓上下兩塊
+   對不齊，看起來像兩個不同的版面。 */
+@media (min-width: 1024px) {
+  .apply-reading { max-width: 720px; }
+}
+
+.apply-footer {
+  display: none;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+@media (min-width: 1024px) {
+  .apply-footer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 12px;
+    padding-block: 20px;
+    border-top: 1px solid var(--border);
+  }
+}

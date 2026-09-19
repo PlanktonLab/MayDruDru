@@ -2,11 +2,13 @@
 
 import { describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { http, HttpResponse } from 'msw'
 import { ConfirmStep } from '../apply/ConfirmStep'
 import { lineDeepLink } from './SubmittedPage'
-import SchemesPage from './SchemesPage'
+import ApplyPage from './ApplyPage'
 import HelpPage from './HelpPage'
 import SubmittedPage from './SubmittedPage'
+import { server } from '../mocks/server'
 import { Providers, renderAt } from '../test/utils'
 import { SCHEME } from '../mocks/data'
 import { initialState, type ApplyState } from '../apply/state'
@@ -146,27 +148,18 @@ describe('ConfirmStep', () => {
   })
 })
 
-describe('SchemesPage', () => {
-  it('列出開放中的方案，每張卡只有一個主要動作', async () => {
-    render(
-      <Providers>
-        <SchemesPage />
-      </Providers>,
-    )
-    expect(await screen.findByText('115年度 AI領航青年數位工具補助計畫')).toBeTruthy()
-    expect(screen.getAllByRole('button', { name: /開始申請/ }).length).toBe(3)
+describe('首頁', () => {
+  it('不先讓人選方案，直接進入唯一那個補助計畫的第一步', async () => {
+    renderAt(<ApplyPage />, '/', '/')
+    // 開放中的方案只有一個，所以進站看到的就是申請流程的第一步。
+    expect(await screen.findByRole('heading', { name: '你買的是哪一個 AI 工具？' })).toBeTruthy()
   })
 
-  it('提供查詢、教學、常見問題三個次要入口', async () => {
-    render(
-      <Providers>
-        <SchemesPage />
-      </Providers>,
-    )
-    await screen.findByText('115年度 AI領航青年數位工具補助計畫')
-    expect(screen.getByRole('link', { name: /查詢我的案件進度/ })).toBeTruthy()
-    expect(screen.getByRole('link', { name: /教我怎麼取得文件/ })).toBeTruthy()
-    expect(screen.getByRole('link', { name: /常見問題/ })).toBeTruthy()
+  it('沒有開放中的方案時說明現況，並給查詢案件的出口', async () => {
+    server.use(http.get('/api/apply/schemes', () => HttpResponse.json([])))
+    renderAt(<ApplyPage />, '/', '/')
+    expect(await screen.findByText('目前沒有開放中的方案')).toBeTruthy()
+    expect(screen.getByRole('button', { name: /查詢案件進度/ })).toBeTruthy()
   })
 })
 
