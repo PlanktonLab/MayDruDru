@@ -141,15 +141,15 @@ async def test_available_transitions_depend_on_the_viewers_capabilities(client, 
     app = await make_case(db, tenant, scheme)
     reviewer = (await client.get(f"{CASES}/{app.case_no}", headers=auth_headers("case_reviewer"))).json()
     supervisor = (await client.get(f"{CASES}/{app.case_no}", headers=auth_headers("case_supervisor"))).json()
-    assert [t["code"] for t in reviewer["available_transitions"]] == ["T2"]
-    assert sorted(t["code"] for t in supervisor["available_transitions"]) == ["T11", "T2", "T3", "T9"]
+    assert [t["code"] for t in reviewer["allowed_transitions"]] == ["T2"]
+    assert sorted(t["code"] for t in supervisor["allowed_transitions"]) == ["T11", "T2", "T3", "T9"]
 
 
 async def test_a_terminal_case_offers_no_transitions(client, auth_headers, db, tenant, scheme):
     app = await make_case(db, tenant, scheme)
     await drive(db, app, "T10")
     body = (await client.get(f"{CASES}/{app.case_no}", headers=auth_headers("case_supervisor"))).json()
-    assert body["available_transitions"] == []
+    assert body["allowed_transitions"] == []
     assert body["documents_purge_at"] is not None
 
 
@@ -168,7 +168,8 @@ async def test_posting_a_transition_moves_the_case(client, auth_headers, db, ten
         headers=auth_headers("case_reviewer"),
     )
     assert r.status_code == 201
-    assert r.json()["to_status"] == "NEEDS_REVISION"
+    assert r.json()["status"] == "NEEDS_REVISION"
+    assert r.json()["events"][-1]["to_status"] == "NEEDS_REVISION"
     await db.refresh(app)
     assert app.status == "NEEDS_REVISION" and app.revision_count == 1
 

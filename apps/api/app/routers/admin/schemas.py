@@ -14,16 +14,25 @@ from pydantic import BaseModel, ConfigDict, Field
 __all__ = [
     "ApplicationDetailOut",
     "ApplicationOut",
+    "AssignIn",
+    "AssignOut",
     "ChildIn",
     "DocumentOut",
+    "DocumentUrlOut",
+    "EvaluateOut",
     "EventOut",
     "FindingOut",
+    "FindingOverrideIn",
+    "FindingsOut",
+    "OcrIn",
     "QueueOut",
+    "ReviewerOut",
     "SchemeIn",
     "SchemeOut",
     "SchemePatch",
     "SupplementItemIn",
     "TransitionIn",
+    "TransitionResultOut",
 ]
 
 
@@ -127,9 +136,24 @@ class TransitionIn(BaseModel):
     payload: dict[str, Any] = Field(default_factory=dict)
 
 
+class OcrLineOut(BaseModel):
+    text: str = ""
+    confidence: float | None = None
+    bbox: dict[str, float] | None = None
+    words: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class OcrOut(BaseModel):
+    source: str
+    engine: str = ""
+    confidence: float = 0.0
+    lines: list[dict[str, Any]] = Field(default_factory=list)
+
+
 class DocumentOut(BaseModel):
     id: str
     document_type_code: str
+    document_type_label: str = ""
     revision: int
     is_current: bool
     supersedes_id: str | None = None
@@ -140,6 +164,45 @@ class DocumentOut(BaseModel):
     preview_key: str | None = None
     uploaded_at: datetime | None = None
     purged_at: datetime | None = None
+    ocr: OcrOut | None = None
+
+
+class DocumentUrlOut(BaseModel):
+    """private bucket 的短效連結（SPEC §11：5 分鐘）。"""
+
+    url: str
+    expires_at: datetime
+
+
+class OcrIn(BaseModel):
+    """承辦人在自己的瀏覽器重新辨識的結果（`source=reviewer`，SPEC §8.2）。"""
+
+    ocr: dict[str, Any] = Field(default_factory=dict)
+
+
+class FindingOverrideIn(BaseModel):
+    """人工覆寫：另寫一列 `source=reviewer`，舊的留著（SPEC §8.3）。"""
+
+    model_config = ConfigDict(extra="forbid")
+
+    status: str = Field(pattern="^(MATCH|MISMATCH|UNREADABLE|PENDING)$")
+    extracted_value: str | None = None
+    note: str | None = None
+
+
+class ReviewerOut(BaseModel):
+    id: str
+    name: str = ""
+
+
+class AssignIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    reviewer_id: str | None = None
+
+
+class AssignOut(BaseModel):
+    assigned_reviewer: ReviewerOut | None = None
 
 
 class EventOut(BaseModel):
@@ -156,24 +219,65 @@ class EventOut(BaseModel):
 
 
 class FindingOut(BaseModel):
+    """契約 §Finding + 案件頁需要的落地欄位。
+
+    `superseded=True` 代表這一列已經被同一條規則更新的判定取代，只留在歷史裡。
+    """
+
     id: str
-    rule_id: str | None
+    rule_id: str | None = None
     rule_code: str
-    document_id: str | None
+    document_id: str | None = None
     status: str
-    extracted_value: str
-    expected_value: str
-    confidence: float
+    extracted_value: str | None = None
+    expected_value: str | None = None
+    confidence: float | None = None
+    bbox: dict[str, float] | None = None
+    document_type_code: str | None = None
+    note: str | None = None
+    suggested_supplement: list[str] | None = None
     source: str
-    note: str
+    reviewer: ReviewerOut | None = None
     decided_at: datetime | None = None
+    superseded: bool = False
+
+
+class FindingsOut(BaseModel):
+    findings: list[FindingOut]
+
+
+class EvaluateOut(BaseModel):
+    findings: list[FindingOut]
+    verdict: str
+
+
+class BlockerOut(BaseModel):
+    rule_code: str
+    label: str = ""
+    status: str = "PENDING"
+
+
+class AllowedTransitionOut(BaseModel):
+    code: str
+    label: str = ""
+    to_status: str = ""
+    needs_reason: bool = False
+    needs_rejection_codes: bool = False
+    needs_supplement_items: bool = False
+
+
+class TransitionResultOut(BaseModel):
+    status: str
+    events: list[EventOut]
 
 
 class ApplicationOut(BaseModel):
-    """佇列列。姓名遮蔽、電話只到末四碼——承辦人要看全名請開案件頁。"""
+    """佇列列（契約 §QueueRow）。姓名遮蔽、電話只到末四碼——要看全名請開案件頁。"""
 
     case_no: str
     scheme_id: str
+    scheme_code: str = ""
+    scheme_name: str = ""
     status: str
     tier_code: str
     payment_channel_code: str
@@ -186,13 +290,18 @@ class ApplicationOut(BaseModel):
     last_submitted_at: datetime | None
     supplement_deadline: datetime | None
     assigned_reviewer_id: str | None
+    assigned_reviewer: ReviewerOut | None = None
+    verdict: str | None = None
     version: int
 
 
 class ApplicationDetailOut(ApplicationOut):
+    """案件頁（契約 §CaseDetail）。"""
+
     applicant_name: str
     email: str
     phone_masked: str
+    id_last4_masked: str = ""
     purchase_date: date | None
     paid_by_proxy: bool
     note: str
@@ -202,7 +311,9 @@ class ApplicationDetailOut(ApplicationOut):
     documents_purge_at: datetime | None
     supplement_items: list[dict[str, Any]]
     required_document_types: list[str]
-    available_transitions: list[dict[str, Any]]
+    allowed_transitions: list[AllowedTransitionOut]
+    approval_blockers: list[BlockerOut]
+    rules: list[dict[str, Any]]
     documents: list[DocumentOut]
     events: list[EventOut]
     findings: list[FindingOut]
