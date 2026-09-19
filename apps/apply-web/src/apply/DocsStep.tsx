@@ -8,7 +8,7 @@
  * 所以市民可以在段落之間來回，不必照順序填完。
  */
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Check } from 'lucide-react'
 import { cx } from '@maydru/ui'
 import { DocField, type DocProblem } from './DocField'
@@ -71,19 +71,27 @@ export function DocsStep({
   /**
    * 把「下一步」的內容交給上層，讓它與「上一步」排在同一列——按鈕畫在這裡的話
    * 會卡在面板內容中間，跟其他步驟的位置對不齊。
+   *
+   * 相依只放**原始值**：`groups` 每次 render 都是新陣列，把它（或從它取出的
+   * `nextGroup` 物件）放進相依陣列，effect 就每次都跑、上層每次都 setState，
+   * 兩邊互相觸發成無限迴圈。`advance` 用 `useCallback` 固定住，理由相同。
    */
+  const hasNext = Boolean(nextGroup)
+  const nextLabel = nextGroup?.label ?? ''
+
+  const advance = useCallback(() => {
+    setActive((index) => index + 1)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [])
+
   useEffect(() => {
     onNavChange?.({
-      label: nextGroup ? `下一步：${nextGroup.label}` : '下一步',
+      label: hasNext ? `下一步：${nextLabel}` : '下一步',
       disabled: currentIncomplete,
-      onLastGroup: !nextGroup,
-      advance: () => {
-        if (!nextGroup) return
-        setActive((index) => index + 1)
-        window.scrollTo({ top: 0, behavior: 'smooth' })
-      },
+      onLastGroup: !hasNext,
+      advance,
     })
-  }, [onNavChange, nextGroup, currentIncomplete])
+  }, [onNavChange, hasNext, nextLabel, currentIncomplete, advance])
 
   return (
     <div className="space-y-4">

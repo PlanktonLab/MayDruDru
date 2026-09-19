@@ -18,8 +18,14 @@ export interface HelpChatMessage {
   text: string
 }
 
-/** `.env` 的 `VITE_HELP_CHAT=1`；沒開時整個泡泡不掛上去。 */
-export const helpChatEnabled = import.meta.env.VITE_HELP_CHAT === '1'
+/**
+ * 預設開啟，讓版面看得到；`VITE_HELP_CHAT=0` 可以關掉。
+ *
+ * 後端端點還沒有，所以現在按下去會得到「現在問不到」的錯誤訊息。
+ * **正式上線前要嘛把端點做完，要嘛把這裡改回預設關閉**——接不到後端的功能
+ * 出現在市民面前，按下去只拿到錯誤，比沒有這個功能更糟。
+ */
+export const helpChatEnabled = import.meta.env.VITE_HELP_CHAT !== '0'
 
 /** 端點還沒有，所以這裡只有形狀。接上之後改成打真的 API。 */
 export async function sendHelpChat(_text: string): Promise<HelpChatMessage> {

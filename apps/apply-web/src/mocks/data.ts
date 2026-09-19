@@ -516,6 +516,37 @@ export const FAQS: Faq[] = [
     answer:
       '一般青年補助實際支出的 50%，上限 NT$3,000。\n低收入戶與中低收入戶補助 90%，上限 NT$6,000（需另附特定對象證明）。',
   },
+  {
+    id: 'faq_qualification',
+    category: 'ELIGIBILITY',
+    priority: 10,
+    question: '誰可以申請？',
+    answer: '設籍新竹市的 18–40 歲青年。需以身分證正反面證明設籍地。',
+  },
+  {
+    id: 'faq_iphone',
+    category: 'DOCUMENTS',
+    priority: 10,
+    question: '我用 iPhone 拍的照片上傳後打不開？',
+    answer:
+      '系統會在你的手機上自動把 iPhone 的 HEIC 照片轉成 JPEG 再上傳，所以承辦端一定打得開。你不需要自己轉檔。',
+  },
+  {
+    id: 'faq_card_photo',
+    category: 'DOCUMENTS',
+    priority: 10,
+    question: '一定要拍實體信用卡嗎？我的卡在別的地方',
+    answer:
+      '不一定。網路銀行截圖、銀行 APP 截圖、信用卡帳單、即時消費通知都可以，只要看得到「卡號末四碼」與「持卡人姓名」即可。\n\n簽名不需要出現在畫面上。',
+  },
+  {
+    id: 'faq_regulation',
+    category: 'REGULATION',
+    priority: 100,
+    question: '簡章去哪裡看？有哪些規定要注意？',
+    answer:
+      '重點有四項：\n1. 設籍新竹市、18–40 歲\n2. 同一筆支出不得重複領取其他政府補助（需簽切結書）\n3. 具中資背景的服務不予補助\n4. 需提供含臺幣換算金額的繳款憑證\n\n完整簡章請見計畫公告頁面。',
+  },
 ]
 
 /** 依級距、繳費管道、代付旗標推出必備文件——與伺服器同一套規則。 */
