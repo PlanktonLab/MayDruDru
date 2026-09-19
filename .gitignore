@@ -10,12 +10,19 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.coverage
+coverage/
+htmlcov/
 
 # node
 node_modules/
 dist/
 build/
 .vite/
+.eslintcache
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
 # data / uploads
 data/
@@ -26,8 +33,7 @@ data/
 .DS_Store
 .idea/
 .vscode/
-
-# generated API client types (產生自後端 OpenAPI，不進 git)
+.claude/
 
 # tool caches
 .tsbuildinfo
