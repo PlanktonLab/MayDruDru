@@ -19,7 +19,7 @@
 | P7 部署 | 🟡 OracleCloud VM、Compose、資料搬遷與 Nginx 已完成；等待 DNS 與 LINE 正式切換 |
 | **P8 打磨** | ✅ 已完成（Dashboard、稽核 UI、axe gate、LINE QR、文件） |
 
-目前測試數：後端 **1282 passed、5 skipped**，admin-web 122、apply-web 92、packages 131；OpenAPI 與生成 client 已同步。程式面已完成，P7 剩 DNS 與 LINE 正式切換。
+目前測試數：後端 **1282 passed、5 skipped**，admin-web 122、apply-web 100、packages 131；OpenAPI 與生成 client 已同步。程式面已完成，P7 剩 DNS 與 LINE 正式切換。
 
 ---
 

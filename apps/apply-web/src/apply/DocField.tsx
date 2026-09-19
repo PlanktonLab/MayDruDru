@@ -11,6 +11,7 @@ import { MaskEditor } from '@maydru/mask-editor'
 import { disposeAll, encodePages, prepareFile, recognizePages } from './pipeline'
 import { captureOcrProgress, getOcrWorker } from '../lib/ocrWorker'
 import { sampleFor } from './docSamples'
+import { DocumentSopHelp } from './DocumentSopHelp'
 import type { UploadedDoc } from './state'
 import type { SchemeDocumentType } from '../lib/types'
 
@@ -35,6 +36,8 @@ export interface DocFieldProps {
   problems?: DocProblem[]
   /** 缺這份就不能進下一步。 */
   required?: boolean
+  /** 有方案代碼時，在文件卡內提供已發布 SOP 的情境式入口（D41）。 */
+  sopSchemeCode?: string
 }
 
 const ACCEPT = 'image/*,.heic,.heif,application/pdf'
@@ -52,6 +55,7 @@ export function DocField({
   onClear,
   problems = [],
   required = false,
+  sopSchemeCode,
 }: DocFieldProps) {
   const title = label ?? docType.label
   const sample = sampleFor(docType.code)
@@ -237,18 +241,30 @@ export function DocField({
           再講一次，在每張卡片上先講第三次只是把畫面塞滿。 */}
 
       {/* 合格範例：傳之前可以點開對照，傳完就不再顯示——已經傳好的人不需要它。 */}
-      {sample && !value && (
+      {!value && (sample || sopSchemeCode) && (
         <div className="mb-3">
-          <button
-            type="button"
-            aria-expanded={showSample}
-            onClick={() => setShowSample((previous) => !previous)}
-            className="inline-flex min-h-11 items-center gap-1.5 text-[14px] font-medium text-accent"
-          >
-            <ImageIcon size={14} aria-hidden />
-            {showSample ? '收起範例' : '看合格範例'}
-          </button>
-          {showSample && (
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            {sample && (
+              <button
+                type="button"
+                aria-expanded={showSample}
+                onClick={() => setShowSample((previous) => !previous)}
+                className="inline-flex min-h-11 items-center gap-1.5 text-[14px] font-medium text-accent"
+              >
+                <ImageIcon size={14} aria-hidden />
+                {showSample ? '收起範例' : '看合格範例'}
+              </button>
+            )}
+            {sopSchemeCode && (
+              <DocumentSopHelp
+                documentTypeCode={docType.code}
+                documentLabel={title}
+                schemeCode={sopSchemeCode}
+                onReady={() => fileRef.current?.click()}
+              />
+            )}
+          </div>
+          {showSample && sample && (
             <img
               src={sample}
               alt={`${title}的合格範例`}

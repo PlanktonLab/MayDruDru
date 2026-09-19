@@ -195,7 +195,7 @@ npm test                      # vitest
 npm run build                 # tsc -b && vite build
 ```
 
-目前的數量：後端 1281（另有 5 個環境條件 skip）、admin-web 122、apply-web 92、五個 package 合計 131。
+目前的數量：後端 1281（另有 5 個環境條件 skip）、admin-web 122、apply-web 100、五個 package 合計 131。
 
 CI（`.github/workflows/ci.yml`）跑同一組指令，另加 `docker buildx`（linux/arm64 + linux/amd64），只有 main 的 push 會推 GHCR。
 

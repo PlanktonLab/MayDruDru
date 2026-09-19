@@ -11,6 +11,8 @@ export interface ModalProps {
   footer?: ReactNode
   /** 最大寬度（px）。行動版一律滿版。 */
   width?: number
+  /** 覆寫最大高度；大型圖片或編輯器可使用接近全螢幕的高度。 */
+  maxHeight?: string
   children: ReactNode
   className?: string
 }
@@ -29,7 +31,7 @@ const FOCUSABLE =
  */
 const CENTERED = 'fixed inset-0 m-auto h-fit'
 
-export function Modal({ open, onClose, title, subtitle, footer, width = 520, children, className }: ModalProps) {
+export function Modal({ open, onClose, title, subtitle, footer, width = 520, maxHeight, children, className }: ModalProps) {
   const ref = useRef<HTMLDialogElement>(null)
 
   useEffect(() => {
@@ -89,7 +91,7 @@ export function Modal({ open, onClose, title, subtitle, footer, width = 520, chi
         'max-h-[85vh] overflow-hidden',
         className,
       )}
-      style={{ maxWidth: width, boxShadow: 'var(--shadow-popover)' }}
+      style={{ maxWidth: width, maxHeight, boxShadow: 'var(--shadow-popover)' }}
     >
       {(title || subtitle) && (
         <header className="flex shrink-0 items-start justify-between gap-3 px-5 pt-5">
