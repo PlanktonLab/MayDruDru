@@ -139,7 +139,7 @@ export function MaskEditor({
 
   return (
     <div className="fixed inset-0 z-50 flex bg-scrim p-0 sm:p-4" role="dialog" aria-modal="true" aria-label="編輯個資遮罩">
-      <div className="mx-auto flex h-full w-full max-w-[1600px] flex-col overflow-hidden bg-background sm:rounded-2xl">
+      <div className="mx-auto flex h-[100dvh] w-full max-w-[1600px] flex-col overflow-hidden bg-background sm:h-[calc(100dvh-2rem)] sm:rounded-2xl">
         <header className="flex shrink-0 items-center justify-between gap-3 border-b border-border bg-canvas px-4 py-3">
           <div className="flex min-w-0 items-center gap-2.5">
             <span aria-hidden className="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent-bg text-accent">
@@ -155,14 +155,14 @@ export function MaskEditor({
           </Button>
         </header>
 
-        <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="grid min-h-0 flex-1 grid-cols-1 overflow-y-auto md:grid-cols-[minmax(0,1fr)_360px] md:overflow-hidden">
           <MaskCanvas source={source} masks={masks} onChange={changeMasks} disabled={busy} />
 
           <aside className="flex min-h-0 flex-col border-t border-border bg-canvas md:border-l md:border-t-0">
             <div className="space-y-3 overflow-y-auto p-4">
               <div className="rounded-xl bg-background-lite p-3 text-[12px] leading-relaxed text-muted">
                 <p className="font-semibold text-primary">編輯方式</p>
-                <p className="mt-1">按「新增遮罩」建立一個框；拖曳框可移動，拉四角可調整大小。點空白只會取消選取。</p>
+                <p className="mt-1">像 SOP 標註一樣，直接在圖片上拖曳框選。拖動已有遮罩可移動，拉四角可調整大小。</p>
               </div>
 
               {keepHint && (

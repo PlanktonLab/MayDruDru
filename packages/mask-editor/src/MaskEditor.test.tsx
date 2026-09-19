@@ -46,9 +46,15 @@ const source = (): HTMLCanvasElement => {
   return canvas
 }
 
-/** Explicitly add one mask. Blank canvas gestures must never create one. */
+/** 像 SOP BoxEditor 一樣，直接在圖片表面拖出一個框。 */
+let pointerId = 20
 function drawMask(): void {
-  fireEvent.click(screen.getByRole('button', { name: /新增遮罩/ }))
+  pointerId += 1
+  const surface = screen.getByTestId('mask-surface')
+  const stage = screen.getByTestId('mask-stage')
+  fireEvent.pointerDown(surface, { clientX: 100, clientY: 90, pointerId, button: 0 })
+  fireEvent.pointerMove(stage, { clientX: 220, clientY: 150, pointerId })
+  fireEvent.pointerUp(stage, { clientX: 220, clientY: 150, pointerId })
 }
 
 beforeEach(() => {
@@ -143,7 +149,12 @@ describe('MaskEditor 的確認邏輯', () => {
     expect(masked).not.toBe(original)
     expect(masked.width).toBe(800)
     expect(meta.masks).toHaveLength(1)
-    expect(meta.masks[0]).toMatchObject({ source: 'MANUAL', x: 0.35, y: 0.45 })
+    const mask = meta.masks[0] as { source: string; x: number; y: number; w: number; h: number }
+    expect(mask.source).toBe('MANUAL')
+    expect(mask.x).toBeCloseTo(0.25)
+    expect(mask.y).toBeCloseTo(0.3)
+    expect(mask.w).toBeCloseTo(0.3)
+    expect(mask.h).toBeCloseTo(0.2)
   })
 
   it('取消時清掉來源影像，不留在記憶體裡', () => {
@@ -196,8 +207,29 @@ describe('MaskEditor 的確認邏輯', () => {
     expect(surface.className.split(/\s+/)).not.toContain('w-full')
     expect(surface.style.width).toBe('336px')
     expect(surface.style.height).toBe('252px')
+    expect(surface.style.left).toBe('50%')
+    expect(surface.style.top).toBe('50%')
     expect(canvas.className).toContain('h-full')
     expect(canvas.className).toContain('w-full')
+  })
+
+  it('小尺寸來源圖也會放大到編輯區，不會在桌機畫布中央縮成小圖', () => {
+    const smallSource = document.createElement('canvas')
+    smallSource.width = 200
+    smallSource.height = 100
+    render(
+      <MaskEditor
+        source={smallSource}
+        mustMask
+        autoDetectCardNumber={false}
+        onConfirm={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    )
+
+    const surface = screen.getByTestId('mask-surface')
+    expect(surface.style.width).toBe('352px')
+    expect(surface.style.height).toBe('176px')
   })
 
   it('可以縮放並一鍵回到符合視窗', () => {
@@ -287,7 +319,7 @@ describe('MaskEditor 的確認邏輯', () => {
     expect(screen.queryAllByTestId('mask-rect')).toHaveLength(0)
   })
 
-  it('按新增遮罩會立即在圖片中央建立可編輯遮罩', () => {
+  it('在圖片上拖曳時會預覽框，放開後建立可編輯遮罩', () => {
     render(
       <MaskEditor
         source={source()}
@@ -298,10 +330,16 @@ describe('MaskEditor 的確認邏輯', () => {
       />,
     )
 
-    fireEvent.click(screen.getByRole('button', { name: /新增遮罩/ }))
+    const surface = screen.getByTestId('mask-surface')
+    const stage = screen.getByTestId('mask-stage')
+    fireEvent.pointerDown(surface, { clientX: 100, clientY: 90, pointerId: 8, button: 0 })
+    fireEvent.pointerMove(stage, { clientX: 220, clientY: 150, pointerId: 8 })
+    expect(screen.getByTestId('mask-draft')).toBeTruthy()
+    fireEvent.pointerUp(stage, { clientX: 220, clientY: 150, pointerId: 8 })
     const mask = screen.getByTestId('mask-rect')
-    expect(Number.parseFloat(mask.style.left)).toBeCloseTo(35)
-    expect(Number.parseFloat(mask.style.top)).toBeCloseTo(45)
+    expect(screen.queryByTestId('mask-draft')).toBeNull()
+    expect(Number.parseFloat(mask.style.left)).toBeCloseTo(25)
+    expect(Number.parseFloat(mask.style.top)).toBeCloseTo(30)
     expect(screen.getAllByRole('button', { name: /調整遮罩/ })).toHaveLength(4)
   })
 
@@ -322,15 +360,15 @@ describe('MaskEditor 的確認邏輯', () => {
     const stage = screen.getByTestId('mask-stage')
     fireEvent.pointerMove(stage, { clientX: 140, clientY: 110, pointerId: 5 })
     fireEvent.pointerUp(stage, { clientX: 140, clientY: 110, pointerId: 5 })
-    expect(Number.parseFloat(mask.style.left)).toBeCloseTo(45)
-    expect(Number.parseFloat(mask.style.top)).toBeCloseTo(55)
+    expect(Number.parseFloat(mask.style.left)).toBeCloseTo(35)
+    expect(Number.parseFloat(mask.style.top)).toBeCloseTo(40)
 
     const handle = screen.getByRole('button', { name: '調整遮罩SE角' })
     fireEvent.pointerDown(handle, { clientX: 240, clientY: 180, pointerId: 6 })
     fireEvent.pointerMove(stage, { clientX: 320, clientY: 240, pointerId: 6 })
     fireEvent.pointerUp(stage, { clientX: 320, clientY: 240, pointerId: 6 })
-    expect(Number.parseFloat(mask.style.width)).toBeCloseTo(35)
-    expect(Number.parseFloat(mask.style.height)).toBeCloseTo(25)
+    expect(Number.parseFloat(mask.style.width)).toBeCloseTo(45)
+    expect(Number.parseFloat(mask.style.height)).toBeCloseTo(40)
   })
 
   it('滑鼠滾輪會以畫布為中心連續縮放，不需要按 Ctrl', () => {
@@ -362,7 +400,7 @@ describe('MaskEditor 的確認邏輯', () => {
       />,
     )
 
-    fireEvent.click(screen.getByRole('button', { name: /新增遮罩/ }))
+    drawMask()
     expect(screen.getAllByTestId('mask-rect')).toHaveLength(1)
     fireEvent.keyDown(screen.getByTestId('mask-stage'), { key: 'Delete' })
     expect(screen.queryAllByTestId('mask-rect')).toHaveLength(0)
@@ -379,13 +417,12 @@ describe('MaskEditor 的確認邏輯', () => {
       />,
     )
 
-    fireEvent.click(screen.getByRole('button', { name: /新增遮罩/ }))
-    expect(screen.getByText('遮罩 1')).toBeTruthy()
+    drawMask()
     fireEvent.click(screen.getByRole('button', { name: '刪除遮罩 1' }))
     expect(screen.queryAllByTestId('mask-rect')).toHaveLength(0)
   })
 
-  it('每按一次新增只建立一個遮罩，刪除後會重新要求確認', () => {
+  it('每次拖曳只建立一個遮罩，刪除後會重新要求確認', () => {
     render(
       <MaskEditor
         source={source()}

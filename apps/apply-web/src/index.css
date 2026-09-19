@@ -4,6 +4,8 @@
    所以只出現在共用元件裡的 utility（Modal 的 max-h-[85vh]）會一個規則都不產生。
    指名掃它的原始碼。 */
 @source "../../../packages/ui/src";
+/* 遮罩編輯器也是 workspace 原始碼；漏掃會讓定位、雙欄與滿高畫布 utility 在正式版消失。 */
+@source "../../../packages/mask-editor/src";
 
 /* apply-web 是行動優先的市民介面：一個畫面一個主要動作，字級偏大，
    點擊目標至少 44px（SPEC §15）。base layer 讓 utility 仍然能覆蓋。 */

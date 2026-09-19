@@ -1,11 +1,9 @@
 /**
- * A focused canvas-style mask editor.
+ * 申請端遮罩畫布。
  *
- * The interaction model follows SOP_Tutor's BoxEditor/LayoutEditor:
- * - the stage owns pointer capture and keyboard focus;
- * - masks use normalized image coordinates;
- * - blank clicks only deselect; creating a mask is always an explicit action;
- * - the selected mask moves from its body and resizes from its four corners.
+ * 互動刻意與後台 SOP 的 BoxEditor 一致：在圖片空白處直接拖曳建立框、拖框移動、
+ * Delete 刪除。遮罩另外保留四角縮放與平移／縮放，讓長截圖在手機上也能精準處理。
+ * 所有座標都存成相對圖片的 0..1，不受目前顯示尺寸影響。
  */
 import {
   useEffect,
@@ -27,9 +25,12 @@ interface Props {
   disabled?: boolean
 }
 
-type Tool = 'select' | 'pan'
+type Tool = 'draw' | 'pan'
 type Corner = 'nw' | 'ne' | 'sw' | 'se'
+type Point = { x: number; y: number }
+type Draft = { x: number; y: number; w: number; h: number }
 type Interaction =
+  | { kind: 'draw'; pointerId: number; start: Point; current: Point }
   | { kind: 'pan'; pointerId: number; x: number; y: number; panX: number; panY: number }
   | { kind: 'move'; pointerId: number; index: number; x: number; y: number; original: MaskRect }
   | { kind: 'resize'; pointerId: number; index: number; corner: Corner; original: MaskRect }
@@ -37,15 +38,21 @@ type Interaction =
 const MIN_ZOOM = 0.25
 const MAX_ZOOM = 4
 const ZOOM_STEP = 0.1
-const DEFAULT_MASK: Pick<MaskRect, 'x' | 'y' | 'w' | 'h'> = { x: 0.35, y: 0.45, w: 0.3, h: 0.1 }
 const clamp = (value: number, minimum: number, maximum: number) => Math.min(maximum, Math.max(minimum, value))
+const draftFrom = (start: Point, current: Point): Draft => ({
+  x: Math.min(start.x, current.x),
+  y: Math.min(start.y, current.y),
+  w: Math.abs(current.x - start.x),
+  h: Math.abs(current.y - start.y),
+})
 
 export function MaskCanvas({ source, masks, onChange, disabled = false }: Props) {
   const [selected, setSelected] = useState<number | null>(null)
-  const [tool, setTool] = useState<Tool>('select')
+  const [tool, setTool] = useState<Tool>('draw')
   const [zoom, setZoom] = useState(1)
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [fitSize, setFitSize] = useState<{ width: number; height: number } | null>(null)
+  const [draft, setDraft] = useState<Draft | null>(null)
   const stageRef = useRef<HTMLDivElement>(null)
   const surfaceRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -58,7 +65,7 @@ export function MaskCanvas({ source, masks, onChange, disabled = false }: Props)
     if (changeFrame.current !== null) cancelAnimationFrame(changeFrame.current)
   }, [])
 
-  /** 拖曳最多每個 animation frame 更新一次，避免高解析圖片上每個 pointer event 都重繪 React。 */
+  /** 移動／縮放最多每個 animation frame 更新一次，避免 pointermove 讓整個 dialog 重排。 */
   const scheduleChange = (next: MaskRect[]) => {
     pendingMasks.current = next
     if (changeFrame.current !== null) return
@@ -93,7 +100,9 @@ export function MaskCanvas({ source, masks, onChange, disabled = false }: Props)
       const bounds = stage.getBoundingClientRect()
       const availableWidth = Math.max(1, bounds.width - 48)
       const availableHeight = Math.max(1, bounds.height - 48)
-      const scale = Math.min(availableWidth / source.width, availableHeight / source.height, 1)
+      // 與 SOP BoxEditor 一樣以「編輯區」為準縮放：來源圖即使像素較小，也要放大到
+      // 足以框選的尺寸。原先上限 1 會讓 450px 左右的手機截圖在桌機畫布中央只剩小圖。
+      const scale = Math.min(availableWidth / source.width, availableHeight / source.height)
       setFitSize({ width: Math.max(1, source.width * scale), height: Math.max(1, source.height * scale) })
     }
     fit()
@@ -103,22 +112,13 @@ export function MaskCanvas({ source, masks, onChange, disabled = false }: Props)
     return () => observer.disconnect()
   }, [source])
 
-  const pointOnImage = (clientX: number, clientY: number) => {
+  const pointOnImage = (clientX: number, clientY: number): Point => {
     const bounds = surfaceRef.current?.getBoundingClientRect()
     if (!bounds || bounds.width === 0 || bounds.height === 0) return { x: 0, y: 0 }
     return {
       x: clamp((clientX - bounds.left) / bounds.width, 0, 1),
       y: clamp((clientY - bounds.top) / bounds.height, 0, 1),
     }
-  }
-
-  const addMask = () => {
-    if (disabled) return
-    const next = [...masks, { ...DEFAULT_MASK, source: 'MANUAL' as const }]
-    onChange(next)
-    setSelected(next.length - 1)
-    setTool('select')
-    stageRef.current?.focus()
   }
 
   const removeMask = (index: number) => {
@@ -147,10 +147,12 @@ export function MaskCanvas({ source, masks, onChange, disabled = false }: Props)
     setPan({ x: 0, y: 0 })
   }
 
-  const beginPan = (event: ReactPointerEvent<HTMLDivElement>) => {
+  const capture = (pointerId: number) => stageRef.current?.setPointerCapture?.(pointerId)
+
+  const beginPan = (event: ReactPointerEvent<HTMLElement>) => {
     if (event.button !== 0 && event.button !== 1) return
     event.preventDefault()
-    stageRef.current?.setPointerCapture?.(event.pointerId)
+    capture(event.pointerId)
     interaction.current = {
       kind: 'pan', pointerId: event.pointerId, x: event.clientX, y: event.clientY, panX: pan.x, panY: pan.y,
     }
@@ -158,11 +160,25 @@ export function MaskCanvas({ source, masks, onChange, disabled = false }: Props)
 
   const onStageDown = (event: ReactPointerEvent<HTMLDivElement>) => {
     stageRef.current?.focus()
+    if (tool === 'pan' || event.button === 1) beginPan(event)
+    else if (event.button === 0) setSelected(null)
+  }
+
+  const onSurfaceDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    event.stopPropagation()
+    stageRef.current?.focus()
+    if (disabled) return
     if (tool === 'pan' || event.button === 1) {
       beginPan(event)
       return
     }
-    if (event.button === 0) setSelected(null)
+    if (event.button !== 0) return
+    event.preventDefault()
+    const point = pointOnImage(event.clientX, event.clientY)
+    setSelected(null)
+    setDraft({ x: point.x, y: point.y, w: 0, h: 0 })
+    capture(event.pointerId)
+    interaction.current = { kind: 'draw', pointerId: event.pointerId, start: point, current: point }
   }
 
   const onMaskDown = (event: ReactPointerEvent<HTMLDivElement>, index: number) => {
@@ -174,7 +190,7 @@ export function MaskCanvas({ source, masks, onChange, disabled = false }: Props)
       return
     }
     event.preventDefault()
-    stageRef.current?.setPointerCapture?.(event.pointerId)
+    capture(event.pointerId)
     const point = pointOnImage(event.clientX, event.clientY)
     setSelected(index)
     interaction.current = {
@@ -187,7 +203,7 @@ export function MaskCanvas({ source, masks, onChange, disabled = false }: Props)
     if (disabled || event.button !== 0) return
     event.preventDefault()
     stageRef.current?.focus()
-    stageRef.current?.setPointerCapture?.(event.pointerId)
+    capture(event.pointerId)
     interaction.current = { kind: 'resize', pointerId: event.pointerId, index, corner, original: masks[index] }
   }
 
@@ -200,6 +216,11 @@ export function MaskCanvas({ source, masks, onChange, disabled = false }: Props)
       return
     }
     const point = pointOnImage(event.clientX, event.clientY)
+    if (active.kind === 'draw') {
+      active.current = point
+      setDraft(draftFrom(active.start, point))
+      return
+    }
     if (active.kind === 'move') {
       const x = clamp(active.original.x + point.x - active.x, 0, 1 - active.original.w)
       const y = clamp(active.original.y + point.y - active.y, 0, 1 - active.original.h)
@@ -219,15 +240,39 @@ export function MaskCanvas({ source, masks, onChange, disabled = false }: Props)
     )))
   }
 
-  const endInteraction = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (!interaction.current) return
-    flushChange()
+  const release = (pointerId: number) => {
     try {
-      stageRef.current?.releasePointerCapture?.(event.pointerId)
+      stageRef.current?.releasePointerCapture?.(pointerId)
     } catch {
       // The browser may already have released capture.
     }
+  }
+
+  const endInteraction = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const active = interaction.current
+    if (!active) return
+    release(event.pointerId)
+    if (active.kind === 'draw') {
+      const next = draftFrom(active.start, active.current)
+      if (next.w >= MIN_MASK_WIDTH && next.h >= MIN_MASK_HEIGHT) {
+        onChange([...masks, { ...next, source: 'MANUAL' }])
+        setSelected(masks.length)
+      }
+      setDraft(null)
+    } else {
+      flushChange()
+    }
     interaction.current = null
+  }
+
+  const cancelInteraction = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!interaction.current) return
+    release(event.pointerId)
+    pendingMasks.current = null
+    if (changeFrame.current !== null) cancelAnimationFrame(changeFrame.current)
+    changeFrame.current = null
+    interaction.current = null
+    setDraft(null)
   }
 
   const onWheel = (event: ReactWheelEvent<HTMLDivElement>) => {
@@ -242,6 +287,7 @@ export function MaskCanvas({ source, masks, onChange, disabled = false }: Props)
     } else if (event.key === 'Escape') {
       setSelected(null)
       interaction.current = null
+      setDraft(null)
     } else if (event.key === '+' || event.key === '=') {
       event.preventDefault()
       setZoomAround(zoom + ZOOM_STEP)
@@ -255,17 +301,14 @@ export function MaskCanvas({ source, masks, onChange, disabled = false }: Props)
   const height = fitSize ? fitSize.height * zoom : 1
 
   return (
-    <section className="flex min-h-0 flex-1 flex-col bg-background-lite">
+    <section className="flex min-h-[420px] min-w-0 flex-col bg-background-lite md:min-h-0">
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border bg-canvas px-3 py-2.5">
         <div className="flex items-center gap-1.5">
-          <Button size="sm" variant="primary" onClick={addMask} disabled={disabled} icon={<Plus size={14} />}>
-            新增遮罩
-          </Button>
           <Button
-            size="sm" variant={tool === 'select' ? 'secondary' : 'ghost'} aria-pressed={tool === 'select'}
-            onClick={() => setTool('select')} icon={<MousePointer2 size={14} />}
+            size="sm" variant={tool === 'draw' ? 'primary' : 'ghost'} aria-pressed={tool === 'draw'}
+            onClick={() => setTool('draw')} disabled={disabled} icon={<MousePointer2 size={14} />}
           >
-            選取
+            框選遮罩
           </Button>
           <Button
             size="sm" variant={tool === 'pan' ? 'secondary' : 'ghost'} aria-pressed={tool === 'pan'}
@@ -301,7 +344,7 @@ export function MaskCanvas({ source, masks, onChange, disabled = false }: Props)
         onPointerDown={onStageDown}
         onPointerMove={onPointerMove}
         onPointerUp={endInteraction}
-        onPointerCancel={endInteraction}
+        onPointerCancel={cancelInteraction}
         onWheel={onWheel}
         className={cx(
           'relative min-h-0 flex-1 touch-none overflow-hidden bg-[#e9edf3] outline-none select-none focus:ring-2 focus:ring-inset focus:ring-accent',
@@ -311,8 +354,10 @@ export function MaskCanvas({ source, masks, onChange, disabled = false }: Props)
         <div
           ref={surfaceRef}
           data-testid="mask-surface"
-          className="absolute left-1/2 top-1/2 bg-canvas shadow-xl"
+          onPointerDown={onSurfaceDown}
+          className={cx('bg-canvas shadow-xl', tool === 'draw' && !disabled && 'cursor-crosshair')}
           style={{
+            position: 'absolute', left: '50%', top: '50%',
             width: `${width}px`, height: `${height}px`,
             transform: `translate(-50%, -50%) translate(${pan.x}px, ${pan.y}px)`,
             visibility: fitSize ? 'visible' : 'hidden',
@@ -321,6 +366,15 @@ export function MaskCanvas({ source, masks, onChange, disabled = false }: Props)
           }}
         >
           <canvas ref={canvasRef} data-testid="mask-canvas" className="pointer-events-none block h-full w-full" />
+
+          {draft && draft.w > 0 && draft.h > 0 && (
+            <div
+              data-testid="mask-draft"
+              className="pointer-events-none absolute rounded-sm border-2 border-dashed border-accent bg-accent/15"
+              style={{ left: `${draft.x * 100}%`, top: `${draft.y * 100}%`, width: `${draft.w * 100}%`, height: `${draft.h * 100}%` }}
+            />
+          )}
+
           {masks.map((mask, index) => {
             const active = selectedIndex === index
             return (
@@ -329,17 +383,17 @@ export function MaskCanvas({ source, masks, onChange, disabled = false }: Props)
                 data-testid="mask-rect"
                 onPointerDown={(event) => onMaskDown(event, index)}
                 className={cx(
-                  'group absolute border-2 bg-[#0f172a]/82',
+                  'group absolute rounded-sm border-2 bg-[#0f172a]/82',
                   active ? 'z-10 cursor-move border-accent shadow-[0_0_0_2px_white]' : 'cursor-move border-white/80 hover:border-accent',
                   tool === 'pan' && 'pointer-events-none',
                 )}
                 style={{ left: `${mask.x * 100}%`, top: `${mask.y * 100}%`, width: `${mask.w * 100}%`, height: `${mask.h * 100}%` }}
               >
-                {active && tool === 'select' && (
+                <span className="pointer-events-none absolute -left-2.5 -top-2.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1 text-[11px] font-bold leading-none text-on-accent shadow-sm">
+                  {index + 1}
+                </span>
+                {active && tool === 'draw' && (
                   <>
-                    <span className="pointer-events-none absolute bottom-full left-0 mb-1 whitespace-nowrap rounded bg-accent px-2 py-0.5 text-[11px] font-semibold text-on-accent shadow-sm">
-                      遮罩 {index + 1}
-                    </span>
                     <button
                       type="button" aria-label={`刪除遮罩 ${index + 1}`} title="刪除遮罩"
                       onPointerDown={(event) => event.stopPropagation()} onClick={() => removeMask(index)}
@@ -366,8 +420,8 @@ export function MaskCanvas({ source, masks, onChange, disabled = false }: Props)
           })}
         </div>
 
-        <div className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-primary/75 px-3 py-1.5 text-[11px] text-white backdrop-blur">
-          滾輪縮放 · 遮罩本體可移動 · 拉四角調整大小
+        <div className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-primary/75 px-3 py-1.5 text-[11px] text-white backdrop-blur">
+          {tool === 'draw' ? '在圖片上拖曳框選 · 拖動已有遮罩可移動' : '拖曳移動畫布 · 滾輪縮放'}
         </div>
       </div>
     </section>
