@@ -168,8 +168,8 @@ export function DocumentViewer({
               doc.id === selected?.id ? 'bg-accent-bg font-medium text-accent' : 'text-muted hover:bg-background-lite',
             )}
           >
-            {doc.document_type_label}
-            {doc.revision > 1 && <span className="ml-1 tabular-nums">v{doc.revision}</span>}
+            {doc.document_type_label}{(doc.period_index ?? 1) > 1 ? `（第 ${doc.period_index} 期）` : ''}
+            {doc.revision > 0 && <span className="ml-1 tabular-nums">v{doc.revision + 1}</span>}
           </button>
         ))}
         {history.length > 0 && (
@@ -198,7 +198,7 @@ export function DocumentViewer({
                 )}
               >
                 <span className="flex-1 truncate">{doc.document_type_label}</span>
-                <span className="tabular-nums text-muted">第 {doc.revision} 版</span>
+                <span className="tabular-nums text-muted">第 {doc.revision + 1} 版</span>
                 <span className="text-muted">{dateTime(doc.uploaded_at)}</span>
               </button>
             </li>
@@ -293,7 +293,8 @@ export function DocumentViewer({
             {error}
           </p>
         )}
-        {url && (
+        {url && selected?.mime === 'application/pdf' && <iframe src={url} title="PDF 文件" className="h-full w-full border-0" />}
+        {url && selected?.mime !== 'application/pdf' && (
           <div
             data-testid="document-stage"
             className="absolute left-1/2 top-1/2 origin-center"
@@ -303,7 +304,7 @@ export function DocumentViewer({
           >
             <img
               src={url}
-              alt={selected ? `${selected.document_type_label}（第 ${selected.revision} 版）` : '文件'}
+              alt={selected ? `${selected.document_type_label}（第 ${selected.revision + 1} 版）` : '文件'}
               draggable={false}
               onLoad={(event) =>
                 setNatural({

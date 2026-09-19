@@ -18,10 +18,10 @@ import { sendHelpChat, type HelpChatMessage } from '../lib/helpChat'
 
 const GREETING: HelpChatMessage = {
   role: 'assistant',
-  text: '找不到扣款證明嗎？說說你用哪一家銀行或電信、卡在哪一步，我幫你找。',
+  text: '輸入申請或文件問題，我會查找已公布的常見問題。請勿輸入身分證、卡號或其他個人資料。',
 }
 
-export function HelpChat() {
+export function HelpChat({ schemeCode = '' }: { schemeCode?: string }) {
   const [open, setOpen] = useState(false)
   const [draft, setDraft] = useState('')
   const [busy, setBusy] = useState(false)
@@ -57,10 +57,11 @@ export function HelpChat() {
     setMessages((current) => [...current, { role: 'user', text }])
     setBusy(true)
     try {
-      const reply = await sendHelpChat(text)
+      const reply = await sendHelpChat(text, schemeCode)
       setMessages((current) => [...current, reply])
-    } catch {
-      setError('現在問不到，請稍後再試，或直接洽承辦單位。')
+    } catch (error) {
+      setDraft(text)
+      setError(error instanceof Error ? error.message : '現在問不到，請稍後再試，或直接洽承辦單位。')
     } finally {
       setBusy(false)
     }
@@ -106,7 +107,7 @@ export function HelpChat() {
         </button>
       </header>
 
-      <div ref={listRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-3">
+      <div aria-live="polite" ref={listRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-3">
         {messages.map((message, index) => (
           <p
             key={index}
@@ -141,6 +142,7 @@ export function HelpChat() {
         <input
           ref={inputRef}
           id="help-chat-input"
+          maxLength={1000}
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           placeholder="例如：我用玉山，找不到帳單查詢"

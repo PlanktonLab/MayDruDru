@@ -220,6 +220,7 @@ class EligibleTool(TsMixin, VersionMixin, Base):
     aliases: Mapped[list] = mapped_column(JSON, default=list)
     status: Mapped[str] = mapped_column(String(20), default="PENDING")
     verdict_note: Mapped[str] = mapped_column(Text, default="")
+    inquiry_count: Mapped[int] = mapped_column(Integer, default=0)
     request_count: Mapped[int] = mapped_column(Integer, default=0)
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
 

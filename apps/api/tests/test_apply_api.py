@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import io
 import json
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from app.models import Application, ApplicationDocument, DocumentOcrResult, Faq, ReviewFinding, ReviewRule
@@ -258,7 +258,7 @@ async def test_missing_documents_come_back_as_a_supplement_suggestion(apply_clie
 
 
 async def test_a_closed_scheme_refuses_submissions(apply_client, scheme, db):
-    scheme.application_end = date.today() - timedelta(days=1)
+    scheme.application_end = datetime.now(UTC).date() - timedelta(days=1)
     await db.commit()
     data, files = multipart([], application=application_payload())
     r = await apply_client.post(f"{APPLY}/applications", data=data, files=files)
@@ -657,3 +657,17 @@ async def test_the_seeded_required_doc_rule_falls_back_to_the_payment_channel():
                                     required_document_type_codes=("BILLING_STATEMENT",))
     docs = {f.rule_code: f for f in review.evaluate(specs, [], facts)}["REQUIRED_DOCS_PRESENT"]
     assert docs.status == "MISMATCH" and docs.suggested_supplement == ("BILLING_STATEMENT",)
+
+
+async def test_multi_period_amount_requires_review_and_missing_period_blocks_approval(apply_client, scheme, rules, db):
+    from app.services import review
+
+    data, files = multipart([
+        {"document_type_code": "ID_CARD_FRONT", "mime": "image/png"},
+        {"document_type_code": "BILLING_STATEMENT", "period_index": 1, "mime": "image/png", "ocr": ocr("金額 NT$1,200")},
+    ], application=application_payload(billing_periods=2))
+    response = await apply_client.post(f"{APPLY}/applications", data=data, files=files)
+    assert response.status_code == 201
+    assert {f["rule_code"]: f["status"] for f in response.json()["findings"]}["AMOUNT_MATCHES"] == "PENDING"
+    app = (await db.execute(select(Application))).scalar_one()
+    assert "BILLING_STATEMENT_2" in {b["rule_code"] for b in await review.blockers_for(db, app)}

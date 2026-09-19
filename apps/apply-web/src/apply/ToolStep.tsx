@@ -8,6 +8,8 @@
  * 準備完所有文件之後才在送件時撞牆。沒有收錄的工具可以自己填，由承辦人工認定。
  */
 
+import { useQueryClient } from '@tanstack/react-query'
+import { postJson } from '../lib/api'
 import { useMemo, useState } from 'react'
 import { AlertTriangle, Info } from 'lucide-react'
 import { Badge, Button, Field, FlatSelect, Input, cx } from '@maydru/ui'
@@ -94,11 +96,22 @@ export function ToolStep({ scheme, value, onChange, error }: ToolStepProps) {
   const [draft, setDraft] = useState(() => (value.tool_id === null ? value.name : ''))
   const [checked, setChecked] = useState(() => (value.tool_id === null ? value.name : ''))
 
-  const check = () => {
+  const client = useQueryClient()
+  const [checking, setChecking] = useState(false)
+  const [checkError, setCheckError] = useState('')
+  const check = async () => {
     const name = draft.trim()
-    if (!name) return
-    setChecked(name)
-    onChange({ name, tool_id: null })
+    if (!name || checking) return
+    setChecking(true)
+    setCheckError('')
+    try {
+      await postJson(`/api/apply/schemes/${encodeURIComponent(scheme.code)}/tool-inquiries`, { name })
+      await client.invalidateQueries({ queryKey: ['apply', 'scheme', scheme.code] })
+      setChecked(name)
+      onChange({ name, tool_id: null })
+    } catch (cause) {
+      setCheckError(cause instanceof Error ? cause.message : '查詢失敗，請再試一次。')
+    } finally { setChecking(false) }
   }
 
   // 比對整份工具清單（含沒列在選單上的不予補助項目），在送出前就把
@@ -110,10 +123,12 @@ export function ToolStep({ scheme, value, onChange, error }: ToolStepProps) {
 
   return (
     <div className="space-y-4">
+      {checkError && <p role="alert" className="text-sm text-danger">{checkError}</p>}
       <Field label="AI 工具名稱" required error={error}>
         {(props) => (
           <FlatSelect
             id={props.id}
+            disabled={checking}
             aria-describedby={props['aria-describedby']}
             aria-invalid={props['aria-invalid']}
             value={other ? OTHER : (value.tool_id ?? '')}
@@ -171,12 +186,13 @@ export function ToolStep({ scheme, value, onChange, error }: ToolStepProps) {
                 <Input
                   {...props}
                   value={draft}
+                  disabled={checking}
                   onChange={(event) => setDraft(event.target.value)}
                   onKeyDown={(event) => {
                     // Enter 直接檢查；輸入法組字中的 Enter 是在選字，不能當送出。
                     if (event.key === 'Enter' && !event.nativeEvent.isComposing) {
                       event.preventDefault()
-                      check()
+                      void check()
                     }
                   }}
                   placeholder="請填寫工具名稱"
@@ -186,7 +202,8 @@ export function ToolStep({ scheme, value, onChange, error }: ToolStepProps) {
                   variant="primary"
                   size="sm"
                   disabled={!draft.trim()}
-                  onClick={check}
+                  onClick={() => void check()}
+                  loading={checking}
                   className="absolute right-1.5"
                 >
                   檢查補助資格

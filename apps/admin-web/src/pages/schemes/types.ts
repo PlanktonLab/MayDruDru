@@ -127,6 +127,7 @@ export interface EligibleTool {
   aliases: string[]
   status: ToolStatus
   verdict_note: string
+  inquiry_count?: number
   request_count: number
   sort_order: number
   version: number

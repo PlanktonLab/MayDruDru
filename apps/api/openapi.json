@@ -436,6 +436,16 @@
             ],
             "title": "Assigned Reviewer Id"
           },
+          "billing_cycle": {
+            "default": "MONTHLY",
+            "title": "Billing Cycle",
+            "type": "string"
+          },
+          "billing_periods": {
+            "default": 1,
+            "title": "Billing Periods",
+            "type": "integer"
+          },
           "case_no": {
             "title": "Case No",
             "type": "string"
@@ -512,6 +522,22 @@
           },
           "note": {
             "title": "Note",
+            "type": "string"
+          },
+          "original_amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Amount"
+          },
+          "original_currency": {
+            "default": "TWD",
+            "title": "Original Currency",
             "type": "string"
           },
           "paid_by_proxy": {
@@ -635,6 +661,17 @@
           "tier_code": {
             "title": "Tier Code",
             "type": "string"
+          },
+          "tool_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tool Id"
           },
           "tool_name": {
             "title": "Tool Name",
@@ -1642,6 +1679,11 @@
             "title": "Page Count",
             "type": "integer"
           },
+          "period_index": {
+            "default": 1,
+            "title": "Period Index",
+            "type": "integer"
+          },
           "revision": {
             "title": "Revision",
             "type": "integer"
@@ -1938,6 +1980,86 @@
           "external_user_id"
         ],
         "title": "ChatCreate",
+        "type": "object"
+      },
+      "ChatReply": {
+        "properties": {
+          "role": {
+            "const": "assistant",
+            "title": "Role",
+            "type": "string"
+          },
+          "source_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Source Ids",
+            "type": "array"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "role",
+          "text",
+          "source_ids"
+        ],
+        "title": "ChatReply",
+        "type": "object"
+      },
+      "ChatSettings": {
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "default": true,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "max_question_chars": {
+            "default": 500,
+            "maximum": 1000.0,
+            "minimum": 20.0,
+            "title": "Max Question Chars",
+            "type": "integer"
+          },
+          "max_results": {
+            "default": 2,
+            "maximum": 3.0,
+            "minimum": 1.0,
+            "title": "Max Results",
+            "type": "integer"
+          },
+          "per_day": {
+            "default": 60,
+            "maximum": 1000.0,
+            "minimum": 1.0,
+            "title": "Per Day",
+            "type": "integer"
+          },
+          "per_minute": {
+            "default": 6,
+            "maximum": 60.0,
+            "minimum": 1.0,
+            "title": "Per Minute",
+            "type": "integer"
+          },
+          "tenant_per_day": {
+            "default": 5000,
+            "maximum": 100000.0,
+            "minimum": 1.0,
+            "title": "Tenant Per Day",
+            "type": "integer"
+          },
+          "version": {
+            "default": 1,
+            "minimum": 1.0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "title": "ChatSettings",
         "type": "object"
       },
       "ChatStart": {
@@ -2298,6 +2420,11 @@
           },
           "page_count": {
             "title": "Page Count",
+            "type": "integer"
+          },
+          "period_index": {
+            "default": 1,
+            "title": "Period Index",
             "type": "integer"
           },
           "preview_key": {
@@ -4823,6 +4950,28 @@
         "title": "PublishIn",
         "type": "object"
       },
+      "Question": {
+        "additionalProperties": false,
+        "properties": {
+          "scheme_code": {
+            "default": "",
+            "maxLength": 80,
+            "title": "Scheme Code",
+            "type": "string"
+          },
+          "text": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "Question",
+        "type": "object"
+      },
       "QueueOut": {
         "properties": {
           "items": {
@@ -6576,6 +6725,13 @@
             "title": "Note",
             "type": "string"
           },
+          "period_index": {
+            "default": 1,
+            "maximum": 12.0,
+            "minimum": 1.0,
+            "title": "Period Index",
+            "type": "integer"
+          },
           "rejection_code": {
             "default": "OTHER",
             "title": "Rejection Code",
@@ -6602,6 +6758,11 @@
             "default": "",
             "title": "Note",
             "type": "string"
+          },
+          "period_index": {
+            "default": 1,
+            "title": "Period Index",
+            "type": "integer"
           },
           "rejection_code": {
             "default": "",
@@ -6724,6 +6885,42 @@
           "access_token"
         ],
         "title": "TokenOut",
+        "type": "object"
+      },
+      "ToolInquiryIn": {
+        "properties": {
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "ToolInquiryIn",
+        "type": "object"
+      },
+      "ToolInquiryOut": {
+        "properties": {
+          "tool_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tool Id"
+          }
+        },
+        "required": [
+          "tool_id"
+        ],
+        "title": "ToolInquiryOut",
         "type": "object"
       },
       "ToolResolveIn": {
@@ -9224,6 +9421,66 @@
         ]
       }
     },
+    "/api/admin/help-chat": {
+      "get": {
+        "operationId": "read_settings_api_admin_help_chat_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatSettings"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Read Settings",
+        "tags": [
+          "help-chat"
+        ]
+      },
+      "put": {
+        "operationId": "write_settings_api_admin_help_chat_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatSettings"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatSettings"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Write Settings",
+        "tags": [
+          "help-chat"
+        ]
+      }
+    },
     "/api/admin/knowledge": {
       "get": {
         "operationId": "list_documents_api_admin_knowledge_get",
@@ -11093,6 +11350,47 @@
         ]
       }
     },
+    "/api/apply/help-chat": {
+      "post": {
+        "operationId": "ask_api_apply_help_chat_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Question"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatReply"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ask",
+        "tags": [
+          "help-chat"
+        ]
+      }
+    },
     "/api/apply/schemes": {
       "get": {
         "description": "開放中的方案。停用的方案完全不出現在列表裡。",
@@ -11212,6 +11510,58 @@
           }
         },
         "summary": "Required Documents",
+        "tags": [
+          "apply"
+        ]
+      }
+    },
+    "/api/apply/schemes/{code}/tool-inquiries": {
+      "post": {
+        "operationId": "inquire_tool_api_apply_schemes__code__tool_inquiries_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ToolInquiryIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToolInquiryOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Inquire Tool",
         "tags": [
           "apply"
         ]
