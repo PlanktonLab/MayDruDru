@@ -4,7 +4,7 @@
 
 完整規格在 [`SPEC.md`](SPEC.md)（v1.0，唯一規格來源）；工作規則在 [`CLAUDE.md`](CLAUDE.md)。
 
-目前階段：**P1 資料層**（SPEC §16）。§6 的資料表、案件狀態機、方案服務、seed 與舊資料搬遷都已就緒；LINE、送件與審核介面在 P2–P5。
+目前階段：**P3 送件與審核**（SPEC §16）。§6 的資料層、案件狀態機、規則引擎、`/api/apply/*` 與 `/api/admin/applications/*` 都已就緒；LINE channel 在 P2，SOP 串接在 P4。
 
 ## 版面
 
@@ -77,6 +77,50 @@ failed）報表。SOP_Tutor 的 Postgres 與 MinIO 是整份接手，不需要�
 
 排程工作由 worker 執行：補件逾期每小時檢查一次（T8），終態案件滿保存期限後在每天
 03:00 硬刪證明文件——刪的是影像、OCR 與標註座標，申請主檔與事件時間軸永遠留著。
+
+## 送件與審核 API（SPEC §8.1、§8.2、§8.3）
+
+市民走 `/api/apply/*`（匿名、依來源 IP 限流），承辦人走 `/api/admin/applications/*`
+（JWT + capability）。兩邊共用同一組 service，狀態只由 `transition()` 改變。
+
+| 端點 | 做什麼 |
+|---|---|
+| `GET /api/apply/schemes`、`GET /api/apply/schemes/{code}` | 開放中的方案；詳情含級距、文件類型、繳費管道、退件碼與**審核規則**（前端即時回饋用） |
+| `POST /api/apply/schemes/{code}/required-documents` | 必要文件由伺服器算，前端不自己推 |
+| `POST /api/apply/applications` | multipart 送件：`application`、`documents` 兩個 JSON 欄位 + `file_0`、`file_1`… |
+| `POST /api/apply/verify` | 案號 + 末四碼 → 30 分鐘的案件 token；5 次失敗鎖 15 分鐘（423） |
+| `GET /api/apply/applications/{case_no}` | 案件時間軸、補件項目、文件版本（帶案件 token） |
+| `POST …/documents`、`POST …/withdraw` | 補件（T4，系統接著跑 T5）與撤回（T10） |
+| `GET /api/apply/faqs` | 關鍵字搜尋；語意搜尋在 P4 |
+| `GET /api/admin/applications` | 佇列：分頁、狀態／方案／承辦人篩選、案號與姓名搜尋 |
+| `GET /api/admin/applications/{case_no}` | 案件頁：文件與 OCR、findings（最新 + 歷史）、規則、可用轉移、核准阻擋項 |
+| `GET …/documents/{id}/url` | private bucket 的 5 分鐘 presigned URL |
+| `POST …/documents/{id}/ocr`、`POST …/evaluate`、`PUT …/findings/{rule_code}` | 承辦人重新辨識、重跑規則、人工覆寫 |
+| `POST …/transitions`、`POST …/assign` | 狀態轉移與指派 |
+
+規則引擎（`app/services/review.py`）是判定的唯一權威：它不碰資料庫、不呼叫任何模型，
+也不 import `app.ai`（import-linter 強制）。申請人瀏覽器跑的 `packages/review-rules`
+只是即時回饋，伺服器收件後一律重跑。兩版共用
+`packages/review-rules/fixtures/*.json`，`tests/test_review_fixtures.py` 與
+`src/fixtures.test.ts` 對同一組輸入斷言相同輸出。
+
+核准（T3）的前置條件在伺服器端強制：所有 `required` 規則的**最新** finding 都得是
+MATCH，否則回 `409 {code:"TRANSITION_NOT_ALLOWED", blockers:[…]}`。承辦人覆寫會另寫一列
+`source=reviewer`，舊的留著供稽核。
+
+證明文件只進 private bucket，key 是
+`applications/{tenant}/{case_no}/{doc_type}/{revision}.{ext}`；影像永不經過 API 本體，
+只給 presigned URL。
+
+### OpenAPI 快照
+
+`apps/api/openapi.json` 是提交進 git 的契約快照，CI 用它做「client 同步檢查」。
+端點或 schema 改了就重新產生並一起 commit：
+
+```bash
+cd apps/api
+UPDATE_OPENAPI=1 uv run --package maydru-api pytest tests/test_openapi_snapshot.py
+```
 
 ## 品質門檻（SPEC §14）
 

@@ -593,6 +593,7 @@ Cloudflare proxied；origin cert 需涵蓋三個名稱（萬用或重簽）。DN
 | D15 | 測試用 aiosqlite in-memory；新表的清單欄位一律 JSON 而非 ARRAY；事件不可變同時以 Postgres trigger 與 SQLAlchemy event listener 落實 | 測試不需要真的資料庫也能涵蓋整個 schema；同一條不變式在兩種引擎上都成立 |
 | D16 | 案件編號 `HC-YYYY-NNNNNN`，流水號依 tenant 與年度各自累加（`case_no_counters` 一列一年，Postgres 取號時列鎖）；舊系統的 8 位數編號照舊 | 對民眾好唸、對承辦好查；跨年度自動歸零，跨機關不互相干擾 |
 | D17 | 查詢的第二因子是手機或身分證**末四碼**（不是完整號碼）；連續 5 次失敗鎖 15 分鐘，案號與來源 IP 各自計數；查無此案與末四碼錯誤的回應完全一致 | 末四碼即可驗證又不必再傳一次完整個資；雙軸計數同時擋單案猜測與整批掃號；回應一致才不會讓錯誤訊息變成查詢介面 |
+| D18 | P3 的實作決策：(a) 文件物件 key 為 `applications/{tenant}/{case_no}/{doc_type}/{revision}.{ext}`，預覽圖同目錄下的 `{revision}-preview.jpg`；(b) 同一份文件有多筆 OCR 時，承辦人重新辨識的結果（`source=reviewer`）勝過申請人上傳的，同來源取最新；(c) 規則引擎的 `note` 回**文案 key**（`review.note.*`）而不是句子，字由 contents 層渲染；(d) `/api/apply/*` 的錯誤 body 是扁平的 `{code, …}`，不包在 `detail` 裡；(e) 匿名流量歸屬 `slug="default"` 的 tenant，沒有就取建立時間最早的那一個；(f) 補件送出後系統立刻接著跑 T5，`REVISION_SUBMITTED` 是過場狀態；(g) `review_rules.config.tolerance_pct` 是百分比（`5` = 5%），Python 與 TS 兩版一致；(h) OpenAPI 提交為 `apps/api/openapi.json` 快照，CI 以它做 client 同步檢查 | (a) 案號本身就是命名空間，整案稽核與刪除只要一個前綴；(b) 申請人送上來的 OCR 依 §11 不可信，承辦人看著原圖跑出來的才算數；(c) 給市民的文字一律走 contents（§17.4），service 不得硬編中文；(d) 契約寫的就是扁平 body，多一層 `detail` 會讓前端每個錯誤都要解兩次；(e) 用網域或 header 判斷等於讓「送到哪個機關」變成可偽造的輸入；(f) 與建案後立刻跑 T1 對稱，補件完就該回到同一個審查佇列；(g) 兩版共用 fixtures，單位不同會讓同一筆設定在兩邊得到不同判定；(h) schema 一動前端型別就得動，快照讓契約變更在 PR 裡看得見
 
 ---
 
