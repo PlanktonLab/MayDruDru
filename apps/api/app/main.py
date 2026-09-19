@@ -24,6 +24,8 @@ from .routers import (
     tenant,
     variants,
 )
+from .routers.admin import applications as admin_applications
+from .routers.admin import schemes as admin_schemes
 from .security import hash_password
 
 log = logging.getLogger("sop")
@@ -79,7 +81,8 @@ def create_app() -> FastAPI:
     s = get_settings()
     app = FastAPI(title=s.app_name, version="0.1.0", lifespan=lifespan)
     app.add_middleware(CORSMiddleware, allow_origins=s.cors_origins, allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
-    for r in (auth, tenant, catalog_admin, components, flows, variants, playground, evals, dashboard, public_api, media):
+    for r in (auth, tenant, catalog_admin, components, flows, variants, playground, evals, dashboard,
+              admin_schemes, admin_applications, public_api, media):
         app.include_router(r.router)
 
     @app.get("/health")

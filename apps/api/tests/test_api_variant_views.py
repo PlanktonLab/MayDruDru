@@ -14,7 +14,7 @@ LEAK_PROBLEM = "復刻中出現原圖的資料字串，必須移除或換成假�
 REPORT = {"ok": False, "problems": [LEAK_PROBLEM, "渲染寬度不符"], "leaked": ["王小明", "0912345678"], "missing": []}
 
 
-def _user(uid="u1", role="editor"):
+def _user(uid="u1", role="sop_editor"):
     return CurrentUser(id=uid, tenant_id="t1", role=role, email="a@b.tw", name="")
 
 
@@ -35,7 +35,7 @@ def test_check_report_revealed_to_uploader_and_admin():
     v = _variant()
     assert can_see_original_data(v, _user("u1"))
     assert can_see_original_data(v, _user("u2", "admin"))
-    assert not can_see_original_data(v, _user("u2", "reviewer"))
+    assert not can_see_original_data(v, _user("u2", "sop_reviewer"))
     assert redact_check_report(REPORT, True) is REPORT
 
 

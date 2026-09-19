@@ -9,7 +9,9 @@ from ..jobs import redis_settings as _redis_settings
 from .tasks import (
     EVAL_JOB_TIMEOUT_SECONDS,
     cleanup_originals,
+    expire_supplements,
     process_variant,
+    purge_documents,
     render_stepcard,
     resume_variant,
     run_eval,
@@ -27,6 +29,8 @@ class WorkerSettings:
     cron_jobs = [
         cron(sweep_stale_jobs, minute=set(range(0, 60, 10))),
         cron(cleanup_originals, minute={5}),  # hourly: TTL, orphan originals, PII scrub
+        cron(expire_supplements, minute={20}),  # hourly: T8 補件逾期（SPEC §7）
+        cron(purge_documents, hour={3}, minute={0}),  # daily 03:00: 終態案件硬刪文件（SPEC §7 / §11）
     ]
     on_startup = startup
     redis_settings = _redis_settings()

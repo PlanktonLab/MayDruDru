@@ -11,7 +11,7 @@ from .. import storage
 from ..ai.agents import styledoc_text
 from ..ai.llm import embed
 from ..db import get_db
-from ..deps import CurrentUser, current_user, get_owned, require
+from ..deps import CurrentUser, current_user, get_owned, require_cap
 from ..models import Flow, Goal, Platform, PlatformComponent, Step, StyleDoc, StyleDocVersion
 from ..schemas import GoalIn, GoalOut, PlatformIn, PlatformOut, PlatformPatch, StyleDocOut, StyleDocPatch
 from ..services.assets import PURGE_FAILED_MESSAGE, AssetPurgeError, purge_variant_assets, variants_of_platform
@@ -54,7 +54,7 @@ async def list_goals(user: CurrentUser = Depends(current_user), db: AsyncSession
 
 
 @router.post("/goals", response_model=GoalOut)
-async def create_goal(body: GoalIn, user: CurrentUser = Depends(require("admin")), db: AsyncSession = Depends(get_db)):
+async def create_goal(body: GoalIn, user: CurrentUser = Depends(require_cap("admin")), db: AsyncSession = Depends(get_db)):
     g = Goal(tenant_id=user.tenant_id, **body.model_dump())
     db.add(g)
     await db.commit()
@@ -62,7 +62,7 @@ async def create_goal(body: GoalIn, user: CurrentUser = Depends(require("admin")
 
 
 @router.put("/goals/{goal_id}", response_model=GoalOut)
-async def update_goal(goal_id: str, body: GoalIn, user: CurrentUser = Depends(require("admin")), db: AsyncSession = Depends(get_db)):
+async def update_goal(goal_id: str, body: GoalIn, user: CurrentUser = Depends(require_cap("admin")), db: AsyncSession = Depends(get_db)):
     g = await get_owned(db, Goal, goal_id, user, GOAL_NOT_FOUND)
     for k, v in body.model_dump().items():
         setattr(g, k, v)
@@ -71,7 +71,7 @@ async def update_goal(goal_id: str, body: GoalIn, user: CurrentUser = Depends(re
 
 
 @router.delete("/goals/{goal_id}")
-async def delete_goal(goal_id: str, user: CurrentUser = Depends(require("admin")), db: AsyncSession = Depends(get_db)):
+async def delete_goal(goal_id: str, user: CurrentUser = Depends(require_cap("admin")), db: AsyncSession = Depends(get_db)):
     g = await get_owned(db, Goal, goal_id, user, GOAL_NOT_FOUND)
     n = (await db.execute(select(func.count(func.distinct(Step.flow_id))).join(Flow, Flow.id == Step.flow_id)
                           .where(Step.goal_id == goal_id, Step.is_end.is_(True), Flow.tenant_id == user.tenant_id))).scalar_one()
@@ -89,7 +89,7 @@ async def list_platforms(user: CurrentUser = Depends(current_user), db: AsyncSes
 
 
 @router.post("/platforms", response_model=PlatformOut)
-async def create_platform(body: PlatformIn, user: CurrentUser = Depends(require("editor")), db: AsyncSession = Depends(get_db)):
+async def create_platform(body: PlatformIn, user: CurrentUser = Depends(require_cap("sop_edit")), db: AsyncSession = Depends(get_db)):
     p = Platform(tenant_id=user.tenant_id, owner_tenant_id=user.tenant_id, **body.model_dump())
     db.add(p)
     await db.flush()
@@ -99,7 +99,7 @@ async def create_platform(body: PlatformIn, user: CurrentUser = Depends(require(
 
 
 @router.patch("/platforms/{platform_id}", response_model=PlatformOut)
-async def patch_platform(platform_id: str, body: PlatformPatch, user: CurrentUser = Depends(require("editor")), db: AsyncSession = Depends(get_db)):
+async def patch_platform(platform_id: str, body: PlatformPatch, user: CurrentUser = Depends(require_cap("sop_edit")), db: AsyncSession = Depends(get_db)):
     p = await get_owned(db, Platform, platform_id, user, PLATFORM_NOT_FOUND)
     for k, v in body.model_dump(exclude_none=True).items():
         setattr(p, k, v)
@@ -108,7 +108,7 @@ async def patch_platform(platform_id: str, body: PlatformPatch, user: CurrentUse
 
 
 @router.delete("/platforms/{platform_id}")
-async def delete_platform(platform_id: str, user: CurrentUser = Depends(require("admin")), db: AsyncSession = Depends(get_db)):
+async def delete_platform(platform_id: str, user: CurrentUser = Depends(require_cap("admin")), db: AsyncSession = Depends(get_db)):
     p = await get_owned(db, Platform, platform_id, user, PLATFORM_NOT_FOUND)
     try:
         await purge_variant_assets(await variants_of_platform(db, p.id))
@@ -140,7 +140,7 @@ async def get_style_doc(platform_id: str, user: CurrentUser = Depends(current_us
 
 
 @router.patch("/platforms/{platform_id}/style-doc", response_model=StyleDocOut)
-async def patch_style_doc(platform_id: str, body: StyleDocPatch, user: CurrentUser = Depends(require("editor")), db: AsyncSession = Depends(get_db)):
+async def patch_style_doc(platform_id: str, body: StyleDocPatch, user: CurrentUser = Depends(require_cap("sop_edit")), db: AsyncSession = Depends(get_db)):
     p = await get_owned(db, Platform, platform_id, user, PLATFORM_NOT_FOUND)
     doc = (await db.execute(select(StyleDoc).where(StyleDoc.platform_id == platform_id))).scalar_one_or_none()
     if not doc:

@@ -19,7 +19,7 @@ from ..ai.image_utils import ImageTooLarge, InvalidImage, dimensions, read_image
 from ..ai.ingestion_graph import platform_context
 from ..config import get_settings
 from ..db import get_db, release_connection
-from ..deps import CurrentUser, current_user, get_owned, require, require_any
+from ..deps import CurrentUser, current_user, get_owned, require_cap
 from ..jobs import enqueue
 from ..models import JOB_OWNED_STATUSES, Flow, Platform, Step, Variant
 from ..renderer_client import RendererRejected, render_html
@@ -100,7 +100,7 @@ async def annotation_types():
 # ---- 2. upload original
 
 @router.post("/variants/{variant_id}/original", response_model=VariantOut)
-async def upload_original(variant_id: str, file: UploadFile, user: CurrentUser = Depends(require("editor")), db: AsyncSession = Depends(get_db)):
+async def upload_original(variant_id: str, file: UploadFile, user: CurrentUser = Depends(require_cap("sop_edit")), db: AsyncSession = Depends(get_db)):
     v = await _variant(db, user, variant_id)
     ensure_not_job_owned(v)
     try:
@@ -138,7 +138,7 @@ async def get_original(variant_id: str, user: CurrentUser = Depends(current_user
 
 
 @router.delete("/variants/{variant_id}/original", response_model=VariantOut)
-async def delete_original(variant_id: str, user: CurrentUser = Depends(require("editor")), db: AsyncSession = Depends(get_db)):
+async def delete_original(variant_id: str, user: CurrentUser = Depends(require_cap("sop_edit")), db: AsyncSession = Depends(get_db)):
     v = await _variant(db, user, variant_id)
     ensure_not_job_owned(v)
     if v.original_key:
@@ -158,7 +158,7 @@ async def delete_original(variant_id: str, user: CurrentUser = Depends(require("
 # ---- 3. focus boxes
 
 @router.put("/variants/{variant_id}/focus-boxes", response_model=VariantOut)
-async def set_focus_boxes(variant_id: str, body: FocusBoxesIn, user: CurrentUser = Depends(require("editor")), db: AsyncSession = Depends(get_db)):
+async def set_focus_boxes(variant_id: str, body: FocusBoxesIn, user: CurrentUser = Depends(require_cap("sop_edit")), db: AsyncSession = Depends(get_db)):
     v = await _variant(db, user, variant_id)
     ensure_not_job_owned(v)
     if not v.original_key:
@@ -174,7 +174,7 @@ async def set_focus_boxes(variant_id: str, body: FocusBoxesIn, user: CurrentUser
 # ---- 4. process
 
 @router.post("/variants/{variant_id}/process", response_model=VariantOut)
-async def process(variant_id: str, user: CurrentUser = Depends(require("editor")), db: AsyncSession = Depends(get_db)):
+async def process(variant_id: str, user: CurrentUser = Depends(require_cap("sop_edit")), db: AsyncSession = Depends(get_db)):
     v = await _variant(db, user, variant_id)
     ensure_not_job_owned(v)
     if not v.original_key:
@@ -202,7 +202,7 @@ async def review_queue(user: CurrentUser = Depends(current_user), db: AsyncSessi
 
 
 @router.post("/variants/{variant_id}/review", response_model=VariantOut)
-async def review(variant_id: str, body: ReviewIn, user: CurrentUser = Depends(require_any("reviewer")), db: AsyncSession = Depends(get_db)):
+async def review(variant_id: str, body: ReviewIn, user: CurrentUser = Depends(require_cap("sop_review")), db: AsyncSession = Depends(get_db)):
     v = await _variant(db, user, variant_id)
     ensure_not_job_owned(v)
     if v.status != "pending_review":
@@ -214,7 +214,7 @@ async def review(variant_id: str, body: ReviewIn, user: CurrentUser = Depends(re
 
 
 @router.post("/variants/{variant_id}/fake-data", response_model=VariantOut)
-async def sync_fake_data(variant_id: str, body: FakeDataSyncIn, user: CurrentUser = Depends(require("editor")), db: AsyncSession = Depends(get_db)):
+async def sync_fake_data(variant_id: str, body: FakeDataSyncIn, user: CurrentUser = Depends(require_cap("sop_edit")), db: AsyncSession = Depends(get_db)):
     """假資料同步 (SPEC §6.5): the clerk's answer to what this replica reported
     inventing. Picked values join the platform's 示範資料, so every screen after
     this one uses them; `regenerate` draws this screen again first, since a
@@ -279,7 +279,7 @@ async def replica_html(variant_id: str, user: CurrentUser = Depends(current_user
 
 
 @router.put("/variants/{variant_id}/replica-html", response_model=VariantOut)
-async def advanced_edit(variant_id: str, body: AdvancedEditIn, user: CurrentUser = Depends(require("admin")), db: AsyncSession = Depends(get_db)):
+async def advanced_edit(variant_id: str, body: AdvancedEditIn, user: CurrentUser = Depends(require_cap("admin")), db: AsyncSession = Depends(get_db)):
     """Admin-only advanced mode (SPEC §6.2 step 5): direct HTML edit, re-rendered
     outside the graph. The same programmatic checks as the pipeline apply."""
     v = await _variant(db, user, variant_id)
@@ -334,7 +334,7 @@ async def _delete_replaced(keys: list[str]) -> None:
 # ---- 7. annotations & 8. step card
 
 @router.put("/variants/{variant_id}/annotations", response_model=VariantOut)
-async def set_annotations(variant_id: str, body: AnnotationsIn, user: CurrentUser = Depends(require("editor")), db: AsyncSession = Depends(get_db)):
+async def set_annotations(variant_id: str, body: AnnotationsIn, user: CurrentUser = Depends(require_cap("sop_edit")), db: AsyncSession = Depends(get_db)):
     v = await _variant(db, user, variant_id)
     ensure_not_job_owned(v)
     if v.status not in EDITABLE_AFTER_REVIEW:
@@ -369,7 +369,7 @@ async def card_preview(variant_id: str, body: CardPreviewIn, user: CurrentUser =
 
 
 @router.put("/variants/{variant_id}/stepcard-layout", response_model=VariantOut)
-async def set_layout(variant_id: str, body: StepCardLayoutIn, user: CurrentUser = Depends(require("editor")), db: AsyncSession = Depends(get_db)):
+async def set_layout(variant_id: str, body: StepCardLayoutIn, user: CurrentUser = Depends(require_cap("sop_edit")), db: AsyncSession = Depends(get_db)):
     """Store this step's changes to the template — only the keys it touched —
     or clear them so it follows the template again. The card is rendered
     again by hand."""
@@ -383,7 +383,7 @@ async def set_layout(variant_id: str, body: StepCardLayoutIn, user: CurrentUser 
 
 
 @router.post("/variants/{variant_id}/render-card", response_model=VariantOut)
-async def render_card(variant_id: str, user: CurrentUser = Depends(require("editor")), db: AsyncSession = Depends(get_db)):
+async def render_card(variant_id: str, user: CurrentUser = Depends(require_cap("sop_edit")), db: AsyncSession = Depends(get_db)):
     v = await _variant(db, user, variant_id)
     ensure_not_job_owned(v)
     if v.status not in EDITABLE_AFTER_REVIEW or not v.replica_html_key:

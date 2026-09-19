@@ -53,6 +53,38 @@ def decode_token(token: str) -> dict:
     return jwt.decode(token, get_settings().secret_key, algorithms=["HS256"])
 
 
+CASE_TOKEN_MINUTES = 30
+
+
+def case_scope(case_no: str) -> str:
+    return f"case:{case_no}"
+
+
+def create_case_token(case_no: str, tenant_id: str) -> str:
+    """查詢驗證成功後發的短效 token（SPEC §8.1）：只對這一件案子有效，30 分鐘。
+
+    它不是登入憑證——沒有 `sub`，也不對應任何帳號；`scope` 就是它的全部權限。
+    """
+    now = datetime.now(UTC)
+    claims = {
+        "scope": case_scope(case_no),
+        "case_no": case_no,
+        "tid": tenant_id,
+        "iat": now,
+        "exp": now + timedelta(minutes=CASE_TOKEN_MINUTES),
+    }
+    return jwt.encode(claims, get_settings().secret_key, algorithm="HS256")
+
+
+def decode_case_token(token: str) -> dict:
+    """解碼並確認它真的是案件 token（而不是一張後台 JWT 拿來當案件 token 用）。"""
+    payload = jwt.decode(token, get_settings().secret_key, algorithms=["HS256"])
+    case_no = payload.get("case_no", "")
+    if not case_no or payload.get("scope") != case_scope(case_no):
+        raise jwt.InvalidTokenError("not a case token")
+    return payload
+
+
 def token_predates_password_change(payload: dict, password_changed_at: datetime | None) -> bool:
     """JWT `iat` has whole-second precision, so compare at that precision."""
     if password_changed_at is None:

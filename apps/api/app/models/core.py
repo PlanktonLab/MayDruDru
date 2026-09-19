@@ -1,9 +1,12 @@
-"""SQLAlchemy models for SOP Tutor (see SPEC.md §5)."""
+"""SOP 製作相關資料表（自 SOP_Tutor 沿用，SPEC §6.1）。
+
+新的方案／案件／內容資料表分別在 `scheme.py`、`application.py`、`content.py`；
+`__init__.py` 會把四個模組的名稱全部 re-export，`from app.models import X` 一如既往。
+"""
 
 from __future__ import annotations
 
-import uuid
-from datetime import UTC, datetime
+from datetime import datetime
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
@@ -20,22 +23,30 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from .db import Base
+from .base import EMBED_DIM, Base, TsMixin, new_id, now
 
-EMBED_DIM = 1536
-
-
-def now() -> datetime:
-    return datetime.now(UTC)
-
-
-def new_id() -> str:
-    return uuid.uuid4().hex
-
-
-class TsMixin:
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, onupdate=now)
+__all__ = [
+    "ROLES",
+    "COMPONENT_KINDS",
+    "JOB_OWNED_STATUSES",
+    "ApiKey",
+    "Edge",
+    "EvalCase",
+    "EvalRun",
+    "EventLog",
+    "Flow",
+    "FlowVersion",
+    "Goal",
+    "LlmUsage",
+    "Platform",
+    "PlatformComponent",
+    "Step",
+    "StyleDoc",
+    "StyleDocVersion",
+    "Tenant",
+    "User",
+    "Variant",
+]
 
 
 # ---------------------------------------------------------------- org & access
@@ -48,7 +59,8 @@ class Tenant(TsMixin, Base):
     settings: Mapped[dict] = mapped_column(JSON, default=dict)
 
 
-ROLES = ("viewer", "reviewer", "editor", "admin", "owner")  # ascending privilege
+# 角色（SPEC §6.5 / 決策 D14），由低到高。`viewer` 只作為舊資料的唯讀層級保留。
+ROLES = ("viewer", "sop_editor", "sop_reviewer", "case_reviewer", "case_supervisor", "admin", "owner")
 
 
 class User(TsMixin, Base):

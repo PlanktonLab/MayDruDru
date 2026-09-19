@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from .. import storage
 from ..ai.checks import unsafe_html_problems
 from ..db import get_db, release_connection
-from ..deps import CurrentUser, current_user, get_owned, require
+from ..deps import CurrentUser, current_user, get_owned, require_cap
 from ..models import Flow, Platform, PlatformComponent, Step, Variant, new_id
 from ..renderer_client import RendererRejected, extract_element
 from ..schemas import ComponentIn, ComponentOut, ComponentPatch
@@ -48,7 +48,7 @@ async def list_components(platform_id: str, user: CurrentUser = Depends(current_
 
 
 @router.post("/variants/{variant_id}/components", response_model=ComponentOut)
-async def create_component(variant_id: str, body: ComponentIn, user: CurrentUser = Depends(require("editor")),
+async def create_component(variant_id: str, body: ComponentIn, user: CurrentUser = Depends(require_cap("sop_edit")),
                            db: AsyncSession = Depends(get_db)):
     v = await get_owned(db, Variant, variant_id, user, VARIANT_NOT_FOUND)
     if not v.replica_html_key:
@@ -109,7 +109,7 @@ def apply_component_patch(c: PlatformComponent, body: ComponentPatch) -> Platfor
 
 
 @router.patch("/components/{component_id}", response_model=ComponentOut)
-async def patch_component(component_id: str, body: ComponentPatch, user: CurrentUser = Depends(require("editor")),
+async def patch_component(component_id: str, body: ComponentPatch, user: CurrentUser = Depends(require_cap("sop_edit")),
                           db: AsyncSession = Depends(get_db)):
     c = await get_owned(db, PlatformComponent, component_id, user, COMPONENT_NOT_FOUND)
     apply_component_patch(c, body)
@@ -131,7 +131,7 @@ async def component_thumb(component_id: str, user: CurrentUser = Depends(current
 
 
 @router.delete("/components/{component_id}")
-async def delete_component(component_id: str, user: CurrentUser = Depends(require("admin")), db: AsyncSession = Depends(get_db)):
+async def delete_component(component_id: str, user: CurrentUser = Depends(require_cap("admin")), db: AsyncSession = Depends(get_db)):
     c = await get_owned(db, PlatformComponent, component_id, user, COMPONENT_NOT_FOUND)
     thumb_key = c.thumb_key
     await db.delete(c)

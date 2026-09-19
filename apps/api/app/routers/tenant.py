@@ -6,7 +6,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_db
-from ..deps import CurrentUser, current_user, get_owned, require
+from ..deps import CurrentUser, current_user, get_owned, require_cap
 from ..models import ApiKey, Tenant, User
 from ..schemas import (
     ApiKeyIn,
@@ -65,7 +65,7 @@ async def get_tenant(user: CurrentUser = Depends(current_user), db: AsyncSession
 
 
 @router.put("/tenant/stepcard-layout", response_model=TenantOut)
-async def set_tenant_layout(body: TenantLayoutIn, user: CurrentUser = Depends(require("admin")), db: AsyncSession = Depends(get_db)):
+async def set_tenant_layout(body: TenantLayoutIn, user: CurrentUser = Depends(require_cap("admin")), db: AsyncSession = Depends(get_db)):
     """The Step Card layout every step of this channel renders with unless it
     has its own (SPEC §9.1). Already-rendered cards keep their picture."""
     t = await db.get(Tenant, user.tenant_id)
@@ -91,7 +91,7 @@ async def get_policy(user: CurrentUser = Depends(current_user), db: AsyncSession
 
 
 @router.put("/tenant/policy")
-async def set_policy(body: PolicyIn, user: CurrentUser = Depends(require("admin")), db: AsyncSession = Depends(get_db)):
+async def set_policy(body: PolicyIn, user: CurrentUser = Depends(require_cap("admin")), db: AsyncSession = Depends(get_db)):
     """Voice (language, name, tone, goal noun, extra rules, hand-off line),
     behaviour (delivery, what each screenshot outcome turns into, confidence
     bars) and template overrides. Fields equal to the built-in are stored as
@@ -126,7 +126,7 @@ async def list_members(user: CurrentUser = Depends(current_user), db: AsyncSessi
 
 
 @router.post("/members", response_model=UserOut)
-async def create_member(body: MemberIn, user: CurrentUser = Depends(require("admin")), db: AsyncSession = Depends(get_db)):
+async def create_member(body: MemberIn, user: CurrentUser = Depends(require_cap("admin")), db: AsyncSession = Depends(get_db)):
     if body.role == "owner" and user.role != "owner":
         raise HTTPException(403, "只有 owner 能建立 owner")
     email = body.email.lower().strip()
@@ -144,7 +144,7 @@ async def create_member(body: MemberIn, user: CurrentUser = Depends(require("adm
 
 
 @router.patch("/members/{member_id}", response_model=UserOut)
-async def patch_member(member_id: str, body: MemberPatch, user: CurrentUser = Depends(require("admin")), db: AsyncSession = Depends(get_db)):
+async def patch_member(member_id: str, body: MemberPatch, user: CurrentUser = Depends(require_cap("admin")), db: AsyncSession = Depends(get_db)):
     u = await get_owned(db, User, member_id, user, MEMBER_NOT_FOUND)
     if (u.role == "owner" or body.role == "owner") and user.role != "owner":
         raise HTTPException(403, "只有 owner 能變更 owner")
@@ -165,7 +165,7 @@ async def patch_member(member_id: str, body: MemberPatch, user: CurrentUser = De
 
 
 @router.delete("/members/{member_id}")
-async def delete_member(member_id: str, user: CurrentUser = Depends(require("admin")), db: AsyncSession = Depends(get_db)):
+async def delete_member(member_id: str, user: CurrentUser = Depends(require_cap("admin")), db: AsyncSession = Depends(get_db)):
     u = await get_owned(db, User, member_id, user, MEMBER_NOT_FOUND)
     if u.role == "owner":
         if user.role != "owner":
@@ -183,13 +183,13 @@ def _key_out(k: ApiKey, plaintext: str | None = None) -> ApiKeyOut:
 
 
 @router.get("/api-keys", response_model=list[ApiKeyOut])
-async def list_keys(user: CurrentUser = Depends(require("admin")), db: AsyncSession = Depends(get_db)):
+async def list_keys(user: CurrentUser = Depends(require_cap("admin")), db: AsyncSession = Depends(get_db)):
     rows = (await db.execute(select(ApiKey).where(ApiKey.tenant_id == user.tenant_id).order_by(ApiKey.created_at))).scalars().all()
     return [_key_out(k) for k in rows]
 
 
 @router.post("/api-keys", response_model=ApiKeyOut)
-async def create_key(body: ApiKeyIn, user: CurrentUser = Depends(require("admin")), db: AsyncSession = Depends(get_db)):
+async def create_key(body: ApiKeyIn, user: CurrentUser = Depends(require_cap("admin")), db: AsyncSession = Depends(get_db)):
     raw, prefix, digest = generate_api_key()
     k = ApiKey(tenant_id=user.tenant_id, name=body.name, prefix=prefix, key_hash=digest, rate_limit_per_minute=body.rate_limit_per_minute)
     db.add(k)
@@ -198,7 +198,7 @@ async def create_key(body: ApiKeyIn, user: CurrentUser = Depends(require("admin"
 
 
 @router.patch("/api-keys/{key_id}", response_model=ApiKeyOut)
-async def patch_key(key_id: str, body: ApiKeyPatch, user: CurrentUser = Depends(require("admin")), db: AsyncSession = Depends(get_db)):
+async def patch_key(key_id: str, body: ApiKeyPatch, user: CurrentUser = Depends(require_cap("admin")), db: AsyncSession = Depends(get_db)):
     k = await get_owned(db, ApiKey, key_id, user, API_KEY_NOT_FOUND)
     for f in ("name", "status", "rate_limit_per_minute"):
         if getattr(body, f) is not None:
@@ -208,7 +208,7 @@ async def patch_key(key_id: str, body: ApiKeyPatch, user: CurrentUser = Depends(
 
 
 @router.delete("/api-keys/{key_id}")
-async def delete_key(key_id: str, user: CurrentUser = Depends(require("admin")), db: AsyncSession = Depends(get_db)):
+async def delete_key(key_id: str, user: CurrentUser = Depends(require_cap("admin")), db: AsyncSession = Depends(get_db)):
     k = await get_owned(db, ApiKey, key_id, user, API_KEY_NOT_FOUND)
     await db.delete(k)
     await db.commit()

@@ -1,5 +1,5 @@
-"""FastAPI dependencies: admin auth (JWT), public auth (API key), role gates,
-tenant-scoped loading."""
+"""FastAPI dependencies: admin auth (JWT), public auth (API key), case tokens,
+capability gates, tenant-scoped loading."""
 
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -13,12 +13,31 @@ from .db import get_db
 from .errors import RATE_LIMITED, ApiError
 from .models import ROLES, ApiKey, Edge, Flow, Step, User, Variant
 from .redis_client import redis
-from .security import decode_token, hash_api_key, token_predates_password_change
+from .security import decode_case_token, decode_token, hash_api_key, token_predates_password_change
 
 ROLE_RANK = {role: rank for rank, role in enumerate(ROLES)}
 LAST_USED_RESOLUTION = timedelta(minutes=1)
 
+# 授權以 capability 為準，不以角色排名為準（決策 D14）。角色只是 capability 的組合，
+# 所以「案件覆核者」不會因為排名比較高就順便拿到 SOP 編輯權。
+CAPABILITIES = ("sop_edit", "sop_review", "case_review", "case_supervise", "admin", "owner")
+
+_ADMIN_CAPS = frozenset({"sop_edit", "sop_review", "case_review", "case_supervise", "admin"})
+ROLE_CAPS: dict[str, frozenset[str]] = {
+    "viewer": frozenset(),                              # 舊資料的唯讀層級，UI 不再提供
+    "sop_editor": frozenset({"sop_edit"}),
+    "sop_reviewer": frozenset({"sop_review"}),
+    "case_reviewer": frozenset({"case_review"}),
+    "case_supervisor": frozenset({"case_review", "case_supervise"}),
+    "admin": _ADMIN_CAPS,
+    "owner": _ADMIN_CAPS | {"owner"},
+}
+
 T = TypeVar("T")
+
+
+def has_cap(role: str, cap: str) -> bool:
+    return cap in ROLE_CAPS.get(role, frozenset())
 
 
 @dataclass
@@ -31,6 +50,9 @@ class CurrentUser:
 
     def at_least(self, role: str) -> bool:
         return ROLE_RANK[self.role] >= ROLE_RANK[role]
+
+    def can(self, cap: str) -> bool:
+        return has_cap(self.role, cap)
 
 
 async def current_user(request: Request, db: AsyncSession = Depends(get_db)) -> CurrentUser:
@@ -49,26 +71,37 @@ async def current_user(request: Request, db: AsyncSession = Depends(get_db)) -> 
     return CurrentUser(id=user.id, tenant_id=user.tenant_id, role=user.role, email=user.email, name=user.name)
 
 
-def require(role: str):
-    """Minimum role gate. Roles are ordered viewer < reviewer < editor < admin < owner."""
+def require_cap(cap: str):
+    """Capability gate (SPEC §6.5 / 決策 D14). An endpoint declares what it *does*
+    (`sop_edit`, `case_supervise`), never which rank happens to be allowed today."""
 
     async def dep(user: CurrentUser = Depends(current_user)) -> CurrentUser:
-        if not user.at_least(role):
-            raise HTTPException(403, f"需要 {role} 以上的權限")
+        if not has_cap(user.role, cap):
+            raise HTTPException(403, f"需要 {cap} 權限")
         return user
 
     return dep
 
 
-def require_any(*roles: str):
-    """Exact-role gate that admins and owners always pass (e.g. reviewer actions)."""
+@dataclass
+class CaseCaller:
+    """一張案件 token 代表的身分：只有一個案號，沒有帳號（SPEC §8.1）。"""
 
-    async def dep(user: CurrentUser = Depends(current_user)) -> CurrentUser:
-        if user.role not in roles and not user.at_least("admin"):
-            raise HTTPException(403, f"需要 {', '.join(roles)} 角色")
-        return user
+    case_no: str
+    tenant_id: str
 
-    return dep
+
+async def require_case_token(request: Request) -> CaseCaller:
+    """補件與撤回用的短效憑證。查詢驗證成功後發，30 分鐘內只對那一件案子有效。"""
+    auth = request.headers.get("authorization", "")
+    token = auth[7:] if auth.lower().startswith("bearer ") else request.headers.get("x-case-token", "")
+    if not token:
+        raise HTTPException(401, "缺少案件驗證")
+    try:
+        payload = decode_case_token(token)
+    except Exception:
+        raise HTTPException(401, "案件驗證已失效，請重新查詢")
+    return CaseCaller(case_no=payload["case_no"], tenant_id=payload.get("tid", ""))
 
 
 def _tenant_scoped(model, tenant_id: str):

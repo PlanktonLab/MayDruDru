@@ -11,7 +11,7 @@ from sqlalchemy.orm import selectinload
 
 from .. import storage
 from ..db import get_db
-from ..deps import CurrentUser, current_user, get_owned, require, require_any
+from ..deps import CurrentUser, current_user, get_owned, require_cap
 from ..jobs import enqueue
 from ..models import Edge, Flow, FlowVersion, Goal, Platform, Step, Variant
 from ..schemas import (
@@ -132,7 +132,7 @@ def layout_positions(items: list[LayoutItem]) -> dict[str, tuple[float, float]]:
 
 
 @router.put("/canvas/layout")
-async def save_layout(body: LayoutIn, user: CurrentUser = Depends(require("editor")), db: AsyncSession = Depends(get_db)):
+async def save_layout(body: LayoutIn, user: CurrentUser = Depends(require_cap("sop_edit")), db: AsyncSession = Depends(get_db)):
     positions = layout_positions(body.items)
     if positions:
         steps = (await db.execute(
@@ -168,7 +168,7 @@ async def default_goal_for_end(db: AsyncSession, tenant_id: str, flow_id: str, e
 
 
 @router.post("/flows", response_model=FlowOut)
-async def create_flow(body: FlowIn, user: CurrentUser = Depends(require("editor")), db: AsyncSession = Depends(get_db)):
+async def create_flow(body: FlowIn, user: CurrentUser = Depends(require_cap("sop_edit")), db: AsyncSession = Depends(get_db)):
     p = await db.get(Platform, body.platform_id)
     if not p or p.tenant_id != user.tenant_id:
         raise HTTPException(400, "platform 不存在")
@@ -187,7 +187,7 @@ async def create_flow(body: FlowIn, user: CurrentUser = Depends(require("editor"
 
 
 @router.patch("/flows/{flow_id}", response_model=FlowOut)
-async def patch_flow(flow_id: str, body: FlowPatch, user: CurrentUser = Depends(require("editor")), db: AsyncSession = Depends(get_db)):
+async def patch_flow(flow_id: str, body: FlowPatch, user: CurrentUser = Depends(require_cap("sop_edit")), db: AsyncSession = Depends(get_db)):
     f = await _own_flow(db, user, flow_id)
     data = body.model_dump(exclude_none=True)
     for k, v in data.items():
@@ -197,7 +197,7 @@ async def patch_flow(flow_id: str, body: FlowPatch, user: CurrentUser = Depends(
 
 
 @router.delete("/flows/{flow_id}")
-async def delete_flow(flow_id: str, user: CurrentUser = Depends(require("editor")), db: AsyncSession = Depends(get_db)):
+async def delete_flow(flow_id: str, user: CurrentUser = Depends(require_cap("sop_edit")), db: AsyncSession = Depends(get_db)):
     f = await _own_flow(db, user, flow_id)
     await _purge_or_503(await variants_of_flow(db, f.id))
     await db.delete(f)
@@ -212,7 +212,7 @@ async def validate(flow_id: str, user: CurrentUser = Depends(current_user), db: 
 
 
 @router.post("/flows/{flow_id}/publish", response_model=FlowOut)
-async def publish(flow_id: str, user: CurrentUser = Depends(require_any("reviewer")), db: AsyncSession = Depends(get_db)):
+async def publish(flow_id: str, user: CurrentUser = Depends(require_cap("sop_review")), db: AsyncSession = Depends(get_db)):
     f = await _own_flow(db, user, flow_id)
     v = await validate_flow(db, flow_id)
     if not v["publishable"]:
@@ -223,7 +223,7 @@ async def publish(flow_id: str, user: CurrentUser = Depends(require_any("reviewe
 
 
 @router.post("/flows/{flow_id}/unpublish", response_model=FlowOut)
-async def unpublish(flow_id: str, user: CurrentUser = Depends(require_any("reviewer")), db: AsyncSession = Depends(get_db)):
+async def unpublish(flow_id: str, user: CurrentUser = Depends(require_cap("sop_review")), db: AsyncSession = Depends(get_db)):
     f = await _own_flow(db, user, flow_id)
     await unpublish_flow(db, flow_id)
     await db.refresh(f)
@@ -237,7 +237,7 @@ def renderable_variants(variants: list[Variant]) -> list[Variant]:
 
 
 @router.post("/flows/{flow_id}/render-cards", response_model=RenderCardsOut)
-async def render_cards(flow_id: str, user: CurrentUser = Depends(require("editor")), db: AsyncSession = Depends(get_db)):
+async def render_cards(flow_id: str, user: CurrentUser = Depends(require_cap("sop_edit")), db: AsyncSession = Depends(get_db)):
     """Render every step's card again — after a template change, or new demo
     data. Each step keeps its own layout patch; only the picture is redone."""
     await _own_flow(db, user, flow_id)
@@ -256,7 +256,7 @@ async def versions(flow_id: str, user: CurrentUser = Depends(current_user), db: 
 
 
 @router.post("/flows/{flow_id}/rollback/{version_id}", response_model=FlowOut)
-async def rollback(flow_id: str, version_id: str, user: CurrentUser = Depends(require_any("reviewer")), db: AsyncSession = Depends(get_db)):
+async def rollback(flow_id: str, version_id: str, user: CurrentUser = Depends(require_cap("sop_review")), db: AsyncSession = Depends(get_db)):
     f = await _own_flow(db, user, flow_id)
     try:
         await rollback_flow(db, flow_id, version_id)
@@ -269,7 +269,7 @@ async def rollback(flow_id: str, version_id: str, user: CurrentUser = Depends(re
 # ------------------------------------------------------------------ steps
 
 @router.post("/steps", response_model=StepOut)
-async def create_step(body: StepIn, user: CurrentUser = Depends(require("editor")), db: AsyncSession = Depends(get_db)):
+async def create_step(body: StepIn, user: CurrentUser = Depends(require_cap("sop_edit")), db: AsyncSession = Depends(get_db)):
     await _own_flow(db, user, body.flow_id)
     data = body.model_dump()
     if data["is_start"]:  # a flow has exactly one start; only the first may claim it
@@ -322,7 +322,7 @@ async def _rerender_cards(db: AsyncSession, variants: list[Variant]) -> None:
 
 
 @router.patch("/steps/{step_id}", response_model=StepOut)
-async def patch_step(step_id: str, body: StepPatch, user: CurrentUser = Depends(require("editor")), db: AsyncSession = Depends(get_db)):
+async def patch_step(step_id: str, body: StepPatch, user: CurrentUser = Depends(require_cap("sop_edit")), db: AsyncSession = Depends(get_db)):
     s = await _own_step(db, user, step_id)
     data = body.model_dump(exclude_none=True)
     if "goal_id" in body.model_fields_set:  # an explicit null clears the goal
@@ -345,7 +345,7 @@ async def patch_step(step_id: str, body: StepPatch, user: CurrentUser = Depends(
 
 
 @router.delete("/steps/{step_id}")
-async def delete_step(step_id: str, user: CurrentUser = Depends(require("editor")), db: AsyncSession = Depends(get_db)):
+async def delete_step(step_id: str, user: CurrentUser = Depends(require_cap("sop_edit")), db: AsyncSession = Depends(get_db)):
     s = await _own_step(db, user, step_id)
     await _purge_or_503(await variants_of_step(db, s.id))
     await db.delete(s)
@@ -374,7 +374,7 @@ async def _duplicate_variant(src: Variant, new_step_id: str, tenant_id: str) -> 
 
 
 @router.post("/steps/{step_id}/duplicate", response_model=StepOut)
-async def duplicate_step(step_id: str, body: StepDuplicateIn, user: CurrentUser = Depends(require("editor")), db: AsyncSession = Depends(get_db)):
+async def duplicate_step(step_id: str, body: StepDuplicateIn, user: CurrentUser = Depends(require_cap("sop_edit")), db: AsyncSession = Depends(get_db)):
     """Copy a step (text + desensitised replica, annotations and Step Card) into a
     flow — for shared steps like 登入 / 首頁 (SPEC §6.1)."""
     s = await _own_step(db, user, step_id)
@@ -397,7 +397,7 @@ async def duplicate_step(step_id: str, body: StepDuplicateIn, user: CurrentUser 
 # ------------------------------------------------------------------ edges
 
 @router.post("/edges", response_model=EdgeOut)
-async def create_edge(body: EdgeIn, user: CurrentUser = Depends(require("editor")), db: AsyncSession = Depends(get_db)):
+async def create_edge(body: EdgeIn, user: CurrentUser = Depends(require_cap("sop_edit")), db: AsyncSession = Depends(get_db)):
     await _own_flow(db, user, body.flow_id)
     a, b = await db.get(Step, body.from_step_id), await db.get(Step, body.to_step_id)
     if not a or not b or a.flow_id != body.flow_id or b.flow_id != body.flow_id:
@@ -414,7 +414,7 @@ async def create_edge(body: EdgeIn, user: CurrentUser = Depends(require("editor"
 
 
 @router.patch("/edges/{edge_id}", response_model=EdgeOut)
-async def patch_edge(edge_id: str, body: EdgePatch, user: CurrentUser = Depends(require("editor")), db: AsyncSession = Depends(get_db)):
+async def patch_edge(edge_id: str, body: EdgePatch, user: CurrentUser = Depends(require_cap("sop_edit")), db: AsyncSession = Depends(get_db)):
     e = await get_owned(db, Edge, edge_id, user, EDGE_NOT_FOUND)
     for k, v in body.model_dump(exclude_none=True).items():
         setattr(e, k, v)
@@ -423,7 +423,7 @@ async def patch_edge(edge_id: str, body: EdgePatch, user: CurrentUser = Depends(
 
 
 @router.delete("/edges/{edge_id}")
-async def delete_edge(edge_id: str, user: CurrentUser = Depends(require("editor")), db: AsyncSession = Depends(get_db)):
+async def delete_edge(edge_id: str, user: CurrentUser = Depends(require_cap("sop_edit")), db: AsyncSession = Depends(get_db)):
     e = await get_owned(db, Edge, edge_id, user, EDGE_NOT_FOUND)
     await db.delete(e)
     await db.commit()

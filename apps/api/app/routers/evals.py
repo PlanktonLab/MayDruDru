@@ -11,7 +11,7 @@ from .. import storage
 from ..ai.image_utils import ImageTooLarge, InvalidImage, read_image_upload
 from ..config import get_settings
 from ..db import get_db
-from ..deps import CurrentUser, current_user, get_owned, require
+from ..deps import CurrentUser, current_user, get_owned, require_cap
 from ..jobs import enqueue
 from ..models import EvalCase, EvalRun
 from ..schemas import EvalCaseOut, EvalRunIn, EvalRunOut
@@ -37,7 +37,7 @@ async def list_cases(user: CurrentUser = Depends(current_user), db: AsyncSession
 
 @router.post("/cases", response_model=EvalCaseOut)
 async def create_case(file: UploadFile, platform_id: str = Form(...), step_id: str | None = Form(default=None), goal_id: str | None = Form(default=None),
-                      text: str = Form(default=""), note: str = Form(default=""), user: CurrentUser = Depends(require("editor")), db: AsyncSession = Depends(get_db)):
+                      text: str = Form(default=""), note: str = Form(default=""), user: CurrentUser = Depends(require_cap("sop_edit")), db: AsyncSession = Depends(get_db)):
     try:
         png = await read_image_upload(file)
     except ImageTooLarge:
@@ -57,7 +57,7 @@ async def create_case(file: UploadFile, platform_id: str = Form(...), step_id: s
 
 
 @router.get("/cases/{case_id}/image.png")
-async def case_image(case_id: str, user: CurrentUser = Depends(require("editor")), db: AsyncSession = Depends(get_db)):
+async def case_image(case_id: str, user: CurrentUser = Depends(require_cap("sop_edit")), db: AsyncSession = Depends(get_db)):
     c = await get_owned(db, EvalCase, case_id, user, CASE_NOT_FOUND)
     try:
         data = await asyncio.to_thread(storage.get_sealed, c.image_key)
@@ -68,7 +68,7 @@ async def case_image(case_id: str, user: CurrentUser = Depends(require("editor")
 
 
 @router.delete("/cases/{case_id}")
-async def delete_case(case_id: str, user: CurrentUser = Depends(require("editor")), db: AsyncSession = Depends(get_db)):
+async def delete_case(case_id: str, user: CurrentUser = Depends(require_cap("sop_edit")), db: AsyncSession = Depends(get_db)):
     c = await get_owned(db, EvalCase, case_id, user, CASE_NOT_FOUND)
     try:
         await asyncio.to_thread(storage.delete_private, c.image_key)
@@ -85,7 +85,7 @@ def _run_out(r: EvalRun) -> EvalRunOut:
 
 
 @router.post("/runs", response_model=EvalRunOut)
-async def start_run(body: EvalRunIn, user: CurrentUser = Depends(require("editor")), db: AsyncSession = Depends(get_db)):
+async def start_run(body: EvalRunIn, user: CurrentUser = Depends(require_cap("sop_edit")), db: AsyncSession = Depends(get_db)):
     s = get_settings()
     r = EvalRun(tenant_id=user.tenant_id, label=body.label, config={"content_mode": body.content_mode, "provider": s.llm_provider,
                                                                      "models": {t: s.model_for(t) for t in ("describe", "rerank", "intent")},

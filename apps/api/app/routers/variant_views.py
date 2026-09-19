@@ -30,7 +30,9 @@ def original_version(v: Variant) -> str | None:
 
 
 def can_see_original_data(v: Variant, user: CurrentUser) -> bool:
-    return user.at_least("admin") or (v.original_uploaded_by is not None and v.original_uploaded_by == user.id)
+    """原圖裡的資料只給上傳者本人與管理者看（決策 D14 起改以 capability 判斷，
+    所以 case_supervisor 不會因為排名靠前就順便看得到 SOP 原圖）。"""
+    return user.can("admin") or (v.original_uploaded_by is not None and v.original_uploaded_by == user.id)
 
 
 def public_structure(structure: dict | None) -> dict | None:

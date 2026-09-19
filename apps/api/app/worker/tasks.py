@@ -27,6 +27,7 @@ from ..config import get_settings
 from ..db import sessionmaker
 from ..models import EvalCase, EvalRun, Goal, Platform, Variant
 from ..renderer_client import render_html
+from ..services import application as case_service
 from ..services.card_context import load_card_context
 from ..services.numbered_card import LINE_PREVIEW_EDGE, html_key_for
 from ..services.stepcard import build_card_html
@@ -372,3 +373,24 @@ async def cleanup_originals(ctx: dict) -> dict:
                 counts["scrubbed"] += 1
         await db.commit()
     return counts
+
+
+# ----------------------------------------------------------------- 案件排程
+
+async def expire_supplements(ctx: dict) -> dict:
+    """T8：補件期限過了的案件自動轉入 EXPIRED（SPEC §7）。每小時跑一次。
+
+    逾期是狀態機的一條轉移，不是一個 UPDATE，所以事件、通知與 purge 排程都照走。
+    """
+    async with sessionmaker()() as db:
+        expired = await case_service.expire_overdue(db, datetime.now(UTC))
+    return {"expired": len(expired)}
+
+
+async def purge_documents(ctx: dict) -> dict:
+    """終態滿保存期限的案件硬刪證明文件（SPEC §7 / §11）。每天 03:00。
+
+    刪 MinIO 物件、OCR 結果與 findings 的 bbox；申請主檔與事件時間軸永遠留著。
+    """
+    async with sessionmaker()() as db:
+        return await case_service.purge_due(db, datetime.now(UTC))
