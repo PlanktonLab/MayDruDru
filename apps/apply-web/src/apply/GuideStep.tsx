@@ -5,7 +5,7 @@
  */
 
 import { useState } from 'react'
-import { ChevronDown, Eye } from 'lucide-react'
+import { ChevronDown } from 'lucide-react'
 import { Spinner, cx } from '@maydru/ui'
 import { guideFor, type ChannelGuide } from './channelGuides'
 import type { SchemeDocumentType, SchemePublic } from '../lib/types'
@@ -67,26 +67,12 @@ function ChannelGuideCard({ guide }: { guide: ChannelGuide }) {
           </ol>
 
           <div className="mt-3 lg:mt-0 lg:min-w-0 lg:flex-1">
-            {guide.mustShow.length > 0 && (
-              <div className="rounded-xl border border-border bg-canvas px-3 py-2.5">
-                <p className="flex items-center gap-1.5 text-[12px] font-semibold text-primary">
-                  <Eye size={12} aria-hidden className="text-accent" />
-                  送出前，確認這些都看得到
-                </p>
-                <ul className="mt-1.5 space-y-1">
-                  {guide.mustShow.map((item) => (
-                    <li key={item} className="flex items-start gap-1.5 text-[12.5px] leading-5 text-muted">
-                      <span aria-hidden className="mt-2 size-1 shrink-0 rounded-full bg-accent" />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+            {/* 「送出前，確認這些都看得到」的清單不再列：每一份要看到什麼，
+                上面的步驟說明已經講過，範例圖也把欄位框了出來——同一件事第三遍。 */}
 
             {/* 合格範例圖：民眾是在對照，不是在閱讀。一張標好必要欄位的圖
                 比整段文字有效得多（原專案 PRD-1 F2.2）。 */}
-            <figure className="mt-3">
+            <figure>
               <img
                 src={guide.sampleImage}
                 alt={guide.sampleCaption}
