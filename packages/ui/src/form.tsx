@@ -8,14 +8,18 @@ import {
 import { Check } from 'lucide-react'
 import { cx } from './cx'
 
+/* 輸入框是「填色 + 透明框線」而不是「白底 + 灰框線」：整排欄位看起來是一片安靜的
+   淺灰塊，只有正在填的那一格浮起來（框線轉 accent、外圈一圈淡光）。
+   `--field` 在 tokens.css 定義，深色模式會換成深一階的底色。 */
 const CONTROL =
-  'w-full rounded-xl border border-border bg-canvas px-3.5 text-[16px] text-primary outline-none ' +
-  'placeholder:text-secondary focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/30 ' +
+  'w-full rounded-xl border border-transparent bg-[var(--field)] px-3.5 text-[16px] text-primary outline-none ' +
+  'transition-colors placeholder:text-secondary ' +
+  'focus-visible:border-accent focus-visible:bg-canvas focus-visible:ring-2 focus-visible:ring-accent/15 ' +
   'disabled:cursor-not-allowed disabled:opacity-60 aria-[invalid=true]:border-danger'
 
 // 行動版的輸入框字級固定 16px：小於 16px 時 iOS Safari 會自動放大整頁。
 export function Input({ className, ...rest }: InputHTMLAttributes<HTMLInputElement>) {
-  return <input {...rest} className={cx(CONTROL, 'h-12', className)} />
+  return <input {...rest} className={cx(CONTROL, 'h-[46px]', className)} />
 }
 
 export function Textarea({ className, rows = 4, ...rest }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
@@ -24,7 +28,7 @@ export function Textarea({ className, rows = 4, ...rest }: TextareaHTMLAttribute
 
 export function Select({ className, children, ...rest }: SelectHTMLAttributes<HTMLSelectElement>) {
   return (
-    <select {...rest} className={cx(CONTROL, 'h-12 pr-8', className)}>
+    <select {...rest} className={cx(CONTROL, 'h-[46px] pr-8', className)}>
       {children}
     </select>
   )
@@ -53,7 +57,7 @@ export function Field({ label, hint, error, required, className, children }: Fie
   const message = error ?? hint
   return (
     <div className={cx('space-y-1.5', className)}>
-      <label htmlFor={id} className="block text-[13px] font-medium text-muted">
+      <label htmlFor={id} className="block text-[12px] font-medium text-muted">
         {label}
         {required && (
           <span className="ml-1 text-danger" aria-label="必填">
@@ -67,7 +71,12 @@ export function Field({ label, hint, error, required, className, children }: Fie
         'aria-invalid': error ? true : undefined,
       })}
       {message && (
-        <p id={messageId} className={cx('text-[13px] leading-5', error ? 'text-danger' : 'text-muted')}>
+        // 錯誤要當場被螢幕閱讀器念出來；提示文字則只是靜態說明，不該打斷人。
+        <p
+          id={messageId}
+          role={error ? 'alert' : undefined}
+          className={cx('text-[13px] leading-5', error ? 'text-danger' : 'text-muted')}
+        >
           {message}
         </p>
       )}

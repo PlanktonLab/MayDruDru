@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 520" width="700" height="520" role="img"><rect width="700" height="520" fill="#fff"/>
+  <rect width="700" height="62" fill="#00508f"/>
+  <text x="26" y="39" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="19" font-weight="700" fill="#fff">竹光電信</text>
+  <text x="674" y="39" text-anchor="end" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="13" fill="#bcd5ea">行動通信費用帳單</text>
+
+  <text x="26" y="98" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12" fill="#6b7280">繳款人</text>
+  <text x="26" y="120" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="15" font-weight="600" fill="#111827">陳宜君</text>
+  <rect x="20" y="102" width="130" height="24" fill="none" stroke="#dc2626" stroke-width="2.5" rx="4"/>
+     <rect x="20" y="81" width="53" height="19" fill="#dc2626" rx="3"/>
+     <text x="27" y="95" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12" font-weight="700" fill="#fff">繳款人</text>
+
+  <text x="250" y="98" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12" fill="#6b7280">行動電話號碼</text>
+  <text x="250" y="120" font-family="ui-monospace, 'Cascadia Mono', Consolas, monospace" font-size="15" fill="#111827">0912-345-<tspan font-weight="700">678</tspan></text>
+  <rect x="244" y="102" width="168" height="24" fill="none" stroke="#dc2626" stroke-width="2.5" rx="4"/>
+     <rect x="244" y="81" width="79" height="19" fill="#dc2626" rx="3"/>
+     <text x="251" y="95" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12" font-weight="700" fill="#fff">電話末三碼</text>
+
+  <text x="520" y="98" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12" fill="#6b7280">帳單月份</text>
+  <text x="520" y="120" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="14" fill="#111827">2026 年 8 月</text>
+
+  <line x1="26" y1="146" x2="674" y2="146" stroke="#e5e7eb"/>
+  <text x="26" y="176" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="14" font-weight="700" fill="#111827">代收費用明細</text>
+
+  <rect x="26" y="192" width="648" height="30" fill="#f3f4f6"/>
+  <text x="38" y="212" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12" font-weight="600" fill="#4b5563">項目</text>
+  <text x="662" y="212" text-anchor="end" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12" font-weight="600" fill="#4b5563">金額（新臺幣）</text>
+
+  <rect x="26" y="222" width="648" height="40" fill="#fffbeb"/>
+  <text x="38" y="247" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="13" font-weight="600" fill="#111827">Google Play 代收 — ChatGPT Plus 訂閱</text>
+  <text x="662" y="247" text-anchor="end" font-family="ui-monospace, 'Cascadia Mono', Consolas, monospace" font-size="14" font-weight="700" fill="#111827">650</text>
+  <rect x="32" y="228" width="420" height="28" fill="none" stroke="#dc2626" stroke-width="2.5" rx="4"/>
+     <rect x="32" y="207" width="92" height="19" fill="#dc2626" rx="3"/>
+     <text x="39" y="221" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12" font-weight="700" fill="#fff">購買品項名稱</text>
+  <rect x="548" y="230" width="116" height="26" fill="none" stroke="#dc2626" stroke-width="2.5" rx="4"/>
+     <rect x="548" y="209" width="66" height="19" fill="#dc2626" rx="3"/>
+     <text x="555" y="223" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12" font-weight="700" fill="#fff">臺幣金額</text>
+
+  <text x="38" y="292" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="13" fill="#6b7280">行動電話月租費</text>
+  <text x="662" y="292" text-anchor="end" font-family="ui-monospace, 'Cascadia Mono', Consolas, monospace" font-size="13" fill="#6b7280">599</text>
+  <text x="38" y="322" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="13" fill="#6b7280">國內語音通信費</text>
+  <text x="662" y="322" text-anchor="end" font-family="ui-monospace, 'Cascadia Mono', Consolas, monospace" font-size="13" fill="#6b7280">124</text>
+
+  <line x1="26" y1="348" x2="674" y2="348" stroke="#e5e7eb"/>
+  <text x="26" y="378" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="13" fill="#4b5563">本期應繳總額</text>
+  <text x="674" y="378" text-anchor="end" font-family="ui-monospace, 'Cascadia Mono', Consolas, monospace" font-size="16" font-weight="700" fill="#111827">NT$ 1,373</text>
+  <text x="26" y="404" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12" fill="#9ca3af">繳款截止日 2026/09/20</text>
+
+  <rect x="26" y="430" width="648" height="62" fill="#eef5fb" rx="8"/>
+  <text x="42" y="456" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12.5" font-weight="700" fill="#00508f">電信帳單本來就是臺幣</text>
+  <text x="42" y="478" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12" fill="#2b6b9e">不需要另外換算。只要這四個欄位看得到就合格。</text>
+  
+  <defs>
+    <pattern id="wm" width="260" height="150" patternUnits="userSpaceOnUse" patternTransform="rotate(-24)">
+      <text x="0" y="40" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="30" font-weight="700"
+            fill="#dc2626" fill-opacity="0.16" letter-spacing="3">範例 SAMPLE</text>
+    </pattern>
+  </defs>
+  <rect x="0" y="0" width="700" height="520" fill="url(#wm)"/></svg>

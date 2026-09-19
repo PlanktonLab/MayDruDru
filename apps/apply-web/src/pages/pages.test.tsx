@@ -2,11 +2,13 @@
 
 import { describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { http, HttpResponse } from 'msw'
 import { ConfirmStep } from '../apply/ConfirmStep'
 import { lineDeepLink } from './SubmittedPage'
-import SchemesPage from './SchemesPage'
+import ApplyPage from './ApplyPage'
 import HelpPage from './HelpPage'
 import SubmittedPage from './SubmittedPage'
+import { server } from '../mocks/server'
 import { Providers, renderAt } from '../test/utils'
 import { SCHEME } from '../mocks/data'
 import { initialState, type ApplyState } from '../apply/state'
@@ -16,12 +18,16 @@ function state(overrides: Partial<ApplyState> = {}): ApplyState {
   return {
     ...initialState('HCAI115'),
     tool: { name: 'Claude Pro', tool_id: 'tool-claude' },
-    identity: { applicant_name: '測試用小明', phone: '0912345678', id_last4: '1234', email: '', tier_code: 'GENERAL' },
+    identity: { applicant_name: '測試用小明', phone: '0912345678', id_number: 'A123456789', email: 'test@example.com', tier_code: 'GENERAL' },
     channel: {
       payment_channel_code: 'CREDIT_CARD',
       paid_by_proxy: false,
       purchase_date: '2026-08-01',
       purchase_amount: '6000',
+      billing_cycle: 'MONTHLY',
+      billing_periods: 1,
+      original_currency: 'USD',
+      original_amount: '20',
     },
     ...overrides,
   }
@@ -48,7 +54,7 @@ const failView: PrecheckView = {
 }
 
 describe('ConfirmStep', () => {
-  it('precheck FAIL 時送出被擋下，並說明怎麼修', () => {
+  it('precheck FAIL 時說明怎麼修，並附上取件教學連結', () => {
     render(
       <Providers>
         <ConfirmStep
@@ -57,20 +63,18 @@ describe('ConfirmStep', () => {
           requiredCodes={[]}
           view={failView}
           onManualAssist={vi.fn()}
-          onSubmit={vi.fn()}
-          submitting={false}
         />
       </Providers>,
     )
-    expect((screen.getByRole('button', { name: '送出申請' }) as HTMLButtonElement).disabled).toBe(true)
+    // 送出按鈕本身畫在 `ApplyPage` 的導覽列，這裡只驗問題的說明。
     expect(screen.getByText('帳單上的金額與你填寫的金額不一致')).toBeTruthy()
+    expect(screen.getByText('尚未通過檢查')).toBeTruthy()
     expect(screen.getByRole('link', { name: '教我怎麼取得' }).getAttribute('href')).toBe(
       '/sop?document_type=BILLING_STATEMENT',
     )
   })
 
-  it('勾了「請人工協助審核」之後就送得出去', () => {
-    const onSubmit = vi.fn()
+  it('勾了「請人工協助審核」之後不再顯示「尚未通過檢查」', () => {
     render(
       <Providers>
         <ConfirmStep
@@ -79,15 +83,11 @@ describe('ConfirmStep', () => {
           requiredCodes={[]}
           view={failView}
           onManualAssist={vi.fn()}
-          onSubmit={onSubmit}
-          submitting={false}
         />
       </Providers>,
     )
-    const button = screen.getByRole('button', { name: '送出申請' }) as HTMLButtonElement
-    expect(button.disabled).toBe(false)
-    fireEvent.click(button)
-    expect(onSubmit).toHaveBeenCalled()
+    expect(screen.queryByText('尚未通過檢查')).toBeNull()
+    expect(screen.getByText(/需人工檢視/)).toBeTruthy()
   })
 
   it('PASS 時不顯示任何問題卡片', () => {
@@ -99,32 +99,11 @@ describe('ConfirmStep', () => {
           requiredCodes={[]}
           view={{ verdict: 'PASS', findings: [], blocking: [], warnings: [], problemsByDoc: {}, missingDocumentTypes: [] }}
           onManualAssist={vi.fn()}
-          onSubmit={vi.fn()}
-          submitting={false}
         />
       </Providers>,
     )
     expect(screen.queryByText('有文件需要先處理')).toBeNull()
-    expect((screen.getByRole('button', { name: '送出申請' }) as HTMLButtonElement).disabled).toBe(false)
-  })
-
-  it('送出之前就把遮罩、保存期限、不送 AI 三件事說清楚（SPEC §15.6）', () => {
-    render(
-      <Providers>
-        <ConfirmStep
-          scheme={SCHEME}
-          state={state()}
-          requiredCodes={[]}
-          view={null}
-          onManualAssist={vi.fn()}
-          onSubmit={vi.fn()}
-          submitting={false}
-        />
-      </Providers>,
-    )
-    expect(screen.getByText(/原圖從未離開瀏覽器/)).toBeTruthy()
-    expect(screen.getByText(/送給任何 AI 服務/)).toBeTruthy()
-    expect(screen.getByText(/自動刪除/)).toBeTruthy()
+    expect(screen.queryByText('尚未通過檢查')).toBeNull()
   })
 
   it('預估補助金額依級距與上限計算', () => {
@@ -136,8 +115,6 @@ describe('ConfirmStep', () => {
           requiredCodes={[]}
           view={null}
           onManualAssist={vi.fn()}
-          onSubmit={vi.fn()}
-          submitting={false}
         />
       </Providers>,
     )
@@ -146,27 +123,18 @@ describe('ConfirmStep', () => {
   })
 })
 
-describe('SchemesPage', () => {
-  it('列出開放中的方案，每張卡只有一個主要動作', async () => {
-    render(
-      <Providers>
-        <SchemesPage />
-      </Providers>,
-    )
-    expect(await screen.findByText('115年度 AI領航青年數位工具補助計畫')).toBeTruthy()
-    expect(screen.getAllByRole('button', { name: /開始申請/ }).length).toBe(3)
+describe('首頁', () => {
+  it('不先讓人選方案，直接進入唯一那個補助計畫的第一步', async () => {
+    renderAt(<ApplyPage />, '/', '/')
+    // 開放中的方案只有一個，所以進站看到的就是申請流程的第一步。
+    expect(await screen.findByRole('heading', { name: '確認申請工具' })).toBeTruthy()
   })
 
-  it('提供查詢、教學、常見問題三個次要入口', async () => {
-    render(
-      <Providers>
-        <SchemesPage />
-      </Providers>,
-    )
-    await screen.findByText('115年度 AI領航青年數位工具補助計畫')
-    expect(screen.getByRole('link', { name: /查詢我的案件進度/ })).toBeTruthy()
-    expect(screen.getByRole('link', { name: /教我怎麼取得文件/ })).toBeTruthy()
-    expect(screen.getByRole('link', { name: /常見問題/ })).toBeTruthy()
+  it('沒有開放中的方案時說明現況，並給查詢案件的出口', async () => {
+    server.use(http.get('/api/apply/schemes', () => HttpResponse.json([])))
+    renderAt(<ApplyPage />, '/', '/')
+    expect(await screen.findByText('目前沒有開放中的方案')).toBeTruthy()
+    expect(screen.getByRole('button', { name: /查詢案件進度/ })).toBeTruthy()
   })
 })
 

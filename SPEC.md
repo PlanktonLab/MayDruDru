@@ -444,7 +444,7 @@ API key scopes：`read`, `apply`, `review`, `sop`, `contents`, `webhooks`, `admi
 |---|---|
 | 申請證明文件 | 上傳前瀏覽器遮罩（must_mask 強制）；存 MinIO private bucket；只經 presigned URL（5 分鐘）給 admin；永不送 LLM；終態後 `retention_days`（預設 90）硬刪 |
 | OCR | 只在瀏覽器；伺服器只存結果；`source=applicant` 的結果視為不可信，規則引擎在伺服器重跑 |
-| 申請人識別 | 手機與身分證只存末四碼 hash（+ salt）；完整手機加密存（推播綁定用）；不存完整身分證字號 |
+| 申請人識別 | 手機與身分證各存末四碼 hash（+ salt）供查詢驗證；完整手機加密存（推播綁定用）；完整身分證字號加密存（核銷造冊用，D40），僅 `application.read_pii` 能解密，解密一律寫稽核日誌 |
 | 市民截圖（SOP） | 記憶體處理不落地；送外部 LLM 供應商前於 UI 揭露；網頁端可先遮罩 |
 | 承辦人 SOP 原圖 | Fernet 加密、審後硬刪、`ORIGINAL_TTL_DAYS` 兜底 |
 | Step card | public bucket、content-hash 檔名不可猜、去識別化且無 PII |
@@ -616,6 +616,7 @@ Cloudflare proxied；origin cert 需涵蓋三個名稱（萬用或重簽）。DN
 | D37 | LINE rich menu 保留新 action 名稱並相容舊 youth-line-bot 的 `subsidy_info`、`eligibility` postback；後台版面直接預覽目前圖檔，沒有客製圖時顯示內建美術稿 | LINE 上已發布的舊選單不應因後端整合改名而失效；看得到實際圖檔才能讓承辦人確認預設圖片與點擊熱區一致 |
 | D38 | LINE 選定一條 SOP 後，以 Flex carousel 一次傳送全部步驟圖片，不再要求逐步按「下一步」；保留卡住截圖、換流程與結束 | 民眾可一次掌握完整操作並自行回看；carousel 能在 LINE 單次回覆上限內承載多張步驟卡 |
 | D39 | LINE 平台只有一條已發布 SOP 時直接進入完整教學；兩條以上才顯示操作指引清單 | 避免只有唯一答案時多問一題，縮短民眾取得教學的路徑 |
+| D40 | 推翻原本「不存完整身分證字號」的規定：改為**加密**保存完整身分證字號（Fernet，與完整手機同一把 `PII_ENCRYPTION_KEY`），末四碼 hash 仍保留供查詢驗證。解密受 `application.read_pii` 能力控管，每次解密寫稽核日誌；列表與一般案件頁一律只顯示末四碼 | 補助核銷要造冊報府，承辦人手上必須有完整字號，否則得另外用紙本或 email 收一次——那比放在系統裡更不安全。加密而非明文、能力控管而非全員可見、解密留痕，是在「承辦真的需要」與「不製造一份裸的個資表」之間的折衷 |
 
 ---
 

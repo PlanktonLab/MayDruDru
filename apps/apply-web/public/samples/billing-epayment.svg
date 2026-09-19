@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 560" width="660" height="560" role="img"><rect width="660" height="560" fill="#f4f6f8"/>
+
+  <!-- 上半：帳戶為本人之證明 -->
+  <rect x="20" y="20" width="620" height="196" fill="#fff" rx="14"/>
+  <text x="40" y="52" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12" font-weight="700" fill="#6b7280">① 支付帳戶為本人之資料</text>
+  <circle cx="64" cy="102" r="24" fill="#d9e8f5"/>
+  <text x="64" y="110" text-anchor="middle" font-size="22">👤</text>
+  <text x="104" y="94" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12" fill="#6b7280">帳戶持有人</text>
+  <text x="104" y="118" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="17" font-weight="600" fill="#111827">陳宜君</text>
+  <rect x="98" y="98" width="150" height="28" fill="none" stroke="#dc2626" stroke-width="2.5" rx="4"/>
+     <rect x="98" y="77" width="105" height="19" fill="#dc2626" rx="3"/>
+     <text x="105" y="91" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12" font-weight="700" fill="#fff">帳戶持有人姓名</text>
+  <text x="40" y="158" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12" fill="#6b7280">帳號　****-**-2841</text>
+  <text x="40" y="184" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="11.5" fill="#9ca3af">餘額等其他資訊可以遮起來，重點是證明帳戶是你本人的。</text>
+
+  <!-- 下半：交易明細 -->
+  <rect x="20" y="236" width="620" height="242" fill="#fff" rx="14"/>
+  <text x="40" y="268" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12" font-weight="700" fill="#6b7280">② 交易明細</text>
+
+  <text x="40" y="306" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12" fill="#6b7280">付款日期</text>
+  <text x="612" y="306" text-anchor="end" font-family="ui-monospace, 'Cascadia Mono', Consolas, monospace" font-size="13.5" font-weight="600" fill="#111827">2026/08/14</text>
+  <rect x="462" y="290" width="156" height="24" fill="none" stroke="#dc2626" stroke-width="2.5" rx="4"/>
+     <rect x="462" y="269" width="66" height="19" fill="#dc2626" rx="3"/>
+     <text x="469" y="283" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12" font-weight="700" fill="#fff">付款日期</text>
+
+  <text x="40" y="352" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12" fill="#6b7280">購買品項</text>
+  <text x="612" y="352" text-anchor="end" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="13.5" font-weight="600" fill="#111827">ChatGPT Plus 月訂閱</text>
+  <rect x="382" y="336" width="236" height="24" fill="none" stroke="#dc2626" stroke-width="2.5" rx="4"/>
+     <rect x="382" y="315" width="92" height="19" fill="#dc2626" rx="3"/>
+     <text x="389" y="329" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12" font-weight="700" fill="#fff">購買品項名稱</text>
+
+  <text x="40" y="398" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12" fill="#6b7280">付款金額</text>
+  <text x="612" y="398" text-anchor="end" font-family="ui-monospace, 'Cascadia Mono', Consolas, monospace" font-size="16" font-weight="700" fill="#111827">NT$ 650</text>
+  <rect x="482" y="379" width="136" height="27" fill="none" stroke="#dc2626" stroke-width="2.5" rx="4"/>
+     <rect x="482" y="358" width="66" height="19" fill="#dc2626" rx="3"/>
+     <text x="489" y="372" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12" font-weight="700" fill="#fff">付款金額</text>
+
+  <line x1="40" y1="424" x2="620" y2="424" stroke="#eceff2"/>
+  <text x="40" y="452" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="11.5" fill="#9ca3af">交易編號 TX-2026-0814-88213　·　支付方式 帳戶餘額</text>
+
+  <rect x="20" y="496" width="620" height="48" fill="#e8f1fb" rx="10"/>
+  <text x="40" y="518" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="12.5" font-weight="700" fill="#1a4f8a">這一類要附兩份，不是擇一</text>
+  <text x="40" y="536" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="11.5" fill="#3a6ea5">帳戶為本人的證明 ＋ 交易明細，兩份都要。</text>
+  
+  <defs>
+    <pattern id="wm" width="260" height="150" patternUnits="userSpaceOnUse" patternTransform="rotate(-24)">
+      <text x="0" y="40" font-family="'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif" font-size="30" font-weight="700"
+            fill="#dc2626" fill-opacity="0.16" letter-spacing="3">範例 SAMPLE</text>
+    </pattern>
+  </defs>
+  <rect x="0" y="0" width="660" height="560" fill="url(#wm)"/></svg>

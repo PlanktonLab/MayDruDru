@@ -7,6 +7,7 @@
 
 import type { OcrResult } from '@maydru/ocr'
 import type { Finding, SchemePublic, Verdict } from '../lib/types'
+import { matchTool } from './toolVerdict'
 
 export const STEP_KEYS = ['tool', 'identity', 'channel', 'guide', 'docs', 'confirm'] as const
 export type StepKey = (typeof STEP_KEYS)[number]
@@ -14,24 +15,24 @@ export type StepKey = (typeof STEP_KEYS)[number]
 export const STEPS = [
   { key: 'tool', label: '工具' },
   { key: 'identity', label: '身分' },
-  { key: 'channel', label: '繳費' },
+  { key: 'channel', label: '購買明細' },
   { key: 'guide', label: '準備' },
   { key: 'docs', label: '上傳' },
   { key: 'confirm', label: '確認' },
 ] as const
 
 export const STEP_TITLE: Record<StepKey, string> = {
-  tool: '你買的是哪一個 AI 工具？',
+  tool: '確認申請工具',
   identity: '填寫申請人資料',
-  channel: '你怎麼付這筆錢？',
-  guide: '要準備哪些文件',
+  channel: '購買明細',
+  guide: '準備申請文件',
   docs: '上傳文件',
   confirm: '確認並送出',
 }
 
 export const STEP_LEAD: Record<StepKey, string> = {
   tool: '先確認工具是否符合補助資格，免得文件都準備好了才發現不能申請。',
-  identity: '這些資料只用於本次申請與通知。手機與身分證只保留末四碼，不存完整號碼。',
+  identity: '這些資料只用於本次申請與通知。身分證字號加密保存，畫面上只會顯示末四碼。',
   channel: '付款方式決定你要準備哪幾份憑證，選錯會被退件。',
   guide: '下面這幾份是這次要準備的文件。不確定去哪裡找的，點「教我怎麼取得」。',
   docs: '照片會在你的手機上處理完才上傳，原圖不會離開這支手機。',
@@ -59,7 +60,8 @@ export interface UploadedDoc {
 export interface Identity {
   applicant_name: string
   phone: string
-  id_last4: string
+  /** 完整身分證字號（D40）。送到伺服器後加密保存，畫面上一律只顯示末四碼。 */
+  id_number: string
   email: string
   tier_code: string
 }
@@ -68,7 +70,16 @@ export interface ChannelInfo {
   payment_channel_code: string
   paid_by_proxy: boolean
   purchase_date: string
+  /** 換算後的臺幣金額；這是唯一會送去比對帳單的數字。 */
   purchase_amount: string
+  /** 月費或年費。 */
+  billing_cycle: 'MONTHLY' | 'ANNUAL'
+  /** 申請補助的期數（月費才問，年費固定一期）。 */
+  billing_periods: number
+  /** 原始幣別代碼，例如 `USD`；`TWD` 時就沒有換算問題。 */
+  original_currency: string
+  /** 原始幣別的金額，供承辦核對換算是否合理。 */
+  original_amount: string
 }
 
 export interface ToolChoice {
@@ -96,8 +107,17 @@ export function initialState(schemeCode: string): ApplyState {
     scheme_code: schemeCode,
     stepIndex: 0,
     tool: { name: '', tool_id: null },
-    identity: { applicant_name: '', phone: '', id_last4: '', email: '', tier_code: '' },
-    channel: { payment_channel_code: '', paid_by_proxy: false, purchase_date: '', purchase_amount: '' },
+    identity: { applicant_name: '', phone: '', id_number: '', email: '', tier_code: '' },
+    channel: {
+      payment_channel_code: '',
+      paid_by_proxy: false,
+      purchase_date: '',
+      purchase_amount: '',
+      billing_cycle: 'MONTHLY',
+      billing_periods: 1,
+      original_currency: 'USD',
+      original_amount: '',
+    },
     docs: {},
     manualAssist: false,
     precheck: null,
@@ -217,20 +237,23 @@ export function clearDraft(schemeCode: string): void {
 /* ───────────────────────── 每一步的過關條件 ───────────────────────── */
 
 const PHONE_RE = /^09\d{8}$/
-const LAST4_RE = /^\d{4}$/
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 /** 一句「怎麼修」；通過則是 null（SPEC §15.5）。 */
 export type FieldErrors = Record<string, string>
 
+/** 身分證字號：一個英文字母 + 九個數字。這裡只驗格式，不驗檢查碼——
+ *  檢查碼由伺服器與承辦核對證件時把關，前端擋太嚴只會誤擋到新式居留證。 */
+const ID_NUMBER_RE = /^[A-Z][0-9]{9}$/
+
 export function identityErrors(identity: Identity): FieldErrors {
   const errors: FieldErrors = {}
   if (!identity.applicant_name.trim()) errors.applicant_name = '請填寫與身分證相同的姓名。'
-  if (!PHONE_RE.test(identity.phone.trim())) errors.phone = '請填寫 10 碼手機號碼，例如 0912345678。'
-  if (identity.id_last4 && !LAST4_RE.test(identity.id_last4.trim()))
-    errors.id_last4 = '請填身分證字號的最後 4 位數字，或留空。'
-  if (identity.email && !EMAIL_RE.test(identity.email.trim()))
-    errors.email = '請填寫完整的電子信箱，例如 name@example.com，或留空。'
+  if (!PHONE_RE.test(identity.phone.trim())) errors.phone = '請填寫 10 碼聯絡電話，例如 0912345678。'
+  if (!ID_NUMBER_RE.test(identity.id_number.trim().toUpperCase()))
+    errors.id_number = '請填寫完整身分證字號，1 個英文字母加 9 個數字。'
+  if (!EMAIL_RE.test(identity.email.trim()))
+    errors.email = '請填寫完整的電子郵件，例如 name@example.com。'
   if (!identity.tier_code) errors.tier_code = '請選擇一個申請身分。'
   return errors
 }
@@ -239,17 +262,33 @@ export function channelErrors(channel: ChannelInfo): FieldErrors {
   const errors: FieldErrors = {}
   if (!channel.payment_channel_code) errors.payment_channel_code = '請選擇你實際付款的方式。'
   if (!channel.purchase_date) errors.purchase_date = '請填寫帳單上的購買（扣款）日期。'
+
   const amount = Number(channel.purchase_amount)
   if (!channel.purchase_amount.trim()) errors.purchase_amount = '請填寫帳單上實際扣款的臺幣金額。'
   else if (!Number.isFinite(amount) || amount <= 0) errors.purchase_amount = '金額請只填數字，例如 6000。'
+
+  // 原始幣別就是臺幣時不必再問一次原始金額——它與換算後的金額是同一個數字。
+  if (channel.original_currency !== 'TWD') {
+    const original = Number(channel.original_amount)
+    if (!channel.original_amount.trim()) errors.original_amount = '請填寫帳單上的原始幣別金額。'
+    else if (!Number.isFinite(original) || original <= 0) errors.original_amount = '金額請只填數字，例如 20。'
+  }
   return errors
 }
 
 export function toolErrors(state: ApplyState, scheme: SchemePublic | undefined): FieldErrors {
   if (!state.tool.name.trim()) return { tool: '請選擇或輸入你購買的工具名稱。' }
-  const matched = scheme?.eligible_tools.find((tool) => tool.id === state.tool.tool_id)
-  if (matched?.status === 'REJECTED')
+  // 從選單選的：直接看那個工具的判定。
+  const picked = scheme?.eligible_tools.find((tool) => tool.id === state.tool.tool_id)
+  if (picked?.status === 'REJECTED')
     return { tool: '這個工具依計畫規定不予補助，換一個符合資格的工具才能繼續。' }
+  // 自行填寫的：比對名稱，比對到不予補助的一樣要擋——不然畫面已經說了不能申請，
+  // 卻還放人走下去準備文件，等於白工。查無收錄則不擋（由承辦人工認定）。
+  if (!state.tool.tool_id && scheme) {
+    const guessed = matchTool(state.tool.name, scheme.eligible_tools)
+    if (guessed?.status === 'REJECTED')
+      return { tool: '這個工具依計畫規定不予補助，換一個符合資格的工具才能繼續。' }
+  }
   return {}
 }
 

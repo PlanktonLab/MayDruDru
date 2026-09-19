@@ -5,11 +5,12 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { AlertTriangle, Camera, Check, FileUp, RefreshCcw, ShieldCheck, X } from 'lucide-react'
+import { AlertTriangle, Camera, Check, FileUp, ImageIcon, RefreshCcw, X } from 'lucide-react'
 import { Badge, Button, Card, Spinner, cx } from '@maydru/ui'
 import { MaskEditor } from '@maydru/mask-editor'
 import { disposeAll, encodePages, prepareFile, recognizePages } from './pipeline'
 import { captureOcrProgress, getOcrWorker } from '../lib/ocrWorker'
+import { sampleFor } from './docSamples'
 import type { UploadedDoc } from './state'
 import type { SchemeDocumentType } from '../lib/types'
 
@@ -26,6 +27,8 @@ type Stage = 'idle' | 'reading' | 'masking' | 'recognizing' | 'done' | 'error'
 
 export interface DocFieldProps {
   docType: SchemeDocumentType
+  /** 覆寫顯示名稱；多期申請時會帶上「（第 N 期）」。預設用 `docType.label`。 */
+  label?: string
   value?: UploadedDoc
   onChange: (doc: UploadedDoc) => void
   onClear: () => void
@@ -41,10 +44,20 @@ function wantsCardDetection(code: string): boolean {
   return code === 'CARD_LAST4_PHOTO' || code === 'BILLING_STATEMENT'
 }
 
-export function DocField({ docType, value, onChange, onClear, problems = [], required = false }: DocFieldProps) {
+export function DocField({
+  docType,
+  label,
+  value,
+  onChange,
+  onClear,
+  problems = [],
+  required = false,
+}: DocFieldProps) {
+  const title = label ?? docType.label
+  const sample = sampleFor(docType.code)
+  const [showSample, setShowSample] = useState(false)
   const [stage, setStage] = useState<Stage>('idle')
   const [error, setError] = useState('')
-  const [progress, setProgress] = useState(0)
   const [pageNote, setPageNote] = useState('')
   /** 等著進遮罩編輯器的頁面，以及已經遮好的那幾頁。 */
   const [pending, setPending] = useState<{
@@ -78,8 +91,9 @@ export function DocField({ docType, value, onChange, onClear, problems = [], req
       meta: { masked: boolean; originalFormat: string; qualityNote: string | null; fileName: string },
     ) => {
       setStage('recognizing')
-      setProgress(0)
-      const release = captureOcrProgress(setProgress)
+      // 進度不顯示給市民（辨識是中間產物），但仍要接管這段時間的回報，
+      // 才不會有別的地方誤收到上一次的進度。
+      const release = captureOcrProgress(() => {})
       try {
         const worker = await getOcrWorker()
         const ocr = await recognizePages(worker, canvases, (index, total) =>
@@ -194,39 +208,70 @@ export function DocField({ docType, value, onChange, onClear, problems = [], req
 
   return (
     <Card
-      className={cx(blocked && 'border-danger')}
+      // 填好的欄位整張卡換成淺灰底：一排文件掃過去，還沒處理的那幾張是白的，
+      // 一眼就看得出剩下哪些（被規則擋下的那張則是紅框，優先於已填）。
+      className={cx(blocked ? 'border-danger' : value && 'bg-background-lite')}
       title={
         <span className="flex items-center gap-2">
-          {docType.label}
+          {title}
           {required && (
             <span className="text-danger" aria-label="必備文件">
               *
             </span>
           )}
-          {value && <Check size={16} aria-label="已上傳" className="text-good" />}
         </span>
       }
       subtitle={docType.hint}
+      actions={
+        value ? (
+          <span
+            aria-label="已上傳"
+            className="flex size-6 shrink-0 items-center justify-center rounded-full bg-accent text-on-accent"
+          >
+            <Check size={14} strokeWidth={3} aria-hidden />
+          </span>
+        ) : undefined
+      }
     >
-      {docType.must_mask && (
-        <p className="mb-3 flex items-start gap-2 rounded-xl bg-accent-bg px-3 py-2 text-[13px] leading-5 text-accent">
-          <ShieldCheck size={15} aria-hidden className="mt-0.5 shrink-0" />
-          這份文件會先在你的手機上遮罩，遮好、你確認過之後才會上傳。原圖不會離開這支手機。
-        </p>
+      {/* 遮罩的說明不放在這裡：遮罩編輯器打開時本來就會講一次，確認步驟送出前
+          再講一次，在每張卡片上先講第三次只是把畫面塞滿。 */}
+
+      {/* 合格範例：傳之前可以點開對照，傳完就不再顯示——已經傳好的人不需要它。 */}
+      {sample && !value && (
+        <div className="mb-3">
+          <button
+            type="button"
+            aria-expanded={showSample}
+            onClick={() => setShowSample((previous) => !previous)}
+            className="inline-flex min-h-11 items-center gap-1.5 text-[14px] font-medium text-accent"
+          >
+            <ImageIcon size={14} aria-hidden />
+            {showSample ? '收起範例' : '看合格範例'}
+          </button>
+          {showSample && (
+            <img
+              src={sample}
+              alt={`${title}的合格範例`}
+              className="mt-2 block w-full rounded-xl border border-border bg-canvas"
+            />
+          )}
+        </div>
       )}
 
       {value && !busy && stage !== 'masking' ? (
         <div className="space-y-3">
           <img
             src={value.previewUrl}
-            alt={`${docType.label}預覽（已處理）`}
+            alt={`${title}預覽（已處理）`}
             className="max-h-56 w-full rounded-xl border border-border object-contain"
           />
+          {/* 辨識結果不在申請端顯示：OCR 只是餵給 precheck 的中間產物，
+              「沒有辨識到文字」對市民不是可行動的訊息——真正擋件的規則會在
+              確認步驟用市民看得懂的話講。 */}
           <div className="flex flex-wrap gap-1.5">
             {value.masked && <Badge tone="good">已遮罩</Badge>}
             {value.originalFormat === 'HEIC' && <Badge tone="neutral">HEIC 已轉 JPEG</Badge>}
             {value.page_count > 1 && <Badge tone="neutral">{value.page_count} 頁</Badge>}
-            {value.ocr && value.ocr.lines.length === 0 && <Badge tone="warn">沒有辨識到文字</Badge>}
           </div>
           {value.qualityNote && (
             <p className="flex items-start gap-2 text-[13px] leading-5 text-warn">
@@ -244,29 +289,20 @@ export function DocField({ docType, value, onChange, onClear, problems = [], req
           </div>
         </div>
       ) : busy ? (
+        // 讀檔與辨識對市民是同一件事——「處理中」。辨識的進度與百分比是實作細節，
+        // 講出來只是讓人盯著一條跑不完的進度條。
         <div className="space-y-2 py-2">
-          <Spinner label={stage === 'reading' ? '正在讀取檔案…' : '正在辨識文字…'} />
-          {stage === 'recognizing' && (
-            <div
-              role="progressbar"
-              aria-label="辨識進度"
-              aria-valuenow={Math.round(progress * 100)}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              className="h-1.5 w-full overflow-hidden rounded-full bg-background-lite"
-            >
-              <div className="h-full bg-accent transition-[width]" style={{ width: `${Math.round(progress * 100)}%` }} />
-            </div>
-          )}
+          <Spinner label="正在處理照片…" />
           {pageNote && <p className="text-[13px] text-muted">{pageNote}</p>}
-          <p className="text-[13px] text-muted">辨識在你的手機上進行，不會上傳原圖。</p>
         </div>
       ) : (
-        <div className="flex flex-wrap gap-2">
-          <Button size="md" variant="primary" icon={<Camera size={16} />} onClick={() => cameraRef.current?.click()}>
+        // 兩顆等寬：手機上拇指不用瞄準，而且「拍照」與「選檔案」是同一層級的選擇，
+        // 不該一大一小看起來像主／次要動作。
+        <div className="grid grid-cols-2 gap-2">
+          <Button size="md" block icon={<Camera size={16} />} onClick={() => cameraRef.current?.click()}>
             拍照
           </Button>
-          <Button size="md" icon={<FileUp size={16} />} onClick={() => fileRef.current?.click()}>
+          <Button size="md" block icon={<FileUp size={16} />} onClick={() => fileRef.current?.click()}>
             選擇檔案
           </Button>
         </div>
@@ -297,7 +333,7 @@ export function DocField({ docType, value, onChange, onClear, problems = [], req
         type="file"
         accept={ACCEPT}
         className="sr-only"
-        aria-label={`選擇${docType.label}的檔案`}
+        aria-label={`選擇${title}的檔案`}
         onChange={(event) => {
           void pick(event.target.files?.[0])
           event.target.value = ''
@@ -309,7 +345,7 @@ export function DocField({ docType, value, onChange, onClear, problems = [], req
         accept="image/*"
         capture="environment"
         className="sr-only"
-        aria-label={`拍攝${docType.label}`}
+        aria-label={`拍攝${title}`}
         onChange={(event) => {
           void pick(event.target.files?.[0])
           event.target.value = ''

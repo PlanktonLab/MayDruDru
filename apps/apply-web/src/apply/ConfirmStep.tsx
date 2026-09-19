@@ -4,8 +4,8 @@
  * 文件保存多久、證明文件不會送 AI。說在事後就只是免責聲明，不是設計。
  */
 
-import { AlertTriangle, Info, ShieldCheck } from 'lucide-react'
-import { Badge, Button, Card, Checkbox } from '@maydru/ui'
+import { AlertTriangle, Check, LifeBuoy } from 'lucide-react'
+import { Badge, Card } from '@maydru/ui'
 import { money, date } from '../lib/format'
 import { documentTypesFor } from './GuideStep'
 import { toProblem } from './precheck'
@@ -19,8 +19,6 @@ export interface ConfirmStepProps {
   requiredCodes: string[]
   view: PrecheckView | null
   onManualAssist: (value: boolean) => void
-  onSubmit: () => void
-  submitting: boolean
   error?: string
 }
 
@@ -39,8 +37,6 @@ export function ConfirmStep({
   requiredCodes,
   view,
   onManualAssist,
-  onSubmit,
-  submitting,
   error,
 }: ConfirmStepProps) {
   const tier = scheme.tiers.find((item) => item.code === state.identity.tier_code)
@@ -50,7 +46,6 @@ export function ConfirmStep({
   const estimate = tier ? Math.min(Math.round(amount * tier.subsidy_rate), tier.cap_amount) : null
 
   const blocked = view?.verdict === 'FAIL' && !state.manualAssist
-  const warnings = view?.warnings ?? []
 
   return (
     <div className="space-y-4">
@@ -70,63 +65,88 @@ export function ConfirmStep({
         </dl>
       </Card>
 
-      {view && view.verdict !== 'PASS' && (
-        <Card
-          title={view.verdict === 'FAIL' ? '有文件需要先處理' : '有幾處系統看不清楚'}
-          subtitle={
-            view.verdict === 'FAIL'
-              ? '下面這幾項在送出前修好，可以少一次補件。'
-              : '這幾項不擋送出，承辦人員會再看一次。'
-          }
-        >
-          <ul className="space-y-2">
-            {(view.verdict === 'FAIL' ? view.blocking : warnings).map((finding) => {
-              const problem = toProblem(scheme, finding)
-              return (
-                <li key={finding.rule_code} className="rounded-xl bg-background-lite px-3 py-2.5 text-[13px] leading-5">
-                  <p className="font-medium text-primary">{problem.what_wrong}</p>
-                  <p className="mt-1 text-muted">{problem.how_to_fix}</p>
-                  <a className="mt-1.5 inline-flex min-h-11 items-center text-accent underline" href={problem.sop_href}>
-                    教我怎麼取得
-                  </a>
-                </li>
-              )
-            })}
-          </ul>
-
-          {view.verdict === 'FAIL' && (
-            <div className="mt-3 border-t border-border pt-3">
-              <Checkbox
-                checked={state.manualAssist}
-                onChange={(event) => onManualAssist(event.target.checked)}
-                label="我確認文件沒問題，請人工協助審核"
-                description="勾選後仍可送出，由承辦人員人工檢視。若確實缺件，還是會被要求補件。"
-              />
-            </div>
-          )}
-        </Card>
+      {/* 三種判定的樣子刻意不同：PASS 安靜地確認一句就好；INDETERMINATE 是中性的說明，
+          不能長得像錯誤（它不擋送出）；FAIL 才用紅色，而且每一條都要說「怎麼修」＋教學連結。 */}
+      {view?.verdict === 'PASS' && (
+        <div className="flex items-start gap-2.5 rounded-xl border border-border bg-background-lite p-4">
+          <span
+            aria-hidden
+            className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-accent text-on-accent"
+          >
+            <Check size={13} strokeWidth={3} />
+          </span>
+          <div className="min-w-0">
+            <p className="text-[15px] font-semibold text-accent">文件看起來沒問題</p>
+            <p className="mt-1 text-[13px] leading-relaxed text-accent">該有的資訊都找得到，可以送出了。</p>
+          </div>
+        </div>
       )}
 
-      <Card title="送出前請先知道" subtitle="這三件事會在你按下送出之後立刻發生。">
-        <ul className="space-y-2.5 text-[14px] leading-6">
-          <li className="flex gap-2">
-            <ShieldCheck size={16} aria-hidden className="mt-1 shrink-0 text-good" />
-            <span>
-              需要遮罩的文件已經在這支手機上遮好，上傳的是<strong>遮罩後</strong>的影像；原圖從未離開瀏覽器。
-            </span>
-          </li>
-          <li className="flex gap-2">
-            <Info size={16} aria-hidden className="mt-1 shrink-0 text-accent" />
-            <span>
-              證明文件<strong>不會</strong>送給任何 AI 服務。文字辨識也是在你的手機上跑完的。
-            </span>
-          </li>
-          <li className="flex gap-2">
-            <AlertTriangle size={16} aria-hidden className="mt-1 shrink-0 text-warn" />
-            <span>案件結案後，上傳的證明文件會依規定期限自動刪除，並保留案件編號與狀態供稽核。</span>
-          </li>
-        </ul>
-      </Card>
+      {/* INDETERMINATE 不出聲：它不擋送出，而且市民也做不了什麼——
+          承辦人員會親自看一眼，講出來只是讓人在送出前多一次不安。 */}
+
+      {view?.verdict === 'FAIL' && (
+        <>
+          <div className="rounded-xl border border-danger/30 bg-danger-bg p-4">
+            <div className="flex items-start gap-2.5">
+              <AlertTriangle size={17} aria-hidden className="mt-0.5 shrink-0 text-danger" />
+              <div className="min-w-0">
+                <p className="text-[15px] font-semibold text-danger">請先確認以下文件問題</p>
+                <p className="mt-1 text-[13px] leading-relaxed text-danger">修正後即可重新檢查，可以少一次補件。</p>
+              </div>
+            </div>
+
+            <ul className="mt-3 space-y-2">
+              {view.blocking.map((finding) => {
+                const problem = toProblem(scheme, finding)
+                return (
+                  <li
+                    key={finding.rule_code}
+                    className="rounded-xl border border-danger/20 bg-canvas p-3 text-[13px] leading-5"
+                  >
+                    <p className="font-semibold text-primary">{problem.what_wrong}</p>
+                    <p className="mt-0.5 text-muted">{problem.how_to_fix}</p>
+                    <a className="mt-1.5 inline-flex min-h-11 items-center text-accent underline" href={problem.sop_href}>
+                      教我怎麼取得
+                    </a>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+
+          {/* 人工出口是必備而非選配：我們窮舉不了全世界的帳單格式，
+              沒有出口的人會困在無限 FAIL，最後還是打電話——回到要消滅的那個循環。 */}
+          {!state.manualAssist && (
+            <button
+              type="button"
+              onClick={() => onManualAssist(true)}
+              className="flex w-full items-start gap-2 rounded-xl border border-border bg-canvas p-3.5 text-left transition-colors hover:bg-background-lite"
+            >
+              <LifeBuoy size={16} aria-hidden className="mt-0.5 shrink-0 text-accent" />
+              <span className="min-w-0">
+                <span className="block text-[14px] font-semibold text-primary">
+                  我的文件格式比較特殊，需要人工協助
+                </span>
+                <span className="mt-0.5 block text-[13px] leading-relaxed text-muted">
+                  如果你確定文件沒問題、是系統看不懂，可以直接送出。承辦人員會人工檢視，
+                  不會因為系統不認得就退件。
+                </span>
+              </span>
+            </button>
+          )}
+        </>
+      )}
+
+      {state.manualAssist && (
+        <div className="flex items-start gap-2 rounded-xl border border-accent/30 bg-accent-bg p-3.5">
+          <LifeBuoy size={16} aria-hidden className="mt-0.5 shrink-0 text-accent" />
+          <p className="text-[13px] leading-relaxed text-accent">
+            已標記為<span className="font-semibold">需人工檢視</span>
+            。承辦人員會直接看你上傳的文件，不會因為系統判讀不出來而退件。
+          </p>
+        </div>
+      )}
 
       {error && (
         <p role="alert" className="text-[14px] leading-6 text-danger">
@@ -141,9 +161,8 @@ export function ConfirmStep({
         </p>
       )}
 
-      <Button variant="primary" size="lg" block loading={submitting} disabled={blocked} onClick={onSubmit}>
-        送出申請
-      </Button>
+      {/* 「送出申請」畫在 `ApplyPage` 的導覽列，與「上一步」同一排——
+          跟其他步驟的主要動作位置一致。 */}
     </div>
   )
 }

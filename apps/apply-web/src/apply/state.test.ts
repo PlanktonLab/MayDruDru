@@ -1,6 +1,7 @@
 /** 送件流程的狀態與每一步的過關條件（SPEC §8.1）。 */
 
 import { describe, expect, it } from 'vitest'
+import { expandSlots } from './docGroups'
 import {
   canLeave,
   channelErrors,
@@ -39,8 +40,8 @@ function filled(): ApplyState {
     identity: {
       applicant_name: '測試用小明',
       phone: '0912345678',
-      id_last4: '1234',
-      email: '',
+      id_number: 'A123456789',
+      email: 'test@example.com',
       tier_code: 'GENERAL',
     },
     channel: {
@@ -48,6 +49,10 @@ function filled(): ApplyState {
       paid_by_proxy: false,
       purchase_date: '2026-08-01',
       purchase_amount: '6000',
+      billing_cycle: 'MONTHLY',
+      billing_periods: 1,
+      original_currency: 'USD',
+      original_amount: '20',
     },
   }
 }
@@ -136,12 +141,19 @@ describe('第 2 步 身分', () => {
     expect(errors.phone).toContain('0912345678')
   })
 
-  it('末四碼與 email 留空是允許的', () => {
-    expect(identityErrors({ ...filled().identity, id_last4: '', email: '' })).toEqual({})
+  it('基本資料五個欄位都填齊才過得去', () => {
+    expect(identityErrors(filled().identity)).toEqual({})
+    // 每一欄留空都要各自擋下來（D40 之後身分證與 email 也是必填）。
+    expect(identityErrors({ ...filled().identity, applicant_name: '' }).applicant_name).toBeTruthy()
+    expect(identityErrors({ ...filled().identity, id_number: '' }).id_number).toBeTruthy()
+    expect(identityErrors({ ...filled().identity, email: '' }).email).toBeTruthy()
   })
 
-  it('末四碼填了但不是 4 碼會被擋', () => {
-    expect(identityErrors({ ...filled().identity, id_last4: '12' }).id_last4).toBeTruthy()
+  it('身分證字號要 1 個英文字母加 9 個數字', () => {
+    expect(identityErrors({ ...filled().identity, id_number: 'A12345' }).id_number).toBeTruthy()
+    expect(identityErrors({ ...filled().identity, id_number: '1234567890' }).id_number).toBeTruthy()
+    // 小寫照樣收——送出前會轉大寫，不該因為大小寫擋人。
+    expect(identityErrors({ ...filled().identity, id_number: 'a123456789' }).id_number).toBeFalsy()
   })
 
   it('沒選身分別不能過', () => {
@@ -149,19 +161,34 @@ describe('第 2 步 身分', () => {
   })
 })
 
-describe('第 3 步 繳費與購買資訊', () => {
-  it('三個欄位都必填', () => {
+describe('第 3 步 購買明細', () => {
+  it('管道、日期、兩個金額都必填', () => {
     const errors = channelErrors({
       payment_channel_code: '',
       paid_by_proxy: false,
       purchase_date: '',
       purchase_amount: '',
+      billing_cycle: 'MONTHLY',
+      billing_periods: 1,
+      original_currency: 'USD',
+      original_amount: '',
     })
-    expect(Object.keys(errors).sort()).toEqual(['payment_channel_code', 'purchase_amount', 'purchase_date'])
+    expect(Object.keys(errors).sort()).toEqual([
+      'original_amount',
+      'payment_channel_code',
+      'purchase_amount',
+      'purchase_date',
+    ])
+  })
+
+  it('原始幣別是臺幣時不必再填一次原始金額', () => {
+    const errors = channelErrors({ ...filled().channel, original_currency: 'TWD', original_amount: '' })
+    expect(errors.original_amount).toBeFalsy()
   })
 
   it('金額不是正數會被擋', () => {
     expect(channelErrors({ ...filled().channel, purchase_amount: '0' }).purchase_amount).toBeTruthy()
+    expect(channelErrors({ ...filled().channel, original_amount: '0' }).original_amount).toBeTruthy()
   })
 })
 
@@ -183,5 +210,34 @@ describe('第 5 步 上傳', () => {
 
   it('準備指引那一步永遠可以往前', () => {
     expect(canLeave('guide', initialState('HCAI115'), SCHEME, required)).toBe(true)
+  })
+})
+
+describe('多期申請的上傳欄位', () => {
+  const types = SCHEME.document_types.filter((type) =>
+    ['ID_CARD_FRONT', 'OFFICIAL_RECEIPT', 'BILLING_STATEMENT', 'BANKBOOK_COVER'].includes(type.code),
+  )
+
+  it('單期時欄位就是文件類型本身', () => {
+    expect(expandSlots(types, 1).map((slot) => slot.key)).toEqual(types.map((type) => type.code))
+  })
+
+  it('多期時收據與繳款憑證每期各一份，其餘仍是一份', () => {
+    const keys = expandSlots(types, 3).map((slot) => slot.key)
+    // 身分證與存摺與期數無關。
+    expect(keys.filter((key) => key.startsWith('ID_CARD_FRONT'))).toEqual(['ID_CARD_FRONT'])
+    expect(keys.filter((key) => key.startsWith('BANKBOOK_COVER'))).toEqual(['BANKBOOK_COVER'])
+    // 收據與帳單各展開成三份。
+    expect(keys.filter((key) => key.startsWith('OFFICIAL_RECEIPT'))).toEqual([
+      'OFFICIAL_RECEIPT_1',
+      'OFFICIAL_RECEIPT_2',
+      'OFFICIAL_RECEIPT_3',
+    ])
+    expect(keys.filter((key) => key.startsWith('BILLING_STATEMENT'))).toHaveLength(3)
+  })
+
+  it('展開後的欄位名稱帶上期數，才分得出是哪一期', () => {
+    const receipts = expandSlots(types, 2).filter((slot) => slot.code === 'OFFICIAL_RECEIPT')
+    expect(receipts.map((slot) => slot.label)).toEqual(['官方收據（第 1 期）', '官方收據（第 2 期）'])
   })
 })

@@ -63,8 +63,10 @@ export interface SchemeDocumentType {
 export interface SchemePaymentChannel {
   code: string
   label: string
-  /** 這個管道要準備什麼的一句話。 */
+  /** 這個管道是什麼的一句話。 */
   hint: string
+  /** 舉例，例如「例如：VISA／MasterCard／JCB 等各家信用卡」。伺服器還沒回這欄。 */
+  example?: string
   required_document_type_codes: string[]
   guide_content_key: string | null
 }

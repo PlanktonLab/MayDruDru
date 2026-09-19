@@ -28,41 +28,58 @@ export function Stepper({
 }) {
   return (
     <nav aria-label="申辦步驟" className={className}>
-      <ol className="flex items-center gap-1">
+      {/* 序號用 `01`…`06` 的兩位數：等寬、視覺上是一組編號而不是一堆散落的數字。
+          手機上序號在上、標籤在下（連接線收起來，寬度不夠畫）；
+          桌面攤成一條橫線，序號與標籤並排，中間用細線連起來。 */}
+      <ol className="apply-steps flex items-center gap-1">
         {steps.map((step, index) => {
           const done = index < current
           const active = index === current
           return (
-            <li key={step.key} className="flex min-w-0 flex-1 items-center gap-2">
+            <li
+              key={step.key}
+              // 手機：每步等寬（`flex-1`），序號與標籤上下排。
+              // 桌面：寬度由內容決定，只有最後一格不長連接線——等寬會把長標籤壓扁。
+              className={cx(
+                'flex min-w-0 flex-1 flex-col items-center gap-1.5',
+                'lg:w-auto lg:flex-row lg:gap-2',
+                index < steps.length - 1 ? 'lg:flex-1' : 'lg:flex-none',
+              )}
+            >
               <span
                 aria-hidden
                 className={cx(
-                  'flex size-7 shrink-0 items-center justify-center rounded-full border text-[13px] font-medium tabular-nums',
-                  done && 'border-accent bg-accent text-on-accent',
-                  active && 'border-accent bg-accent-bg text-accent',
+                  'flex size-7 shrink-0 items-center justify-center rounded-full border text-[11px] font-medium tabular-nums',
+                  // 完成：淡底 + accent 勾。目前：實心 accent + 白字。之後：安靜的灰圈。
+                  done && 'border-transparent bg-accent-bg text-accent',
+                  active && 'border-accent bg-accent text-on-accent',
                   !done && !active && 'border-border bg-canvas text-secondary',
                 )}
               >
-                {done ? <Check size={14} strokeWidth={3} /> : index + 1}
+                {done ? <Check size={13} strokeWidth={3} /> : String(index + 1).padStart(2, '0')}
               </span>
               <span
                 aria-current={active ? 'step' : undefined}
                 className={cx(
-                  'truncate text-[13px]',
-                  active ? 'font-medium text-primary' : 'text-muted',
-                  'hidden sm:inline',
+                  // 桌面不截字：步驟名是「我現在在哪」，截成「購…」等於沒說。
+                  // 連接線用 flex-1 吸收剩下的寬度，所以標籤本身不必縮。
+                  'text-[11px] whitespace-nowrap lg:text-[13px]',
+                  active ? 'font-semibold text-accent' : 'text-muted',
                 )}
               >
                 {step.label}
               </span>
+              {/* 連接線把六步串成一條路：沒有線，六個圈看起來是六個獨立的按鈕。
+                  手機排不下（序號與標籤已經上下疊），所以只在桌面畫。 */}
               {index < steps.length - 1 && (
-                <span aria-hidden className={cx('h-px min-w-2 flex-1', done ? 'bg-accent' : 'bg-border')} />
+                <span aria-hidden className="hidden h-px min-w-4 flex-1 bg-border lg:block" />
               )}
             </li>
           )
         })}
       </ol>
-      <p className="mt-2 text-[13px] text-muted sm:hidden">
+      {/* 螢幕閱讀器與小螢幕都需要一句「現在在哪」；視覺上手機已有標籤，所以只留給輔具。 */}
+      <p className="sr-only">
         第 {Math.min(current + 1, steps.length)} / {steps.length} 步 · {steps[Math.min(current, steps.length - 1)]?.label}
       </p>
     </nav>

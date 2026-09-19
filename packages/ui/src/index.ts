@@ -11,6 +11,7 @@ export { TOUCH_TARGET, colorTokens, cssVar, type ColorToken } from './tokens'
 
 export { Button, type ButtonProps, type ButtonSize, type ButtonVariant } from './Button'
 export { Checkbox, Field, Input, Select, Textarea, type CheckboxProps, type FieldProps } from './form'
+export { FlatSelect, type FlatSelectOption, type FlatSelectProps } from './FlatSelect'
 export { Badge, Card, EmptyState, Spinner, type BadgeTone, type CardProps } from './surfaces'
 export { Modal, type ModalProps } from './Modal'
 export { Stepper, Timeline, type Step, type TimelineEvent } from './progress'
