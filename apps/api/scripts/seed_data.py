@@ -196,8 +196,9 @@ REVIEW_RULES: list[dict[str, Any]] = [
     {"code": "AMOUNT_MATCHES_CLAIM", "label": "帳單金額與申報金額相符",
      "document_type_code": "BILLING_STATEMENT", "rule_type": "amount_tolerance", "required": True,
      "severity": "error", "sort_order": 5,
+     # tolerance_pct 是百分比（5 = 5%），與 services/review.py 和 @maydru/review-rules 一致。
      "config": {"source_rule_code": "BILLING_TWD_AMOUNT", "compare_to": "purchase_amount",
-                "tolerance_pct": 0.05, "tolerance_abs": 150,
+                "tolerance_pct": 5, "tolerance_abs": 150,
                 "rejection_code": "BILLING_AMOUNT_MISMATCH"}},
     {"code": "REQUIRED_DOCS_PRESENT", "label": "必要文件齊備",
      "document_type_code": "", "rule_type": "required_doc", "required": True,

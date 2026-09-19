@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
+from datetime import UTC, date, datetime
 from typing import Any
 
 from fastapi import HTTPException
@@ -34,11 +35,15 @@ __all__ = [
     "create_scheme",
     "delete_child",
     "delete_scheme",
+    "document_type_of",
     "get_scheme",
+    "is_open",
     "list_children",
     "list_schemes",
     "required_document_types",
+    "scheme_apply_view",
     "scheme_public_view",
+    "scheme_summary_view",
     "update_child",
     "update_scheme",
 ]
@@ -309,3 +314,133 @@ def scheme_public_view(scheme: Scheme) -> dict[str, Any]:
             for t in sorted(scheme.eligible_tools, key=lambda t: (t.sort_order, t.name))
         ],
     }
+
+
+# ------------------------------------------------- apply-web 用的公開檢視（P3）
+
+def is_open(scheme: Scheme, today: date | None = None) -> bool:
+    """這個方案現在收不收件：`active` 且在申請期間內（兩端皆含）。
+
+    沒填起訖日就是「沒有期限」——設定不完整不該把民眾擋在門外。
+    """
+    if not scheme.active:
+        return False
+    day = today or datetime.now(UTC).date()
+    if scheme.application_start and day < scheme.application_start:
+        return False
+    if scheme.application_end and day > scheme.application_end:
+        return False
+    return True
+
+
+def scheme_summary_view(scheme: Scheme) -> dict[str, Any]:
+    """`GET /api/apply/schemes` 的一列：方案列表卡片需要的最少欄位。"""
+    return {
+        "code": scheme.code,
+        "name": scheme.name,
+        "category": scheme.category,
+        "description": scheme.description,
+        "application_start": scheme.application_start,
+        "application_end": scheme.application_end,
+        "amount_note": scheme.amount_note,
+        "tags": list(scheme.tags or []),
+        "active": scheme.active,
+    }
+
+
+def scheme_apply_view(scheme: Scheme) -> dict[str, Any]:
+    """`GET /api/apply/schemes/{code}`：送件流程需要的完整設定（P3 契約 §SchemePublic）。
+
+    比 `scheme_public_view()` 多了 `review_rules`——apply-web 用它在瀏覽器裡跑
+    `packages/review-rules` 做即時回饋。規則本身不是祕密（它就是「要看到哪個欄位」），
+    真正不外流的是承辦人的 `staff_label` 與判定結果。
+    """
+    return {
+        "code": scheme.code,
+        "name": scheme.name,
+        "category": scheme.category,
+        "description": scheme.description,
+        "eligibility": scheme.eligibility,
+        "age_min": scheme.age_min,
+        "age_max": scheme.age_max,
+        "application_start": scheme.application_start,
+        "application_end": scheme.application_end,
+        "official_url": scheme.official_url,
+        "contact": scheme.contact,
+        "amount_note": scheme.amount_note,
+        "tags": list(scheme.tags or []),
+        "identity_tags": list(scheme.identity_tags or []),
+        "details": list(scheme.details or []),
+        "active": scheme.active,
+        "supplement_days": scheme.supplement_days,
+        "max_revisions": scheme.max_revisions,
+        "tiers": [
+            {
+                "code": t.code,
+                "label": t.label,
+                "subsidy_rate": t.subsidy_rate,
+                "cap_amount": t.cap_amount,
+                "required_proof_doc_types": list(t.required_proof_doc_types or []),
+            }
+            for t in sorted(scheme.tiers, key=lambda t: (t.sort_order, t.code))
+        ],
+        "document_types": [
+            {
+                "code": d.code,
+                "label": d.label,
+                "hint": d.hint,
+                "required": d.required,
+                "required_when": d.required_when,
+                "must_mask": d.must_mask,
+                "keep_visible": d.keep_visible,
+                "accepted_mime": list(d.accepted_mime or []),
+                "max_pages": d.max_pages,
+                "sort_order": d.sort_order,
+            }
+            for d in sorted(scheme.document_types, key=lambda d: (d.sort_order, d.code))
+        ],
+        "payment_channels": [
+            {
+                "code": c.code,
+                "label": c.label,
+                "hint": c.hint,
+                "required_document_type_codes": list(c.required_document_type_codes or []),
+                "guide_content_key": c.guide_content_key,
+            }
+            for c in sorted(scheme.payment_channels, key=lambda c: (c.sort_order, c.code))
+        ],
+        "rejection_codes": [
+            {
+                "code": r.code,
+                "public_what_wrong": r.public_what_wrong,
+                "public_how_to_fix": r.public_how_to_fix,
+                "related_document_type_codes": list(r.related_document_type_codes or []),
+                "related_sop_flow_ids": list(r.related_sop_flow_ids or []),
+            }
+            for r in sorted(scheme.rejection_codes, key=lambda r: (r.sort_order, r.code))
+            if r.active
+        ],
+        "review_rules": [
+            {
+                "code": r.code,
+                "label": r.label,
+                "document_type_code": r.document_type_code or None,
+                "rule_type": r.rule_type,
+                "config": dict(r.config or {}),
+                "required": r.required,
+                "severity": r.severity,
+                "sort_order": r.sort_order,
+                "active": r.active,
+            }
+            for r in sorted(scheme.review_rules, key=lambda r: (r.sort_order, r.code))
+            if r.active
+        ],
+        "eligible_tools": [
+            {"id": t.id, "name": t.name, "vendor": t.vendor, "aliases": list(t.aliases or []), "status": t.status}
+            for t in sorted(scheme.eligible_tools, key=lambda t: (t.sort_order, t.name))
+        ],
+    }
+
+
+def document_type_of(scheme: Scheme, code: str) -> DocumentType | None:
+    return next((d for d in scheme.document_types if d.code == code), None)

@@ -36,6 +36,7 @@ from app.models import (  # noqa: E402
     Tenant,
 )
 from app.services import application as case_service  # noqa: E402
+from app.services import review  # noqa: E402
 from app.services.actors import Actor  # noqa: E402
 from sqlalchemy import select  # noqa: E402
 from sqlalchemy.ext.asyncio import AsyncSession  # noqa: E402
@@ -222,6 +223,10 @@ async def seed_demo_cases(db: AsyncSession, tenant: Tenant, scheme: Scheme, repo
         report["application:inserted"] += 1
         report["inserted"] += 1
 
+        # 示範案件的文件指向不存在的影像，所以規則引擎判不出東西；讓示範的承辦人
+        # 先把每條必要規則標成 MATCH，核准（T3）的前置條件才成立（SPEC §8.3）。
+        await _demo_findings(db, app, scheme, submitted_at)
+
         for step, code in enumerate(data.DEMO_PATHS[spec["status"]], start=1):
             t = case_service.TRANSITIONS[code]
             kwargs: dict[str, Any] = {}
@@ -235,6 +240,21 @@ async def seed_demo_cases(db: AsyncSession, tenant: Tenant, scheme: Scheme, repo
                 kwargs["payload"] = {"payment_amount": spec.get("approved_amount")}
             await case_service.transition(
                 db, app, code, actor=actor, now=submitted_at + timedelta(days=step), **kwargs)
+
+
+async def _demo_findings(db: Any, app: Any, scheme: Any, when: datetime) -> None:
+    """示範案件的人工判定：每條啟用中的規則一列 `source=reviewer` 的 MATCH。
+
+    真實案件的 finding 由 `services/review.py` 自動產生；示範資料沒有真的影像，
+    所以直接寫承辦人覆寫那一種——後台看到的結構與真案件完全一樣。
+    """
+    findings = [
+        review.Finding(rule_code=rule.code, status="MATCH", document_type_code=rule.document_type_code)
+        for rule in await review.rules_for(db, scheme.id)
+        if rule.active
+    ]
+    if findings:
+        await review.persist_findings(db, app, findings, source="reviewer", now=when)
 
 
 # --------------------------------------------------------------------- main

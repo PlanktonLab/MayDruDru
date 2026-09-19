@@ -80,7 +80,8 @@ async def test_seed_covers_the_four_rule_types(db, session_factory):
     rules = list((await db.execute(select(ReviewRule))).scalars())
     assert {r.rule_type for r in rules} == {"keyword_extract", "regex_extract", "amount_tolerance", "required_doc"}
     tolerance = next(r for r in rules if r.rule_type == "amount_tolerance")
-    assert tolerance.config["tolerance_pct"] == 0.05 and tolerance.config["tolerance_abs"] == 150
+    # tolerance_pct 是百分比（5 = 5%），與 services/review.py 和 @maydru/review-rules 一致。
+    assert tolerance.config["tolerance_pct"] == 5 and tolerance.config["tolerance_abs"] == 150
     assert tolerance.config["compare_to"] == "purchase_amount"
 
 
