@@ -184,6 +184,10 @@ export interface ApplicationPayload {
   email?: string
   tool_name: string
   tool_id?: string | null
+  billing_cycle?: 'MONTHLY' | 'ANNUAL'
+  billing_periods?: number
+  original_currency?: string
+  original_amount?: number | null
   purchase_amount: number
   purchase_date: string
   paid_by_proxy: boolean
@@ -192,6 +196,7 @@ export interface ApplicationPayload {
 }
 
 export interface OutgoingDocument {
+  period_index?: number
   document_type_code: string
   masked: boolean
   mime: string
@@ -207,6 +212,7 @@ export function buildFormData(documents: OutgoingDocument[], application?: Appli
   if (application) form.append('application', JSON.stringify(application))
   const meta: DocumentPayload[] = documents.map((doc) => ({
     document_type_code: doc.document_type_code,
+    period_index: doc.period_index ?? 1,
     masked: doc.masked,
     mime: doc.mime,
     page_count: doc.page_count,

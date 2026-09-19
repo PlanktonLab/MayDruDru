@@ -13,11 +13,12 @@ from datetime import UTC, date, datetime
 from typing import Any
 
 from fastapi import HTTPException
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models import (
     TOOL_STATUSES,
+    Application,
     DocumentType,
     DocumentTypeSopFlow,
     EligibleTool,
@@ -225,6 +226,43 @@ async def reorder_children(db: AsyncSession, scheme: Scheme, kind: str, ids: Seq
 
 # ------------------------------------------------------------- 待審工具
 
+async def record_application_tool(db: AsyncSession, scheme: Scheme, name: str, tool_id: str | None, *, inquiry: bool = False) -> str | None:
+    """Resolve catalog selections and count only free-text submissions, scoped to a scheme."""
+    import unicodedata
+
+    def normalized(value: str) -> str:
+        return " ".join(unicodedata.normalize("NFKC", value).casefold().split())
+
+    # Serialize additions and increments for the same scheme, including new names.
+    await db.execute(select(Scheme.id).where(Scheme.id == scheme.id).with_for_update())
+    rows = list((await db.execute(select(EligibleTool).where(EligibleTool.scheme_id == scheme.id)
+                                 .execution_options(populate_existing=True))).scalars())
+    if tool_id:
+        selected = next((row for row in rows if row.id == tool_id), None)
+        if selected is None or (name.strip() and normalized(name) not in
+                                [normalized(selected.name), *(normalized(str(alias)) for alias in selected.aliases or [])]):
+            raise HTTPException(422, {"code": "UNKNOWN_TOOL"})
+    else:
+        needle = normalized(name)
+        if not needle:
+            return None
+        selected = next((row for row in rows if needle in
+                         [normalized(row.name), *(normalized(str(alias)) for alias in row.aliases or [])]), None)
+    if not inquiry and selected is not None and selected.status == "REJECTED":
+        raise HTTPException(422, {"code": "TOOL_REJECTED"})
+    if not tool_id:
+        if selected is None:
+            selected = EligibleTool(tenant_id=scheme.tenant_id, scheme_id=scheme.id, name=name.strip(), status="PENDING", request_count=0)
+            db.add(selected)
+        if inquiry:
+            selected.inquiry_count = int(selected.inquiry_count or 0) + 1
+        else:
+            selected.request_count = int(selected.request_count or 0) + 1
+        await db.flush()
+        await db.refresh(scheme, ["eligible_tools"])
+    return selected.id if selected else None
+
+
 async def pending_tools(db: AsyncSession, scheme: Scheme) -> list[EligibleTool]:
     """民眾送件時打了、但清單上還沒有的工具（submit-flow 的 pendingTools）。"""
     q = (
@@ -251,6 +289,8 @@ async def resolve_tool(
     下一個人打同樣的字就會直接對上，待審佇列也不會再冒出同一個東西的第七種寫法。
     被併掉的那一列直接刪除——留著只會讓同一個工具在清單上出現兩次。
     """
+    await db.execute(select(Scheme.id).where(Scheme.id == scheme.id).with_for_update())
+    await db.refresh(tool)
     if status not in TOOL_STATUSES:
         raise HTTPException(400, f"未知的工具狀態 {status}")
     if merge_into_id:
@@ -264,9 +304,11 @@ async def resolve_tool(
                 aliases.append(text)
         target.aliases = aliases
         target.request_count = int(target.request_count or 0) + int(tool.request_count or 0)
+        target.inquiry_count = int(target.inquiry_count or 0) + int(tool.inquiry_count or 0)
         if verdict_note:
             target.verdict_note = verdict_note
         bump(target)
+        await db.execute(update(Application).where(Application.scheme_id == scheme.id, Application.tool_id == tool.id).values(tool_id=target.id))
         await db.delete(tool)
         await db.flush()
         return target

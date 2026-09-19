@@ -8,47 +8,35 @@ import { ROLE_LABEL, type Capability } from '../lib/types'
 const LS_NAV_COLLAPSED = 'sop_nav_collapsed'
 
 /** `cap` 是進得去這一頁所需的能力；沒填代表登入就看得到（決策 D14）。 */
-const NAV: { to: string; label: string; icon: typeof Workflow; cap?: Capability }[] = [
-  { to: '/canvas', label: '流程', icon: Workflow },
-  { to: '/review', label: 'SOP 審核', icon: ClipboardCheck },
-  { to: '/playground', label: '測試對話', icon: MessageSquare },
-  { to: '/evals', label: '評測', icon: FlaskConical },
-  { to: '/dashboard', label: '儀表板', icon: BarChart3 },
-  // 平台 and Goal used to be pages of their own; both are edited inside Canvas now.
-  { to: '/members', label: '成員', icon: Users, cap: 'admin' },
-  { to: '/api-keys', label: 'API Key', icon: KeyRound, cap: 'admin' },
-  { to: '/audit-logs', label: '稽核日誌', icon: FileClock, cap: 'admin' },
-]
-
-const CASE_NAV: { to: string; label: string; icon: typeof Workflow; cap?: Capability }[] = [
-  { to: '/cases', label: '案件總覽', icon: FileSearch, cap: 'case_review' },
-  { to: '/review-settings', label: '資料重點設定', icon: ListChecks },
-]
-
-/**
- * LINE 內容（SPEC §8.2）。整組沒有 capability 閘門：要審案件就得先知道民眾在
- * LINE 上看到什麼，所以每個登入的承辦人都讀得到；能不能改，由頁面裡的按鈕各自
- * 問 `can('admin')`——把人擋在門外，他就只能改去問別人「那句話到底怎麼寫的」。
- */
-const LINE_NAV: { to: string; label: string; icon: typeof Workflow }[] = [
-  { to: '/line/contents', label: '罐頭訊息', icon: MessageSquareText },
-  { to: '/line/faqs', label: '常見問題', icon: HelpCircle },
-  { to: '/line/knowledge', label: '知識文件', icon: BookOpen },
-  { to: '/line/richmenu', label: '圖文選單', icon: LayoutGrid },
-  { to: '/line/notifications', label: '推播紀錄', icon: Bell },
-  { to: '/line/unmatched', label: '未命中訊息', icon: SearchX },
-]
-
-/**
- * 方案管理（SPEC §8.2）。和 LINE 內容同一個規矩：每個登入的承辦人都讀得到——審案時
- * 常要回頭確認這個方案是怎麼設定的——能不能改由頁面裡的按鈕各自問 `can('admin')`。
- */
-const SCHEME_NAV: { to: string; label: string; icon: typeof Workflow }[] = [
-  { to: '/schemes', label: '方案設定', icon: FolderCog },
-]
-
-const SOP_NAV: { to: string; label: string; icon: typeof Workflow; cap?: Capability }[] = [
-  { to: '/sop/document-types', label: '文件類型對照', icon: Link2, cap: 'admin' },
+const GROUPS: { label: string; items: { to: string; label: string; icon: typeof Workflow; cap?: Capability }[] }[] = [
+  { label: '申請審查', items: [
+    { to: '/cases', label: '申請名單', icon: FileSearch, cap: 'case_review' },
+    { to: '/review-settings', label: '資料重點設定', icon: ListChecks },
+    { to: '/help-chat', label: '申請端機器人', icon: BookOpen },
+    { to: '/tool-knowledge', label: 'AI 工具知識庫', icon: BookOpen },
+    { to: '/dashboard', label: '審查概況', icon: BarChart3 },
+    { to: '/schemes', label: '申請方案設定', icon: FolderCog },
+  ] },
+  { label: '扣款記錄 SOP', items: [
+    { to: '/canvas', label: '教學流程', icon: Workflow },
+    { to: '/review', label: 'SOP 審核', icon: ClipboardCheck },
+    { to: '/sop/document-types', label: '文件類型對照', icon: Link2, cap: 'admin' },
+    { to: '/playground', label: '測試對話', icon: MessageSquare },
+    { to: '/evals', label: '評測', icon: FlaskConical },
+  ] },
+  { label: 'LINE 帳號', items: [
+    { to: '/line/contents', label: '罐頭訊息', icon: MessageSquareText },
+    { to: '/line/faqs', label: '常見問題', icon: HelpCircle },
+    { to: '/line/knowledge', label: '知識文件', icon: BookOpen },
+    { to: '/line/richmenu', label: '圖文選單', icon: LayoutGrid },
+    { to: '/line/notifications', label: '推播紀錄', icon: Bell },
+    { to: '/line/unmatched', label: '未命中訊息', icon: SearchX },
+  ] },
+  { label: '系統管理', items: [
+    { to: '/members', label: '成員', icon: Users, cap: 'admin' },
+    { to: '/api-keys', label: 'API Key', icon: KeyRound, cap: 'admin' },
+    { to: '/audit-logs', label: '稽核日誌', icon: FileClock, cap: 'admin' },
+  ] },
 ]
 
 const navLinkClass = (collapsed: boolean) => ({ isActive }: { isActive: boolean }) =>
@@ -79,44 +67,17 @@ export default function AppShell() {
             {collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
           </button>
         </div>
-        <nav className="min-h-0 flex-1 space-y-0.5 overflow-y-auto px-2 pb-3">
-          {NAV.filter((n) => !n.cap || can(n.cap)).map((n) => (
-            <NavLink key={n.to} to={n.to} title={collapsed ? n.label : undefined} aria-label={n.label} className={({ isActive }) => clsx('flex items-center gap-2 rounded-lg py-1.5 text-sm', collapsed ? 'justify-center px-0' : 'px-2.5', isActive ? 'bg-accent-bg text-accent font-medium' : 'text-muted hover:bg-background-lite hover:text-primary')}>
-              <n.icon size={15} className="shrink-0" />{!collapsed && <span className="truncate">{n.label}</span>}
-            </NavLink>
-          ))}
-          <div className="mt-3 space-y-0.5 border-t border-border pt-3">
-            {!collapsed && <div className="px-2.5 pb-1 text-[11px] font-medium uppercase tracking-wide text-secondary">審查作業</div>}
-            {CASE_NAV.filter((n) => !n.cap || can(n.cap)).map((n) => (
-              <NavLink key={n.to} to={n.to} title={collapsed ? n.label : undefined} aria-label={n.label} className={navLinkClass(collapsed)}>
+        <nav aria-label="後台功能" className="min-h-0 flex-1 overflow-y-auto px-2 pb-4">
+          {GROUPS.map((group) => {
+            const items = group.items.filter((item) => !item.cap || can(item.cap))
+            if (!items.length) return null
+            return <section key={group.label} aria-label={group.label} className="mb-3 space-y-0.5 border-t border-border pt-3">
+              {!collapsed && <h2 className="px-2.5 pb-2 text-[11px] font-semibold tracking-wide text-secondary">{group.label}</h2>}
+              {items.map((n) => <NavLink key={n.to} to={n.to} title={collapsed ? n.label : undefined} aria-label={n.label} className={navLinkClass(collapsed)}>
                 <n.icon size={15} className="shrink-0" />{!collapsed && <span className="truncate">{n.label}</span>}
-              </NavLink>
-            ))}
-          </div>
-          <div className="mt-3 space-y-0.5 border-t border-border pt-3">
-            {!collapsed && <div className="px-2.5 pb-1 text-[11px] font-medium uppercase tracking-wide text-secondary">SOP</div>}
-            {SOP_NAV.filter((n) => !n.cap || can(n.cap)).map((n) => (
-              <NavLink key={n.to} to={n.to} title={collapsed ? n.label : undefined} aria-label={n.label} className={navLinkClass(collapsed)}>
-                <n.icon size={15} className="shrink-0" />{!collapsed && <span className="truncate">{n.label}</span>}
-              </NavLink>
-            ))}
-          </div>
-          <div className="mt-3 space-y-0.5 border-t border-border pt-3">
-            {!collapsed && <div className="px-2.5 pb-1 text-[11px] font-medium uppercase tracking-wide text-secondary">LINE 內容</div>}
-            {LINE_NAV.map((n) => (
-              <NavLink key={n.to} to={n.to} title={collapsed ? n.label : undefined} aria-label={n.label} className={navLinkClass(collapsed)}>
-                <n.icon size={15} className="shrink-0" />{!collapsed && <span className="truncate">{n.label}</span>}
-              </NavLink>
-            ))}
-          </div>
-          <div className="mt-3 space-y-0.5 border-t border-border pt-3">
-            {!collapsed && <div className="px-2.5 pb-1 text-[11px] font-medium uppercase tracking-wide text-secondary">方案管理</div>}
-            {SCHEME_NAV.map((n) => (
-              <NavLink key={n.to} to={n.to} title={collapsed ? n.label : undefined} aria-label={n.label} className={navLinkClass(collapsed)}>
-                <n.icon size={15} className="shrink-0" />{!collapsed && <span className="truncate">{n.label}</span>}
-              </NavLink>
-            ))}
-          </div>
+              </NavLink>)}
+            </section>
+          })}
         </nav>
         <div className="border-t border-border p-3 text-xs">
           {collapsed ? (

@@ -117,6 +117,7 @@ describe('ApplyPage', () => {
     await pickTool('其他（自行填寫）')
     fireEvent.change(screen.getByLabelText(/其他 AI 工具名稱/), { target: { value: 'Perplexity Pro' } })
     fireEvent.click(screen.getByRole('button', { name: '檢查補助資格' }))
+    await waitFor(() => expect((screen.getByRole('button', { name: /下一步/ }) as HTMLButtonElement).disabled).toBe(false))
     next()
     expect(await screen.findByRole('heading', { name: '填寫申請人資料' })).toBeTruthy()
   })
