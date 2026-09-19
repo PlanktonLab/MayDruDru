@@ -16,6 +16,8 @@ import { GuideStep } from '../apply/GuideStep'
 import { IdentityStep } from '../apply/IdentityStep'
 import { ToolStep } from '../apply/ToolStep'
 import { SummaryAside } from '../apply/SummaryAside'
+import { expandSlots } from '../apply/docGroups'
+import { documentTypesFor } from '../apply/GuideStep'
 import { runPrecheck, type PrecheckView } from '../apply/precheck'
 import {
   STEPS,
@@ -69,6 +71,16 @@ export default function ApplyPage() {
     [requiredQuery.data],
   )
 
+  /**
+   * 實際要傳的欄位鍵。申請多期時收據與繳款憑證會展開成每期一份，
+   * 所以「缺哪幾份」與送出時的清單都要看展開後的鍵，而不是文件類型代碼。
+   */
+  const periods = state.channel.billing_cycle === 'MONTHLY' ? state.channel.billing_periods : 1
+  const slotKeys = useMemo(() => {
+    if (!scheme) return requiredCodes
+    return expandSlots(documentTypesFor(scheme, requiredCodes), periods).map((slot) => slot.key)
+  }, [scheme, requiredCodes, periods])
+
   const stepKey = STEP_KEYS[state.stepIndex]
 
   const facts: ApplicationFacts = useMemo(
@@ -91,14 +103,14 @@ export default function ApplyPage() {
   }, [scheme, uploaded, facts])
 
   const goNext = useCallback(() => {
-    if (!canLeave(stepKey, state, scheme, requiredCodes)) {
+    if (!canLeave(stepKey, state, scheme, slotKeys)) {
       setShowErrors(true)
       return
     }
     setShowErrors(false)
     dispatch({ type: 'next' })
     window.scrollTo({ top: 0, behavior: 'smooth' })
-  }, [requiredCodes, scheme, state, stepKey])
+  }, [slotKeys, scheme, state, stepKey])
 
   const goBack = useCallback(() => {
     setShowErrors(false)
@@ -111,17 +123,18 @@ export default function ApplyPage() {
     setSubmitError('')
     setSubmitting(true)
     try {
-      const documents = requiredCodes
-        .map((code) => state.docs[code])
-        .filter(Boolean)
-        .map((doc) => ({
+      const documents = slotKeys
+        .map((key) => ({ key, doc: state.docs[key] }))
+        .filter((entry) => Boolean(entry.doc))
+        .map(({ key, doc }) => ({
           document_type_code: doc.document_type_code,
           masked: doc.masked,
           mime: doc.mime,
           page_count: doc.page_count,
           ocr: doc.ocr,
           blob: doc.blob,
-          fileName: `${doc.document_type_code}.jpg`,
+          // 檔名用展開後的鍵：多期時同一個類型有好幾份，都叫同一個名字會蓋掉彼此。
+          fileName: `${key}.jpg`,
         }))
       const result = await submitApplication(
         {
@@ -153,7 +166,7 @@ export default function ApplyPage() {
     } finally {
       setSubmitting(false)
     }
-  }, [navigate, requiredCodes, scheme, schemeCode, state, view])
+  }, [navigate, slotKeys, scheme, schemeCode, state, view])
 
   // 首頁要先問到方案代碼才問得到方案本身，兩段載入都算「載入中」。
   if (schemeQuery.isLoading || (!routeCode && schemesQuery.isLoading)) return <Spinner label="載入方案資料…" />
@@ -196,7 +209,7 @@ export default function ApplyPage() {
           : {}
     : {}
 
-  const missing = missingDocuments(requiredCodes, state.docs)
+  const missing = missingDocuments(slotKeys, state.docs)
 
   return (
     <section className="md-risein">
@@ -267,6 +280,8 @@ export default function ApplyPage() {
               problemsByDoc={view?.problemsByDoc ?? {}}
               onDoc={(code, doc) => dispatch({ type: 'doc', code, doc })}
               onClear={(code) => dispatch({ type: 'dropDoc', code })}
+              periods={periods}
+              onDone={goNext}
             />
           )}
           {stepKey === 'confirm' && (
@@ -296,7 +311,9 @@ export default function ApplyPage() {
                 <ArrowLeft size={16} aria-hidden />
               </Button>
             )}
-            {stepKey !== 'confirm' && (
+            {/* `docs` 那一步的「下一步」由 `DocsStep` 自己出（它要按分段走，
+                而且要依當段是否填齊 disable），這裡就不再出第二顆。 */}
+            {stepKey !== 'confirm' && stepKey !== 'docs' && (
               // `flex-1` 而不是 `block`：`block` 是 `w-full`，會算成「整列的寬度」，
               // 旁邊還有一顆上一步時就會把自己推出卡片外。
               <Button variant="primary" size="lg" onClick={goNext} className="min-w-0 flex-1">

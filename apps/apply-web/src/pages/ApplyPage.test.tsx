@@ -214,8 +214,8 @@ describe('ApplyPage', () => {
     next()
     await screen.findByRole('heading', { name: '上傳文件' })
 
-    next()
-    expect((await screen.findByRole('alert')).textContent).toContain('份必備文件沒有上傳')
+    // 這一段還沒填，「下一步」按不下去——按不下去比按了才被擋更誠實。
+    expect((screen.getByRole('button', { name: /下一步/ }) as HTMLButtonElement).disabled).toBe(true)
 
     // 上傳步驟分成三段，一次只看得到一段的欄位；每段填完再走到下一段。
     let filled = 0
@@ -233,8 +233,10 @@ describe('ApplyPage', () => {
         await waitFor(() => expect(card.textContent).toContain('換一張'))
         filled += 1
       }
-      const toNext = screen.queryByRole('button', { name: /^下一段：/ })
-      if (!toNext) break
+      // 還有下一段時按鈕會帶著段落名（「下一步：購買與付款憑證」）；
+      // 最後一段只剩「下一步」，代表整個上傳步驟填完了。
+      const toNext = screen.getByRole('button', { name: /下一步/ })
+      if (!/下一步：/.test(toNext.textContent ?? '')) break
       fireEvent.click(toNext)
     }
     expect(filled).toBe(6)

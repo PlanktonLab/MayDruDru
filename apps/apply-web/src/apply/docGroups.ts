@@ -35,19 +35,55 @@ export function groupOf(code: string): DocGroupKey {
   return GROUP_OF[code] ?? 'payment'
 }
 
+/**
+ * 逐期檢附的文件類型。
+ *
+ * 申請多期時，收據與繳款憑證是「每一期各一份」——第 3 期的帳單證明不了第 1 期
+ * 扣過款。身分證、存摺、切結書則與期數無關，整件案子一份就夠。
+ */
+const PER_PERIOD = new Set(['OFFICIAL_RECEIPT', 'BILLING_STATEMENT', 'TELECOM_BILL', 'TRANSACTION_DETAIL'])
+
+/**
+ * 一個上傳欄位。
+ *
+ * `code` 是送給伺服器的文件類型，`key` 才是畫面與 `docs` 的鍵——申請多期時
+ * 同一個類型會展開成 `BILLING_STATEMENT_1`、`_2`…，所以兩者不一定相同。
+ */
+export interface DocSlot {
+  key: string
+  code: string
+  label: string
+  type: SchemeDocumentType
+  periodIndex?: number
+}
+
+/** 依期數把文件類型展開成實際要傳的欄位。單期時 `key` 就是 `code`，與展開前相同。 */
+export function expandSlots(types: readonly SchemeDocumentType[], periods: number): DocSlot[] {
+  const count = Math.max(1, Math.round(periods))
+  return types.flatMap((type) => {
+    if (count <= 1 || !PER_PERIOD.has(type.code)) {
+      return [{ key: type.code, code: type.code, label: type.label, type }]
+    }
+    return Array.from({ length: count }, (_, index) => ({
+      key: `${type.code}_${index + 1}`,
+      code: type.code,
+      label: `${type.label}（第 ${index + 1} 期）`,
+      type,
+      periodIndex: index + 1,
+    }))
+  })
+}
+
 export interface DocGroupView extends DocGroupDef {
-  types: SchemeDocumentType[]
+  slots: DocSlot[]
   /** 這一段已經傳好幾份。 */
   done: number
 }
 
-/** 把必備文件分成三段；沒有文件的那一段不顯示（例如沒勾代為支付時可能少一份）。 */
-export function groupDocuments(
-  types: readonly SchemeDocumentType[],
-  docs: Record<string, unknown>,
-): DocGroupView[] {
+/** 把上傳欄位分成三段；沒有欄位的那一段不顯示（例如沒勾代為支付時可能少一份）。 */
+export function groupDocuments(slots: readonly DocSlot[], docs: Record<string, unknown>): DocGroupView[] {
   return DOC_GROUPS.map((group) => {
-    const members = types.filter((type) => groupOf(type.code) === group.key)
-    return { ...group, types: members, done: members.filter((type) => docs[type.code]).length }
-  }).filter((group) => group.types.length > 0)
+    const members = slots.filter((slot) => groupOf(slot.code) === group.key)
+    return { ...group, slots: members, done: members.filter((slot) => docs[slot.key]).length }
+  }).filter((group) => group.slots.length > 0)
 }

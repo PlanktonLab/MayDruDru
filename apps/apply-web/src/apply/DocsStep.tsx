@@ -9,11 +9,11 @@
  */
 
 import { useEffect, useState } from 'react'
-import { Check } from 'lucide-react'
-import { cx } from '@maydru/ui'
+import { ArrowRight, Check } from 'lucide-react'
+import { Button, cx } from '@maydru/ui'
 import { DocField, type DocProblem } from './DocField'
 import { documentTypesFor } from './GuideStep'
-import { groupDocuments } from './docGroups'
+import { expandSlots, groupDocuments } from './docGroups'
 import type { SchemePublic } from '../lib/types'
 import type { UploadedDoc } from './state'
 
@@ -24,11 +24,26 @@ export interface DocsStepProps {
   onDoc: (code: string, doc: UploadedDoc) => void
   onClear: (code: string) => void
   problemsByDoc: Record<string, DocProblem[]>
+  /** 申請補助的期數；多期時收據與繳款憑證每期各要一份。 */
+  periods?: number
+  /** 最後一段填齊、按下「下一步」時離開整個上傳步驟。 */
+  onDone: () => void
 }
 
-export function DocsStep({ scheme, requiredCodes, docs, onDoc, onClear, problemsByDoc }: DocsStepProps) {
+export function DocsStep({
+  scheme,
+  requiredCodes,
+  docs,
+  onDoc,
+  onClear,
+  problemsByDoc,
+  periods = 1,
+  onDone,
+}: DocsStepProps) {
   const types = documentTypesFor(scheme, requiredCodes)
-  const groups = groupDocuments(types, docs)
+  // 申請多期時，收據與繳款憑證會展開成每期一份。
+  const slots = expandSlots(types, periods)
+  const groups = groupDocuments(slots, docs)
   const [active, setActive] = useState(0)
 
   // 必備文件會隨繳費方式或身分別變動，分段數也跟著變；索引超出範圍就收回最後一段。
@@ -38,24 +53,22 @@ export function DocsStep({ scheme, requiredCodes, docs, onDoc, onClear, problems
 
   const current = groups[active]
   const nextGroup = groups[active + 1]
+  // 這一段還有沒傳的就不讓走——一次只檢查眼前這幾份，而不是把八份的缺漏一起丟出來。
+  const currentIncomplete = (current?.done ?? 0) < (current?.slots.length ?? 0)
 
   return (
     <div className="space-y-4">
-      {/* 分段指示：每一段標上「已傳幾份／共幾份」，點了可以直接跳過去。 */}
+      {/* 分段指示只顯示進度，不能點著跳——每一段都得填齊才走得到下一段，
+          能跳的話等於繞過那道檢查，人會一路跳到最後才發現前面都沒填。 */}
       {groups.length > 1 && (
         <nav aria-label="上傳分段" className="rounded-xl border border-border bg-canvas p-4">
           <ol className="flex items-center gap-1">
             {groups.map((group, index) => {
-              const complete = group.done === group.types.length
+              const complete = group.done === group.slots.length
               const isActive = index === active
               return (
                 <li key={group.key} className="flex min-w-0 flex-1 items-center gap-2 last:flex-none">
-                  <button
-                    type="button"
-                    aria-current={isActive ? 'step' : undefined}
-                    onClick={() => setActive(index)}
-                    className="flex min-h-11 min-w-0 items-center gap-2 text-left"
-                  >
+                  <span className="flex min-w-0 items-center gap-2">
                     <span
                       aria-hidden
                       className={cx(
@@ -69,6 +82,7 @@ export function DocsStep({ scheme, requiredCodes, docs, onDoc, onClear, problems
                     </span>
                     <span className="min-w-0">
                       <span
+                        aria-current={isActive ? 'step' : undefined}
                         className={cx(
                           'block truncate text-[13px]',
                           isActive ? 'font-semibold text-accent' : 'text-primary',
@@ -77,10 +91,10 @@ export function DocsStep({ scheme, requiredCodes, docs, onDoc, onClear, problems
                         {group.label}
                       </span>
                       <span className="block text-[12px] tabular-nums text-muted">
-                        {group.done}/{group.types.length} 份
+                        {group.done}/{group.slots.length} 份
                       </span>
                     </span>
-                  </button>
+                  </span>
                   {index < groups.length - 1 && (
                     <span aria-hidden className="hidden h-px min-w-4 flex-1 bg-border sm:block" />
                   )}
@@ -93,32 +107,40 @@ export function DocsStep({ scheme, requiredCodes, docs, onDoc, onClear, problems
 
       {/* 兩兩一排：這幾張卡片內容都短，一排一張在桌面會留下半頁空白。 */}
       <div className="grid gap-4 sm:grid-cols-2">
-        {current?.types.map((type) => (
+        {current?.slots.map((slot) => (
           <DocField
-            key={type.code}
-            docType={type}
-            value={docs[type.code]}
+            key={slot.key}
+            docType={slot.type}
+            label={slot.label}
+            value={docs[slot.key]}
             required
-            problems={problemsByDoc[type.code] ?? []}
-            onChange={(doc) => onDoc(type.code, doc)}
-            onClear={() => onClear(type.code)}
+            problems={problemsByDoc[slot.key] ?? problemsByDoc[slot.code] ?? []}
+            onChange={(doc) => onDoc(slot.key, doc)}
+            onClear={() => onClear(slot.key)}
           />
         ))}
       </div>
 
-      {/* 段落之間的移動；最後一段沒有下一段，交給整個流程的「下一步」。 */}
-      {nextGroup && (
-        <button
-          type="button"
-          onClick={() => {
+      {/* 整個上傳步驟只有這一顆「下一步」：在段落之間時它走到下一段，
+          在最後一段時它離開上傳步驟。這一段沒填齊就 disable——
+          按不下去比按了才被擋更誠實。 */}
+      <Button
+        variant="primary"
+        size="lg"
+        block
+        disabled={currentIncomplete}
+        onClick={() => {
+          if (nextGroup) {
             setActive(active + 1)
             window.scrollTo({ top: 0, behavior: 'smooth' })
-          }}
-          className="flex min-h-13 w-full items-center justify-center gap-2 rounded-2xl border border-border bg-canvas px-5 text-[16px] font-medium text-primary transition-colors hover:bg-background-lite"
-        >
-          下一段：{nextGroup.label}
-        </button>
-      )}
+            return
+          }
+          onDone()
+        }}
+      >
+        {nextGroup ? `下一步：${nextGroup.label}` : '下一步'}
+        <ArrowRight size={16} aria-hidden />
+      </Button>
     </div>
   )
 }

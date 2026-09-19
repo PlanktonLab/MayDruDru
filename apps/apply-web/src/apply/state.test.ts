@@ -1,6 +1,7 @@
 /** 送件流程的狀態與每一步的過關條件（SPEC §8.1）。 */
 
 import { describe, expect, it } from 'vitest'
+import { expandSlots } from './docGroups'
 import {
   canLeave,
   channelErrors,
@@ -209,5 +210,34 @@ describe('第 5 步 上傳', () => {
 
   it('準備指引那一步永遠可以往前', () => {
     expect(canLeave('guide', initialState('HCAI115'), SCHEME, required)).toBe(true)
+  })
+})
+
+describe('多期申請的上傳欄位', () => {
+  const types = SCHEME.document_types.filter((type) =>
+    ['ID_CARD_FRONT', 'OFFICIAL_RECEIPT', 'BILLING_STATEMENT', 'BANKBOOK_COVER'].includes(type.code),
+  )
+
+  it('單期時欄位就是文件類型本身', () => {
+    expect(expandSlots(types, 1).map((slot) => slot.key)).toEqual(types.map((type) => type.code))
+  })
+
+  it('多期時收據與繳款憑證每期各一份，其餘仍是一份', () => {
+    const keys = expandSlots(types, 3).map((slot) => slot.key)
+    // 身分證與存摺與期數無關。
+    expect(keys.filter((key) => key.startsWith('ID_CARD_FRONT'))).toEqual(['ID_CARD_FRONT'])
+    expect(keys.filter((key) => key.startsWith('BANKBOOK_COVER'))).toEqual(['BANKBOOK_COVER'])
+    // 收據與帳單各展開成三份。
+    expect(keys.filter((key) => key.startsWith('OFFICIAL_RECEIPT'))).toEqual([
+      'OFFICIAL_RECEIPT_1',
+      'OFFICIAL_RECEIPT_2',
+      'OFFICIAL_RECEIPT_3',
+    ])
+    expect(keys.filter((key) => key.startsWith('BILLING_STATEMENT'))).toHaveLength(3)
+  })
+
+  it('展開後的欄位名稱帶上期數，才分得出是哪一期', () => {
+    const receipts = expandSlots(types, 2).filter((slot) => slot.code === 'OFFICIAL_RECEIPT')
+    expect(receipts.map((slot) => slot.label)).toEqual(['官方收據（第 1 期）', '官方收據（第 2 期）'])
   })
 })

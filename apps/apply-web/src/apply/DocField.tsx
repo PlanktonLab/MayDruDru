@@ -26,6 +26,8 @@ type Stage = 'idle' | 'reading' | 'masking' | 'recognizing' | 'done' | 'error'
 
 export interface DocFieldProps {
   docType: SchemeDocumentType
+  /** 覆寫顯示名稱；多期申請時會帶上「（第 N 期）」。預設用 `docType.label`。 */
+  label?: string
   value?: UploadedDoc
   onChange: (doc: UploadedDoc) => void
   onClear: () => void
@@ -41,7 +43,16 @@ function wantsCardDetection(code: string): boolean {
   return code === 'CARD_LAST4_PHOTO' || code === 'BILLING_STATEMENT'
 }
 
-export function DocField({ docType, value, onChange, onClear, problems = [], required = false }: DocFieldProps) {
+export function DocField({
+  docType,
+  label,
+  value,
+  onChange,
+  onClear,
+  problems = [],
+  required = false,
+}: DocFieldProps) {
+  const title = label ?? docType.label
   const [stage, setStage] = useState<Stage>('idle')
   const [error, setError] = useState('')
   const [progress, setProgress] = useState(0)
@@ -199,7 +210,7 @@ export function DocField({ docType, value, onChange, onClear, problems = [], req
       className={cx(blocked ? 'border-danger' : value && 'bg-background-lite')}
       title={
         <span className="flex items-center gap-2">
-          {docType.label}
+          {title}
           {required && (
             <span className="text-danger" aria-label="必備文件">
               *
@@ -230,7 +241,7 @@ export function DocField({ docType, value, onChange, onClear, problems = [], req
         <div className="space-y-3">
           <img
             src={value.previewUrl}
-            alt={`${docType.label}預覽（已處理）`}
+            alt={`${title}預覽（已處理）`}
             className="max-h-56 w-full rounded-xl border border-border object-contain"
           />
           <div className="flex flex-wrap gap-1.5">
@@ -310,7 +321,7 @@ export function DocField({ docType, value, onChange, onClear, problems = [], req
         type="file"
         accept={ACCEPT}
         className="sr-only"
-        aria-label={`選擇${docType.label}的檔案`}
+        aria-label={`選擇${title}的檔案`}
         onChange={(event) => {
           void pick(event.target.files?.[0])
           event.target.value = ''
@@ -322,7 +333,7 @@ export function DocField({ docType, value, onChange, onClear, problems = [], req
         accept="image/*"
         capture="environment"
         className="sr-only"
-        aria-label={`拍攝${docType.label}`}
+        aria-label={`拍攝${title}`}
         onChange={(event) => {
           void pick(event.target.files?.[0])
           event.target.value = ''
