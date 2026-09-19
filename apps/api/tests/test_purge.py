@@ -17,7 +17,9 @@ from tests.test_state_machine import drive, make_case
 def deleted_keys(monkeypatch):
     """測試不連 MinIO：記下被要求刪掉的 key 就好。"""
     keys: list[str] = []
-    monkeypatch.setattr(case_service.storage, "delete", lambda bucket, key: keys.append(key))
+    from app import storage
+
+    monkeypatch.setattr(storage, "delete", lambda bucket, key: keys.append(key))
     return keys
 
 
@@ -101,10 +103,12 @@ async def test_keep_after_disbursed_documents_survive(db, tenant, scheme, delete
 
 async def test_a_storage_failure_does_not_wedge_the_job(db, tenant, scheme, monkeypatch):
     """物件刪不掉還是要標記完成，否則每天都會拿同一筆重試到天荒地老。"""
+    from app import storage
+
     def boom(bucket, key):
         raise RuntimeError("minio down")
 
-    monkeypatch.setattr(case_service.storage, "delete", boom)
+    monkeypatch.setattr(storage, "delete", boom)
     app = await disbursed_case(db, tenant, scheme)
     later = datetime.now(UTC) + timedelta(days=scheme.retention_days + 1)
     counts = await case_service.purge_due(db, later)

@@ -12,6 +12,7 @@ from .config import get_settings
 from .db import sessionmaker
 from .models import Tenant, User
 from .routers import (
+    apply,
     auth,
     catalog_admin,
     components,
@@ -84,6 +85,7 @@ def create_app() -> FastAPI:
     for r in (auth, tenant, catalog_admin, components, flows, variants, playground, evals, dashboard,
               admin_schemes, admin_applications, public_api, media):
         app.include_router(r.router)
+    app.include_router(apply.router)  # P3 送件與審核：市民匿名端點（SPEC §8.1）
 
     @app.get("/health")
     async def health():

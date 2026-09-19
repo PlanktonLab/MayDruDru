@@ -183,3 +183,82 @@ def reset_blockers():
     """核准前置條件是模組層的掛鉤；裝過就要拆掉，不然會滲進下一個測試。"""
     yield
     review.reset_approval_blockers()
+
+
+# --------------------------------------------------- P3：送件與審核用的 fixture
+
+class FakeStorage:
+    """記憶體版的 MinIO：測試永不連真的物件儲存（SPEC §14）。"""
+
+    def __init__(self) -> None:
+        self.objects: dict[str, bytes] = {}
+        self.deleted: list[str] = []
+        self.presigned: list[str] = []
+
+    def put(self, bucket: str, key: str, data: bytes, content_type: str = "") -> str:
+        self.objects[key] = data
+        return key
+
+    def delete(self, bucket: str, key: str) -> None:
+        self.deleted.append(key)
+        self.objects.pop(key, None)
+
+    def presigned_get_object(self, bucket: str, key: str, expires=None) -> str:
+        self.presigned.append(key)
+        return f"https://minio.test/{bucket}/{key}?signed=1"
+
+
+@pytest.fixture
+def fake_storage(monkeypatch) -> FakeStorage:
+    """把 `app.storage` 的讀寫換成記憶體版；`services/documents` 透過它存取物件。"""
+    from app import storage
+
+    fake = FakeStorage()
+    monkeypatch.setattr(storage, "put", fake.put)
+    monkeypatch.setattr(storage, "delete", fake.delete)
+    monkeypatch.setattr(storage, "put_private", lambda key, data, ct="": fake.put("private", key, data, ct))
+    monkeypatch.setattr(storage, "client", lambda: fake)
+    return fake
+
+
+@pytest_asyncio.fixture
+async def apply_client(db: AsyncSession, fake_redis: "FakeRedis", fake_storage: FakeStorage) -> AsyncIterator[AsyncClient]:
+    """`/api/apply/*` 用的 client：假 redis（限流）、假 MinIO（上傳）。"""
+    from app.redis_client import get_redis
+
+    app = create_app()
+
+    async def _get_db() -> AsyncIterator[AsyncSession]:
+        yield db
+
+    async def _get_redis():
+        return fake_redis
+
+    app.dependency_overrides[get_db] = _get_db
+    app.dependency_overrides[get_redis] = _get_redis
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        yield c
+    app.dependency_overrides.clear()
+
+
+@pytest_asyncio.fixture
+async def admin_client(db: AsyncSession, fake_storage: FakeStorage) -> AsyncIterator[AsyncClient]:
+    """`/api/admin/*` 用的 client，帶假 MinIO（presigned URL 與上傳）。"""
+    app = create_app()
+
+    async def _get_db() -> AsyncIterator[AsyncSession]:
+        yield db
+
+    app.dependency_overrides[get_db] = _get_db
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        yield c
+    app.dependency_overrides.clear()
+
+
+@pytest_asyncio.fixture
+async def default_tenant(db: AsyncSession) -> Tenant:
+    """匿名端點會找 `slug="default"` 的 tenant（決策 D18）。"""
+    t = Tenant(id="d" * 32, name="預設機關", slug="default")
+    db.add(t)
+    await db.commit()
+    return t

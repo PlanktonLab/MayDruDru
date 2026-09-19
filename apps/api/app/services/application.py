@@ -9,7 +9,6 @@ apply-web、admin、`/v1` 與排程工作都從同一扇門進來，所以角色
 
 from __future__ import annotations
 
-import asyncio
 import logging
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -17,24 +16,22 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastapi import HTTPException
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .. import storage
-from ..config import get_settings
 from ..models import (
     TERMINAL_STATUSES,
     Application,
     ApplicationDocument,
     ApplicationStatusEvent,
     CaseNoCounter,
-    DocumentOcrResult,
     ReviewFinding,
     Scheme,
 )
 from ..pii import encrypt_phone, hash_last4
 from ..redis_client import redis as _redis
 from ..security import create_case_token
+from . import documents as documents_service
 from . import notify, review
 from .actors import Actor
 
@@ -489,8 +486,8 @@ async def purge_due(db: AsyncSession, now: datetime | None = None) -> dict[str, 
         for doc in docs:
             if doc.document_type_code in keep_codes.get(app.scheme_id, frozenset()):
                 continue
-            counts["objects"] += await _delete_objects(doc)
-            counts["ocr"] += await _delete_ocr(db, doc.id)
+            counts["objects"] += await documents_service.delete_objects(doc)
+            counts["ocr"] += await documents_service.delete_ocr(db, doc.id)
             doc.object_key = ""
             doc.preview_key = None
             doc.purged_at = stamp
@@ -526,31 +523,6 @@ async def _keep_after_disbursed_codes(db: AsyncSession, scheme_ids: set[str]) ->
     for scheme_id, code in rows:
         out.setdefault(scheme_id, set()).add(code)
     return {k: frozenset(v) for k, v in out.items()}
-
-
-async def _delete_objects(doc: ApplicationDocument) -> int:
-    """MinIO 刪不掉就記下來繼續——資料庫那一側還是要標記成已清除，
-    不然下一輪又會拿同一筆重試到天荒地老。"""
-    bucket = get_settings().s3_bucket_private
-    removed = 0
-    for key in (doc.object_key, doc.preview_key):
-        if not key:
-            continue
-        try:
-            await asyncio.to_thread(storage.delete, bucket, key)
-            removed += 1
-        except Exception:
-            log.exception("刪除物件失敗：%s", key)
-    return removed
-
-
-async def _delete_ocr(db: AsyncSession, document_id: str) -> int:
-    rows = (
-        await db.execute(select(DocumentOcrResult).where(DocumentOcrResult.document_id == document_id))
-    ).scalars().all()
-    for row in rows:
-        await db.delete(row)
-    return len(rows)
 
 
 # --------------------------------------------------------------- 查詢驗證
@@ -630,10 +602,15 @@ async def queue(
     statuses: Sequence[str] | None = None,
     scheme_id: str | None = None,
     assigned_reviewer_id: str | None = None,
+    search: str = "",
     limit: int = 100,
     offset: int = 0,
 ) -> tuple[list[Application], int]:
-    """審核佇列：一律依 `first_submitted_at` 排序，補件不重排（SPEC §7）。"""
+    """審核佇列：一律依 `first_submitted_at` 排序，補件不重排（SPEC §7）。
+
+    `search` 比對案號、申請人姓名與工具名稱。姓名在佇列上是遮蔽的，但承辦人手上
+    通常就是一個名字，所以比對用的是原始欄位。
+    """
     where = [Application.tenant_id == tenant_id]
     if statuses:
         where.append(Application.status.in_(list(statuses)))
@@ -641,6 +618,13 @@ async def queue(
         where.append(Application.scheme_id == scheme_id)
     if assigned_reviewer_id:
         where.append(Application.assigned_reviewer_id == assigned_reviewer_id)
+    if search:
+        needle = f"%{search.strip()}%"
+        where.append(or_(
+            Application.case_no.ilike(needle),
+            Application.applicant_name.ilike(needle),
+            Application.tool_name.ilike(needle),
+        ))
 
     total = (await db.execute(select(func.count(Application.id)).where(*where))).scalar_one()
     rows = (
