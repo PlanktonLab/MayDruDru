@@ -388,6 +388,24 @@ async def test_the_case_page_shows_the_timeline_and_no_staff_data(apply_client, 
     assert "applicant_name" not in body and "phone_masked" not in body
 
 
+async def test_the_case_page_gives_content_keys_not_sentences(apply_client, db, tenant, scheme):
+    """狀態文案走 contents（CLAUDE.md 規則 4）：API 給 key，前端負責渲染。"""
+    app = await make_case(db, tenant, scheme)
+    token = await verified_token(apply_client, app)
+    body = (await apply_client.get(f"{APPLY}/applications/{app.case_no}", headers=bearer(token))).json()
+    assert body["status"] == "UNDER_REVIEW"
+    assert body["public_label_key"] == "status.UNDER_REVIEW.public_label"
+    assert body["next_action"] == "status.UNDER_REVIEW.next_action"
+
+
+async def test_the_content_keys_follow_the_current_status(apply_client, db, tenant, scheme):
+    app = await make_case(db, tenant, scheme)
+    await drive(db, app, "T10")
+    token = await verified_token(apply_client, app)
+    body = (await apply_client.get(f"{APPLY}/applications/{app.case_no}", headers=bearer(token))).json()
+    assert body["next_action"] == "status.WITHDRAWN.next_action"
+
+
 async def test_a_token_for_one_case_is_refused_on_another(apply_client, db, tenant, scheme):
     first = await make_case(db, tenant, scheme)
     second = await make_case(db, tenant, scheme)

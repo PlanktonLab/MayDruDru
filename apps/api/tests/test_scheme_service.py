@@ -92,6 +92,63 @@ async def test_inactive_rejection_codes_stay_out_of_the_public_view(db, tenant, 
     assert scheme_service.scheme_public_view(scheme)["rejection_codes"] == []
 
 
+# ------------------------------------------------- 送件檢視（apply-web）
+
+async def test_the_apply_view_explains_why_a_tool_is_or_is_not_eligible(db, tenant, scheme):
+    """`verdict_note` 是「為什麼不補助」的那一句，不給市民看等於只給一個 NO。"""
+    from app.models import EligibleTool
+
+    db.add_all([
+        EligibleTool(tenant_id=tenant.id, scheme_id=scheme.id, name="剪映", status="REJECTED",
+                     verdict_note="母公司為字節跳動（中國），依本計畫規定不予補助。", sort_order=2),
+        EligibleTool(tenant_id=tenant.id, scheme_id=scheme.id, name="ChatGPT", status="APPROVED",
+                     verdict_note="美國公司，無中資背景。", sort_order=1),
+    ])
+    await db.commit()
+    await db.refresh(scheme)
+
+    tools = scheme_service.scheme_apply_view(scheme)["eligible_tools"]
+    assert [t["name"] for t in tools] == ["ChatGPT", "剪映"]
+    assert tools[1]["verdict_note"].startswith("母公司為字節跳動")
+
+
+async def test_the_apply_view_still_hides_the_staff_label(db, tenant, scheme):
+    from app.models import RejectionCode
+
+    db.add(RejectionCode(tenant_id=tenant.id, scheme_id=scheme.id, code="OTHER",
+                         staff_label="其他（請填說明）", public_what_wrong="其他需要修正的事項"))
+    await db.commit()
+    await db.refresh(scheme)
+    assert "staff_label" not in scheme_service.scheme_apply_view(scheme)["rejection_codes"][0]
+
+
+# ----------------------------------------------- 後台設定檢視（admin-web）
+
+async def test_the_settings_view_carries_the_staff_label_and_full_document_types(db, tenant, scheme):
+    from app.models import RejectionCode
+
+    db.add_all([
+        RejectionCode(tenant_id=tenant.id, scheme_id=scheme.id, code="OTHER",
+                      staff_label="其他（請填說明）", public_what_wrong="其他需要修正的事項",
+                      public_how_to_fix="請參考承辦的補充說明。",
+                      related_document_type_codes=["BILLING_STATEMENT"], sort_order=2),
+        RejectionCode(tenant_id=tenant.id, scheme_id=scheme.id, code="OLD", active=False, sort_order=1),
+    ])
+    await db.commit()
+    await db.refresh(scheme)
+
+    view = scheme_service.scheme_settings_view(scheme)
+    assert [r["code"] for r in view["rejection_codes"]] == ["OTHER"]  # 停用的不給承辦選
+    assert view["rejection_codes"][0]["staff_label"] == "其他（請填說明）"
+    assert view["rejection_codes"][0]["related_document_type_codes"] == ["BILLING_STATEMENT"]
+    assert view["supplement_days"] == 14 and view["max_revisions"] == 2 and view["retention_days"] == 90
+    assert [d["code"] for d in view["document_types"]][0] == "ID_CARD_FRONT"
+    assert "keep_visible" in view["document_types"][0] and "max_pages" in view["document_types"][0]
+    assert [c["code"] for c in view["payment_channels"]] == ["CREDIT_CARD", "TELECOM"]
+    assert [t["code"] for t in view["tiers"]] == ["GENERAL", "LOW_INCOME"]
+    assert "review_rules" not in view
+
+
 # ------------------------------------------------------------------ CRUD
 
 async def test_create_and_fetch_a_scheme(db, tenant):

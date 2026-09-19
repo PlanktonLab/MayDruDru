@@ -43,6 +43,7 @@ __all__ = [
     "required_document_types",
     "scheme_apply_view",
     "scheme_public_view",
+    "scheme_settings_view",
     "scheme_summary_view",
     "update_child",
     "update_scheme",
@@ -436,8 +437,79 @@ def scheme_apply_view(scheme: Scheme) -> dict[str, Any]:
             if r.active
         ],
         "eligible_tools": [
-            {"id": t.id, "name": t.name, "vendor": t.vendor, "aliases": list(t.aliases or []), "status": t.status}
+            {"id": t.id, "name": t.name, "vendor": t.vendor, "aliases": list(t.aliases or []),
+             "status": t.status, "verdict_note": t.verdict_note}
             for t in sorted(scheme.eligible_tools, key=lambda t: (t.sort_order, t.name))
+        ],
+    }
+
+
+# ------------------------------------------------- 後台用的方案設定（P3）
+
+def scheme_settings_view(scheme: Scheme) -> dict[str, Any]:
+    """`GET /api/admin/schemes/{code}/settings`：案件頁要拿來組表單的設定。
+
+    和 `scheme_apply_view()` 的差別只有一個，但那個差別就是它存在的理由：退件碼帶
+    `staff_label`。承辦人選退件原因時看的是機關內部的說法，市民收到的才是
+    `public_what_wrong` / `public_how_to_fix`——兩邊用同一份清單但不是同一段字。
+
+    這裡不含 `review_rules`：案件頁的判定結果已經由 `ApplicationDetailOut.rules` 給了。
+    """
+    return {
+        "code": scheme.code,
+        "name": scheme.name,
+        "supplement_days": scheme.supplement_days,
+        "max_revisions": scheme.max_revisions,
+        "retention_days": scheme.retention_days,
+        "tiers": [
+            {
+                "code": t.code,
+                "label": t.label,
+                "subsidy_rate": t.subsidy_rate,
+                "cap_amount": t.cap_amount,
+                "required_proof_doc_types": list(t.required_proof_doc_types or []),
+                "sort_order": t.sort_order,
+            }
+            for t in sorted(scheme.tiers, key=lambda t: (t.sort_order, t.code))
+        ],
+        "document_types": [
+            {
+                "code": d.code,
+                "label": d.label,
+                "hint": d.hint,
+                "required": d.required,
+                "required_when": d.required_when,
+                "must_mask": d.must_mask,
+                "keep_visible": d.keep_visible,
+                "keep_after_disbursed": d.keep_after_disbursed,
+                "accepted_mime": list(d.accepted_mime or []),
+                "max_pages": d.max_pages,
+                "sort_order": d.sort_order,
+            }
+            for d in sorted(scheme.document_types, key=lambda d: (d.sort_order, d.code))
+        ],
+        "payment_channels": [
+            {
+                "code": c.code,
+                "label": c.label,
+                "hint": c.hint,
+                "required_document_type_codes": list(c.required_document_type_codes or []),
+                "guide_content_key": c.guide_content_key,
+                "sort_order": c.sort_order,
+            }
+            for c in sorted(scheme.payment_channels, key=lambda c: (c.sort_order, c.code))
+        ],
+        "rejection_codes": [
+            {
+                "code": r.code,
+                "staff_label": r.staff_label,
+                "public_what_wrong": r.public_what_wrong,
+                "public_how_to_fix": r.public_how_to_fix,
+                "related_document_type_codes": list(r.related_document_type_codes or []),
+                "related_sop_flow_ids": list(r.related_sop_flow_ids or []),
+            }
+            for r in sorted(scheme.rejection_codes, key=lambda r: (r.sort_order, r.code))
+            if r.active
         ],
     }
 

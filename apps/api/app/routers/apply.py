@@ -352,7 +352,11 @@ async def get_case(
     caller: CaseCaller = Depends(require_case_token),
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
-    """市民看得到的案件：時間軸、補件項目、目前版本的文件清單。沒有承辦人資訊。"""
+    """市民看得到的案件：時間軸、補件項目、目前版本的文件清單。沒有承辦人資訊。
+
+    `public_label_key` 與 `next_action` 給的是 `contents` 的 key，不是句子——這支
+    router 不組任何中文文案（CLAUDE.md 規則 4）。
+    """
     app = await _case(db, caller, case_no)
     scheme = await db.get(Scheme, app.scheme_id)
     docs = (
@@ -374,6 +378,8 @@ async def get_case(
         "case_no": app.case_no,
         "scheme": {"code": scheme.code if scheme else "", "name": scheme.name if scheme else ""},
         "status": app.status,
+        "public_label_key": f"status.{app.status}.public_label",
+        "next_action": f"status.{app.status}.next_action",
         "first_submitted_at": app.first_submitted_at,
         "last_submitted_at": app.last_submitted_at,
         "revision_count": app.revision_count,

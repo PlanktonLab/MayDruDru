@@ -254,6 +254,25 @@ async def _findings_payload(db: AsyncSession, app: Application) -> list[dict[str
     )
 
 
+async def _events_payload(db: AsyncSession, app: Application) -> list[dict[str, Any]]:
+    """時間軸。STAFF 的 `actor_id` 一次查完換成名字，一件案子只多一次查詢。"""
+    events = (
+        await db.execute(
+            select(ApplicationStatusEvent)
+            .where(ApplicationStatusEvent.application_id == app.id)
+            .order_by(ApplicationStatusEvent.created_at)
+        )
+    ).scalars().all()
+    staff = await _reviewers(db, {e.actor_id or "" for e in events if e.actor_type == "STAFF"})
+    out = []
+    for event in events:
+        row = EventOut.model_validate(event, from_attributes=True).model_dump()
+        user = staff.get(event.actor_id or "") if event.actor_type == "STAFF" else None
+        row["actor_name"] = (user.name or user.email) if user else None
+        out.append(row)
+    return out
+
+
 async def _documents_payload(db: AsyncSession, app: Application, scheme: Scheme | None) -> list[dict[str, Any]]:
     docs = sorted(app.documents, key=lambda d: (d.document_type_code, d.revision))
     ocr = await review.latest_ocr_for(db, [d.id for d in docs])
@@ -295,14 +314,6 @@ async def get_application(
     scheme = await scheme_service.get_scheme_by_id(db, user.tenant_id, app.scheme_id)
     reviewers = await _reviewers(db, {app.assigned_reviewer_id or ""})
 
-    events = (
-        await db.execute(
-            select(ApplicationStatusEvent)
-            .where(ApplicationStatusEvent.application_id == app.id)
-            .order_by(ApplicationStatusEvent.created_at)
-        )
-    ).scalars().all()
-
     findings = await _findings_payload(db, app)
     rules = [review.rule_spec(r) for r in sorted(scheme.review_rules, key=lambda r: (r.sort_order, r.code))]
     latest = await review.latest_findings(db, app)
@@ -325,11 +336,12 @@ async def get_application(
         required_document_types=scheme_service.required_document_types(
             scheme, app.tier_code, app.payment_channel_code, app.paid_by_proxy
         ),
+        scheme_settings=scheme_service.scheme_settings_view(scheme),  # type: ignore[arg-type]
         allowed_transitions=_transitions_for(user, app),  # type: ignore[arg-type]
         approval_blockers=await review.blockers_for(db, app),  # type: ignore[arg-type]
         rules=[r.to_public() for r in rules],
         documents=await _documents_payload(db, app, scheme),  # type: ignore[arg-type]
-        events=[EventOut.model_validate(e, from_attributes=True) for e in events],
+        events=await _events_payload(db, app),  # type: ignore[arg-type]
         findings=findings,  # type: ignore[arg-type]
     )
 
@@ -480,24 +492,15 @@ async def post_transition(
         return JSONResponse(status_code=409, content={"code": TRANSITION_NOT_ALLOWED, "blockers": blockers,
                                                       "message": str(err.detail)})
 
-    events = (
-        await db.execute(
-            select(ApplicationStatusEvent)
-            .where(ApplicationStatusEvent.application_id == app.id)
-            .order_by(ApplicationStatusEvent.created_at)
-        )
-    ).scalars().all()
+    events = await _events_payload(db, app)
     latest = events[-1]
     await audit.log(
         db, Actor.staff(user), "transition", "application", app.case_no,
-        {"code": body.code, "from": latest.from_status, "to": latest.to_status},
+        {"code": body.code, "from": latest["from_status"], "to": latest["to_status"]},
         tenant_id=user.tenant_id,
     )
     await db.commit()
-    return TransitionResultOut(
-        status=app.status,
-        events=[EventOut.model_validate(e, from_attributes=True) for e in events],
-    )
+    return TransitionResultOut(status=app.status, events=events)  # type: ignore[arg-type]
 
 
 @router.post("/{case_no}/assign", response_model=AssignOut)

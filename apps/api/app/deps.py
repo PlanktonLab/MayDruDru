@@ -40,6 +40,16 @@ def has_cap(role: str, cap: str) -> bool:
     return cap in ROLE_CAPS.get(role, frozenset())
 
 
+def roles_with_any_cap(*caps: str) -> list[str]:
+    """帶得到這幾個 capability 之一的角色。
+
+    授權以 capability 為準（D14），所以「誰可以被指派案件」也從 capability 反推，
+    而不是把角色名單硬寫進查詢裡——新增一個角色時不必記得回來改這一行。
+    """
+    wanted = set(caps)
+    return sorted(role for role, granted in ROLE_CAPS.items() if granted & wanted)
+
+
 @dataclass
 class CurrentUser:
     id: str

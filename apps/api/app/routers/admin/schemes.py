@@ -16,7 +16,7 @@ from ...deps import CurrentUser, require_cap
 from ...services import audit
 from ...services import scheme as scheme_service
 from ...services.actors import Actor
-from .schemas import ChildIn, SchemeIn, SchemeOut, SchemePatch
+from .schemas import ChildIn, SchemeIn, SchemeOut, SchemePatch, SchemeSettingsOut
 
 router = APIRouter(prefix="/api/admin/schemes", tags=["admin-schemes"])
 
@@ -70,6 +70,21 @@ async def get_scheme(
     view["review_rules"] = [_child_out(r) for r in sorted(scheme.review_rules, key=lambda r: (r.sort_order, r.code))]
     view["rejection_codes"] = [_child_out(r) for r in sorted(scheme.rejection_codes, key=lambda r: (r.sort_order, r.code))]
     return view
+
+
+@router.get("/{code}/settings", response_model=SchemeSettingsOut)
+async def get_scheme_settings(
+    code: str,
+    user: CurrentUser = Depends(require_cap("case_review")),
+    db: AsyncSession = Depends(get_db),
+) -> SchemeSettingsOut:
+    """案件頁要的方案設定：退件碼（含 `staff_label`）、文件類型、管道、級距、天數。
+
+    要 `case_review` 而不是 `admin`——承辦人不能改方案，但看不到退件碼的內部說法就
+    沒辦法退件。必須排在 `/{code}/{kind}` 之前，否則 `settings` 會被當成子設定表。
+    """
+    scheme = await scheme_service.get_scheme(db, user.tenant_id, code)
+    return SchemeSettingsOut.model_validate(scheme_service.scheme_settings_view(scheme))
 
 
 @router.patch("/{code}", response_model=SchemeOut)

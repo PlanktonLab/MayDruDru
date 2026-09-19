@@ -6,6 +6,6 @@
 
 from __future__ import annotations
 
-from . import applications, schemes
+from . import applications, reviewers, schemes
 
-__all__ = ["applications", "schemes"]
+__all__ = ["applications", "reviewers", "schemes"]

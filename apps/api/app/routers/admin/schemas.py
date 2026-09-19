@@ -18,6 +18,7 @@ __all__ = [
     "AssignOut",
     "ChildIn",
     "DocumentOut",
+    "DocumentTypeSettingOut",
     "DocumentUrlOut",
     "EvaluateOut",
     "EventOut",
@@ -25,12 +26,17 @@ __all__ = [
     "FindingOverrideIn",
     "FindingsOut",
     "OcrIn",
+    "PaymentChannelSettingOut",
     "QueueOut",
+    "RejectionCodeSettingOut",
     "ReviewerOut",
     "SchemeIn",
     "SchemeOut",
     "SchemePatch",
+    "SchemeSettingsOut",
+    "StaffOut",
     "SupplementItemIn",
+    "TierSettingOut",
     "TransitionIn",
     "TransitionResultOut",
 ]
@@ -119,6 +125,80 @@ class SchemeOut(BaseModel):
     supplement_days: int
     max_revisions: int
     updated_at: datetime | None = None
+
+
+class TierSettingOut(BaseModel):
+    code: str
+    label: str = ""
+    subsidy_rate: float = 0.0
+    cap_amount: int = 0
+    required_proof_doc_types: list[str] = Field(default_factory=list)
+    sort_order: int = 0
+
+
+class DocumentTypeSettingOut(BaseModel):
+    code: str
+    label: str = ""
+    hint: str = ""
+    required: bool = False
+    required_when: str = ""
+    must_mask: bool = False
+    keep_visible: str = ""
+    keep_after_disbursed: bool = False
+    accepted_mime: list[str] = Field(default_factory=list)
+    max_pages: int = 5
+    sort_order: int = 0
+
+
+class PaymentChannelSettingOut(BaseModel):
+    code: str
+    label: str = ""
+    hint: str = ""
+    required_document_type_codes: list[str] = Field(default_factory=list)
+    guide_content_key: str = ""
+    sort_order: int = 0
+
+
+class RejectionCodeSettingOut(BaseModel):
+    """退件碼的後台形狀：比公開檢視多一個 `staff_label`。
+
+    承辦人在決策列上選的是機關內部的說法，市民收到的是 `public_what_wrong` 與
+    `public_how_to_fix`——同一份清單，兩段不同的字。
+    """
+
+    code: str
+    staff_label: str = ""
+    public_what_wrong: str = ""
+    public_how_to_fix: str = ""
+    related_document_type_codes: list[str] = Field(default_factory=list)
+    related_sop_flow_ids: list[str] = Field(default_factory=list)
+
+
+class SchemeSettingsOut(BaseModel):
+    """案件頁組表單要的方案設定（`GET /api/admin/schemes/{code}/settings`）。
+
+    也直接內嵌在 `ApplicationDetailOut.scheme_settings`：案件頁開一次就夠，不用為了
+    一份退件碼清單再打一支 API。
+    """
+
+    code: str
+    name: str = ""
+    supplement_days: int = 14
+    max_revisions: int = 3
+    retention_days: int = 90
+    tiers: list[TierSettingOut] = Field(default_factory=list)
+    document_types: list[DocumentTypeSettingOut] = Field(default_factory=list)
+    payment_channels: list[PaymentChannelSettingOut] = Field(default_factory=list)
+    rejection_codes: list[RejectionCodeSettingOut] = Field(default_factory=list)
+
+
+class StaffOut(BaseModel):
+    """`GET /api/admin/reviewers` 的一列：可以被指派案件的人。"""
+
+    id: str
+    name: str = ""
+    email: str = ""
+    role: str = ""
 
 
 class SupplementItemIn(BaseModel):
@@ -212,6 +292,9 @@ class EventOut(BaseModel):
     transition_code: str
     actor_type: str
     actor_id: str | None
+    # STAFF 才有名字；APPLICANT 與 SYSTEM 一律 null——時間軸上寫「由系統」是前端的事，
+    # 這裡不替不存在的人編一個名字出來。
+    actor_name: str | None = None
     reason: str
     rejection_codes: list[str]
     payload: dict[str, Any]
@@ -311,6 +394,9 @@ class ApplicationDetailOut(ApplicationOut):
     documents_purge_at: datetime | None
     supplement_items: list[dict[str, Any]]
     required_document_types: list[str]
+    # 案件頁的補件／退件表單要照方案設定長出來，所以設定跟著案件一起給——
+    # 否則每開一件案子就得多打一支 `/api/admin/schemes/{code}/settings`。
+    scheme_settings: SchemeSettingsOut
     allowed_transitions: list[AllowedTransitionOut]
     approval_blockers: list[BlockerOut]
     rules: list[dict[str, Any]]

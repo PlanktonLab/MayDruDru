@@ -26,6 +26,7 @@ from .routers import (
     variants,
 )
 from .routers.admin import applications as admin_applications
+from .routers.admin import reviewers as admin_reviewers
 from .routers.admin import schemes as admin_schemes
 from .security import hash_password
 
@@ -83,7 +84,7 @@ def create_app() -> FastAPI:
     app = FastAPI(title=s.app_name, version="0.1.0", lifespan=lifespan)
     app.add_middleware(CORSMiddleware, allow_origins=s.cors_origins, allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
     for r in (auth, tenant, catalog_admin, components, flows, variants, playground, evals, dashboard,
-              admin_schemes, admin_applications, public_api, media):
+              admin_schemes, admin_applications, admin_reviewers, public_api, media):
         app.include_router(r.router)
     app.include_router(apply.router)  # P3 送件與審核：市民匿名端點（SPEC §8.1）
 

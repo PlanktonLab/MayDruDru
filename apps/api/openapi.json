@@ -542,6 +542,9 @@
             "title": "Scheme Name",
             "type": "string"
           },
+          "scheme_settings": {
+            "$ref": "#/components/schemas/SchemeSettingsOut"
+          },
           "status": {
             "title": "Status",
             "type": "string"
@@ -618,6 +621,7 @@
           "documents_purge_at",
           "supplement_items",
           "required_document_types",
+          "scheme_settings",
           "allowed_transitions",
           "approval_blockers",
           "rules",
@@ -1428,6 +1432,17 @@
             ],
             "title": "Last Submitted At"
           },
+          "next_action": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Action"
+          },
           "payment_date": {
             "anyOf": [
               {
@@ -1439,6 +1454,17 @@
               }
             ],
             "title": "Payment Date"
+          },
+          "public_label_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Public Label Key"
           },
           "purchase_amount": {
             "anyOf": [
@@ -1895,6 +1921,71 @@
         "title": "DocumentOut",
         "type": "object"
       },
+      "DocumentTypeSettingOut": {
+        "properties": {
+          "accepted_mime": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Accepted Mime",
+            "type": "array"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "hint": {
+            "default": "",
+            "title": "Hint",
+            "type": "string"
+          },
+          "keep_after_disbursed": {
+            "default": false,
+            "title": "Keep After Disbursed",
+            "type": "boolean"
+          },
+          "keep_visible": {
+            "default": "",
+            "title": "Keep Visible",
+            "type": "string"
+          },
+          "label": {
+            "default": "",
+            "title": "Label",
+            "type": "string"
+          },
+          "max_pages": {
+            "default": 5,
+            "title": "Max Pages",
+            "type": "integer"
+          },
+          "must_mask": {
+            "default": false,
+            "title": "Must Mask",
+            "type": "boolean"
+          },
+          "required": {
+            "default": false,
+            "title": "Required",
+            "type": "boolean"
+          },
+          "required_when": {
+            "default": "",
+            "title": "Required When",
+            "type": "string"
+          },
+          "sort_order": {
+            "default": 0,
+            "title": "Sort Order",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "title": "DocumentTypeSettingOut",
+        "type": "object"
+      },
       "DocumentUrlOut": {
         "description": "private bucket 的短效連結（SPEC §11：5 分鐘）。",
         "properties": {
@@ -2190,6 +2281,17 @@
               }
             ],
             "title": "Actor Id"
+          },
+          "actor_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actor Name"
           },
           "actor_type": {
             "title": "Actor Type",
@@ -3639,6 +3741,46 @@
         "title": "OcrOut",
         "type": "object"
       },
+      "PaymentChannelSettingOut": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "guide_content_key": {
+            "default": "",
+            "title": "Guide Content Key",
+            "type": "string"
+          },
+          "hint": {
+            "default": "",
+            "title": "Hint",
+            "type": "string"
+          },
+          "label": {
+            "default": "",
+            "title": "Label",
+            "type": "string"
+          },
+          "required_document_type_codes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Required Document Type Codes",
+            "type": "array"
+          },
+          "sort_order": {
+            "default": 0,
+            "title": "Sort Order",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "title": "PaymentChannelSettingOut",
+        "type": "object"
+      },
       "PlatformIn": {
         "properties": {
           "aliases": {
@@ -4026,6 +4168,49 @@
           "items"
         ],
         "title": "QueueOut",
+        "type": "object"
+      },
+      "RejectionCodeSettingOut": {
+        "description": "退件碼的後台形狀：比公開檢視多一個 `staff_label`。\n\n承辦人在決策列上選的是機關內部的說法，市民收到的是 `public_what_wrong` 與\n`public_how_to_fix`——同一份清單，兩段不同的字。",
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "public_how_to_fix": {
+            "default": "",
+            "title": "Public How To Fix",
+            "type": "string"
+          },
+          "public_what_wrong": {
+            "default": "",
+            "title": "Public What Wrong",
+            "type": "string"
+          },
+          "related_document_type_codes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Related Document Type Codes",
+            "type": "array"
+          },
+          "related_sop_flow_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Related Sop Flow Ids",
+            "type": "array"
+          },
+          "staff_label": {
+            "default": "",
+            "title": "Staff Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "title": "RejectionCodeSettingOut",
         "type": "object"
       },
       "RenderCardsOut": {
@@ -4679,6 +4864,68 @@
         "title": "SchemePatch",
         "type": "object"
       },
+      "SchemeSettingsOut": {
+        "description": "案件頁組表單要的方案設定（`GET /api/admin/schemes/{code}/settings`）。\n\n也直接內嵌在 `ApplicationDetailOut.scheme_settings`：案件頁開一次就夠，不用為了\n一份退件碼清單再打一支 API。",
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "document_types": {
+            "items": {
+              "$ref": "#/components/schemas/DocumentTypeSettingOut"
+            },
+            "title": "Document Types",
+            "type": "array"
+          },
+          "max_revisions": {
+            "default": 3,
+            "title": "Max Revisions",
+            "type": "integer"
+          },
+          "name": {
+            "default": "",
+            "title": "Name",
+            "type": "string"
+          },
+          "payment_channels": {
+            "items": {
+              "$ref": "#/components/schemas/PaymentChannelSettingOut"
+            },
+            "title": "Payment Channels",
+            "type": "array"
+          },
+          "rejection_codes": {
+            "items": {
+              "$ref": "#/components/schemas/RejectionCodeSettingOut"
+            },
+            "title": "Rejection Codes",
+            "type": "array"
+          },
+          "retention_days": {
+            "default": 90,
+            "title": "Retention Days",
+            "type": "integer"
+          },
+          "supplement_days": {
+            "default": 14,
+            "title": "Supplement Days",
+            "type": "integer"
+          },
+          "tiers": {
+            "items": {
+              "$ref": "#/components/schemas/TierSettingOut"
+            },
+            "title": "Tiers",
+            "type": "array"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "title": "SchemeSettingsOut",
+        "type": "object"
+      },
       "SchemeSummaryOut": {
         "properties": {
           "active": {
@@ -4833,6 +5080,35 @@
           "external_user_id"
         ],
         "title": "SessionCreate",
+        "type": "object"
+      },
+      "StaffOut": {
+        "description": "`GET /api/admin/reviewers` 的一列：可以被指派案件的人。",
+        "properties": {
+          "email": {
+            "default": "",
+            "title": "Email",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "default": "",
+            "title": "Name",
+            "type": "string"
+          },
+          "role": {
+            "default": "",
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "StaffOut",
         "type": "object"
       },
       "StepCardLayout": {
@@ -5446,6 +5722,46 @@
           "text"
         ],
         "title": "TextIn",
+        "type": "object"
+      },
+      "TierSettingOut": {
+        "properties": {
+          "cap_amount": {
+            "default": 0,
+            "title": "Cap Amount",
+            "type": "integer"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "label": {
+            "default": "",
+            "title": "Label",
+            "type": "string"
+          },
+          "required_proof_doc_types": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Required Proof Doc Types",
+            "type": "array"
+          },
+          "sort_order": {
+            "default": 0,
+            "title": "Sort Order",
+            "type": "integer"
+          },
+          "subsidy_rate": {
+            "default": 0.0,
+            "title": "Subsidy Rate",
+            "type": "number"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "title": "TierSettingOut",
         "type": "object"
       },
       "TokenOut": {
@@ -6866,6 +7182,32 @@
         ]
       }
     },
+    "/api/admin/reviewers": {
+      "get": {
+        "description": "指派選單的選項。停用的帳號不出現——停用就是「不要再派給他」。",
+        "operationId": "list_reviewers_api_admin_reviewers_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/StaffOut"
+                  },
+                  "title": "Response List Reviewers Api Admin Reviewers Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Reviewers",
+        "tags": [
+          "admin-applications"
+        ]
+      }
+    },
     "/api/admin/schemes": {
       "get": {
         "operationId": "list_schemes_api_admin_schemes_get",
@@ -7077,6 +7419,49 @@
           }
         },
         "summary": "Patch Scheme",
+        "tags": [
+          "admin-schemes"
+        ]
+      }
+    },
+    "/api/admin/schemes/{code}/settings": {
+      "get": {
+        "description": "案件頁要的方案設定：退件碼（含 `staff_label`）、文件類型、管道、級距、天數。\n\n要 `case_review` 而不是 `admin`——承辦人不能改方案，但看不到退件碼的內部說法就\n沒辦法退件。必須排在 `/{code}/{kind}` 之前，否則 `settings` 會被當成子設定表。",
+        "operationId": "get_scheme_settings_api_admin_schemes__code__settings_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchemeSettingsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Scheme Settings",
         "tags": [
           "admin-schemes"
         ]
@@ -7505,7 +7890,7 @@
     },
     "/api/apply/applications/{case_no}": {
       "get": {
-        "description": "市民看得到的案件：時間軸、補件項目、目前版本的文件清單。沒有承辦人資訊。",
+        "description": "市民看得到的案件：時間軸、補件項目、目前版本的文件清單。沒有承辦人資訊。\n\n`public_label_key` 與 `next_action` 給的是 `contents` 的 key，不是句子——這支\nrouter 不組任何中文文案（CLAUDE.md 規則 4）。",
         "operationId": "get_case_api_apply_applications__case_no__get",
         "parameters": [
           {

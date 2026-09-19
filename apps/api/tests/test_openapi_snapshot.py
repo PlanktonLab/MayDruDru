@@ -66,6 +66,8 @@ def test_the_snapshot_is_up_to_date(spec):
     "/api/admin/applications/{case_no}/findings/{rule_code}",
     "/api/admin/applications/{case_no}/transitions",
     "/api/admin/applications/{case_no}/assign",
+    "/api/admin/schemes/{code}/settings",
+    "/api/admin/reviewers",
 ])
 def test_every_p3_endpoint_is_in_the_schema(spec, path):
     assert path in spec["paths"]
@@ -79,5 +81,11 @@ def test_the_submit_endpoint_is_multipart(spec):
 def test_the_case_detail_response_carries_the_contract_fields(spec):
     schema = spec["components"]["schemas"]["ApplicationDetailOut"]["properties"]
     for field in ("findings", "rules", "allowed_transitions", "approval_blockers", "documents",
-                  "events", "verdict", "version"):
+                  "events", "verdict", "version", "scheme_code", "scheme_settings"):
         assert field in schema, field
+
+
+def test_the_public_case_carries_the_content_keys(spec):
+    """市民端的狀態文案走 contents：API 給 key，不給句子（CLAUDE.md 規則 4）。"""
+    schema = spec["components"]["schemas"]["CasePublicOut"]["properties"]
+    assert "next_action" in schema and "public_label_key" in schema

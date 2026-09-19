@@ -179,6 +179,10 @@ class CasePublicOut(BaseModel):
     case_no: str
     scheme: CaseSchemeOut
     status: str
+    # 文案 key 而不是句子（CLAUDE.md 規則 4）：狀態的市民用語與「現在換你做什麼」都
+    # 存在 `contents`，由前端的 contents 層渲染；contents 還沒上線時前端有備援對照表。
+    public_label_key: str | None = None
+    next_action: str | None = None
     first_submitted_at: datetime | None = None
     last_submitted_at: datetime | None = None
     revision_count: int

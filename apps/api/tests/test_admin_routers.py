@@ -89,6 +89,87 @@ async def test_an_unknown_child_kind_is_a_404(client, auth_headers, scheme):
     assert r.status_code == 404
 
 
+# --------------------------------------------------------- 方案設定（案件頁）
+
+@pytest.fixture
+async def rejection_codes(db, tenant, scheme):
+    from app.models import RejectionCode
+
+    db.add_all([
+        RejectionCode(tenant_id=tenant.id, scheme_id=scheme.id, code="BILLING_NO_TWD",
+                      staff_label="帳單未顯示臺幣金額", public_what_wrong="帳單上看不到臺幣金額",
+                      public_how_to_fix="請改上傳有臺幣金額的那一頁。",
+                      related_document_type_codes=["BILLING_STATEMENT"], sort_order=1),
+        RejectionCode(tenant_id=tenant.id, scheme_id=scheme.id, code="RETIRED", active=False, sort_order=9),
+    ])
+    await db.commit()
+    await db.refresh(scheme)
+    return scheme
+
+
+async def test_scheme_settings_give_the_reviewer_the_staff_label(client, auth_headers, rejection_codes, scheme):
+    r = await client.get(f"{SCHEMES}/{scheme.code}/settings", headers=auth_headers("case_reviewer"))
+    assert r.status_code == 200
+    body = r.json()
+    assert [c["code"] for c in body["rejection_codes"]] == ["BILLING_NO_TWD"]
+    assert body["rejection_codes"][0]["staff_label"] == "帳單未顯示臺幣金額"
+    assert body["rejection_codes"][0]["related_sop_flow_ids"] == []
+    assert [d["code"] for d in body["document_types"]][0] == "ID_CARD_FRONT"
+    assert body["supplement_days"] == 14 and body["max_revisions"] == 2 and body["retention_days"] == 90
+    assert [t["code"] for t in body["tiers"]] == ["GENERAL", "LOW_INCOME"]
+    assert [c["code"] for c in body["payment_channels"]] == ["CREDIT_CARD", "TELECOM"]
+
+
+async def test_scheme_settings_are_not_shadowed_by_the_child_resource_route(client, auth_headers, scheme):
+    """`settings` 不是子設定表：路由順序錯掉的話這裡會拿到 404 或 403。"""
+    r = await client.get(f"{SCHEMES}/{scheme.code}/settings", headers=auth_headers("case_reviewer"))
+    assert r.status_code == 200 and "rejection_codes" in r.json()
+
+
+@pytest.mark.parametrize("role", ["viewer", "sop_editor", "sop_reviewer"])
+async def test_scheme_settings_need_the_case_review_capability(client, auth_headers, scheme, role):
+    assert (await client.get(f"{SCHEMES}/{scheme.code}/settings", headers=auth_headers(role))).status_code == 403
+
+
+async def test_unknown_scheme_settings_are_a_404(client, auth_headers):
+    assert (await client.get(f"{SCHEMES}/NOPE/settings", headers=auth_headers("case_reviewer"))).status_code == 404
+
+
+# ------------------------------------------------------------- 可指派名單
+
+REVIEWERS = "/api/admin/reviewers"
+
+
+async def test_the_reviewer_list_is_everyone_who_can_actually_review(client, auth_headers, users):
+    body = (await client.get(REVIEWERS, headers=auth_headers("case_reviewer"))).json()
+    assert {u["role"] for u in body} == {"case_reviewer", "case_supervisor", "admin", "owner"}
+    assert all(u["id"] and u["email"] and u["name"] for u in body)
+
+
+async def test_deactivated_accounts_drop_off_the_reviewer_list(client, auth_headers, db, users):
+    users["case_reviewer"].is_active = False
+    await db.commit()
+    body = (await client.get(REVIEWERS, headers=auth_headers("case_supervisor"))).json()
+    assert "case_reviewer" not in {u["role"] for u in body}
+
+
+async def test_the_reviewer_list_is_scoped_to_the_tenant(client, auth_headers, db, users):
+    from app.models import Tenant, User
+
+    db.add(Tenant(id="o" * 32, name="別的機關", slug="other"))
+    await db.flush()
+    db.add(User(id="x" * 32, tenant_id="o" * 32, email="other@example.gov.tw",
+                name="別人", role="case_reviewer", password_hash="x"))
+    await db.commit()
+    body = (await client.get(REVIEWERS, headers=auth_headers("case_reviewer"))).json()
+    assert "x" * 32 not in {u["id"] for u in body}
+
+
+@pytest.mark.parametrize("role", ["viewer", "sop_editor", "sop_reviewer"])
+async def test_the_reviewer_list_needs_the_case_review_capability(client, auth_headers, role):
+    assert (await client.get(REVIEWERS, headers=auth_headers(role))).status_code == 403
+
+
 # ----------------------------------------------------------------- 佇列
 
 async def test_queue_is_ordered_by_first_submission(client, auth_headers, db, tenant, scheme):
@@ -135,6 +216,41 @@ async def test_case_detail_carries_documents_events_and_next_actions(client, aut
     assert [e["transition_code"] for e in body["events"]] == ["T0", "T1"]
     assert body["required_document_types"] == ["ID_CARD_FRONT", "BILLING_STATEMENT"]
     assert body["phone_masked"] == "******5678"
+
+
+async def test_case_detail_embeds_the_scheme_settings(client, auth_headers, db, tenant, scheme, rejection_codes):
+    """案件頁要組補件表單，設定就跟著案件一起給——不用再打第二支 API。"""
+    app = await make_case(db, tenant, scheme)
+    body = (await client.get(f"{CASES}/{app.case_no}", headers=auth_headers("case_reviewer"))).json()
+    assert body["scheme_code"] == "TEST115"
+    settings = body["scheme_settings"]
+    assert settings["code"] == "TEST115"
+    assert [c["staff_label"] for c in settings["rejection_codes"]] == ["帳單未顯示臺幣金額"]
+    assert settings["supplement_days"] == 14
+    assert {d["code"] for d in settings["document_types"]} >= {"ID_CARD_FRONT", "BILLING_STATEMENT"}
+
+
+async def test_the_timeline_names_the_staff_member_who_acted(client, auth_headers, db, tenant, scheme, users):
+    app = await make_case(db, tenant, scheme)
+    posted = await client.post(f"{CASES}/{app.case_no}/transitions", json={"code": "T3"},
+                               headers=auth_headers("case_supervisor"))
+    assert posted.status_code == 201
+
+    body = (await client.get(f"{CASES}/{app.case_no}", headers=auth_headers("case_supervisor"))).json()
+    by_code = {e["transition_code"]: e for e in body["events"]}
+    assert by_code["T3"]["actor_type"] == "STAFF"
+    assert by_code["T3"]["actor_name"] == users["case_supervisor"].name
+    # 系統與市民沒有名字，也不該被編一個出來。
+    assert by_code["T1"]["actor_type"] == "SYSTEM" and by_code["T1"]["actor_name"] is None
+    assert posted.json()["events"][-1]["actor_name"] == users["case_supervisor"].name
+
+
+async def test_an_applicant_event_has_no_actor_name(client, auth_headers, db, tenant, scheme):
+    app = await make_case(db, tenant, scheme)
+    await drive(db, app, "T10")  # 市民自行撤回
+    body = (await client.get(f"{CASES}/{app.case_no}", headers=auth_headers("case_reviewer"))).json()
+    withdrawn = next(e for e in body["events"] if e["transition_code"] == "T10")
+    assert withdrawn["actor_type"] == "APPLICANT" and withdrawn["actor_name"] is None
 
 
 async def test_available_transitions_depend_on_the_viewers_capabilities(client, auth_headers, db, tenant, scheme):
