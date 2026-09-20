@@ -2,7 +2,7 @@
 
     uv run --package maydru-api python scripts/seed.py
 
-冪等：跑第二次只會更新變動的欄位，不會複製出第二份方案，也不會多出五筆示範案件。
+冪等：跑第二次只會更新變動的欄位，不會複製出第二份方案，也不會多出六筆示範案件。
 判斷「已經有了」一律用自然鍵（方案用 code、子表用 scheme_id + code、案件用 case_no），
 因為 id 是隨機的，重跑一次就不一樣。
 

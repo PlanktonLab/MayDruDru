@@ -121,7 +121,21 @@ CASE_NO_PATTERN = re.compile(r"\b([A-Z]{2}-\d{4}-\d{6}|\d{8})\b", re.IGNORECASE)
 PHONE_PATTERN = re.compile(r"\b(09\d{8}|8869\d{8}|\+886-?9\d{8})\b")
 # 送件完成頁的 LINE deep link：`?case=HC-2026-000123` 或直接貼 `case=HC-…`。
 DEEP_LINK_PATTERN = re.compile(r"case=([A-Za-z]{2}-\d{4}-\d{6}|\d{8})", re.IGNORECASE)
-LAST4_PATTERN = re.compile(r"^\s*(\d{4})\s*$")
+_PHONE_SEPARATORS = re.compile(r"[\s()\-]")
+
+
+def normalize_case_phone(value: str) -> str | None:
+    """案件驗證接受罐頭訊息要求的完整手機，也保留只輸入末四碼的快速路徑。
+
+    LINE 使用者常直接貼 `0912-345-678` 或 `+886 912 345 678`；驗證服務本來就只
+    比對末四碼的加鹽 hash，因此這裡只負責先確認輸入確實是臺灣手機格式，再取末四碼。
+    """
+    compact = _PHONE_SEPARATORS.sub("", (value or "").strip())
+    if re.fullmatch(r"\d{4}", compact):
+        return compact
+    if re.fullmatch(r"09\d{8}", compact) or re.fullmatch(r"\+?8869\d{8}", compact):
+        return compact[-4:]
+    return None
 
 _MAX_SCORE = 6.0
 

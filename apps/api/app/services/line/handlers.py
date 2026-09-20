@@ -680,8 +680,8 @@ async def _verify_step(ctx: _Context, state: conversation.State, text: str) -> l
         return await _start_last4(ctx, case_no)
 
     if state.step == STEP_LAST4:
-        last4 = text.strip()
-        if not intent_rules.LAST4_PATTERN.match(last4):
+        last4 = intent_rules.normalize_case_phone(text)
+        if last4 is None:
             return await ctx.say("error.invalid_phone")
         return await _verify(ctx, str(state.value("case_no", "")), last4)
 

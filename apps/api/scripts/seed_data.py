@@ -345,9 +345,18 @@ OTHER_SCHEMES: list[dict[str, Any]] = [
      "age_max": 39, "application_end": "2026-12-31", "residency_requirement": "新竹市"},
 ]
 
-# 五筆示範案件，每個狀態一筆。資料全是假的；文件列指向不存在的 object key，
+# 六筆示範案件；`20260001` 專供 LINE Demo 綁定與推播，其餘每個狀態一筆。
+# 資料全是假的；文件列指向不存在的 object key，
 # 預覽一律 null，所以後台看得到案件結構但不會有任何真實影像（CLAUDE.md 規則 9）。
 DEMO_CASES: list[dict[str, Any]] = [
+    {
+        "case_no": "20260001", "status": "UNDER_REVIEW", "days_ago": 3,
+        "applicant_name": "示範用小明", "phone": "0912345678", "id_number": "A123456789",
+        "tier_code": "GENERAL", "payment_channel_code": "CREDIT_CARD",
+        "tool_name": "ChatGPT Plus", "purchase_amount": 6000, "purchase_date": "2026-08-15",
+        "documents": ["ID_CARD_FRONT", "ID_CARD_BACK", "OFFICIAL_RECEIPT", "CARD_LAST4_PHOTO",
+                      "BILLING_STATEMENT", "BANKBOOK_COVER", "AFFIDAVIT"],
+    },
     {
         "case_no": "HC-2026-900001", "status": "SUBMITTED", "days_ago": 1,
         "applicant_name": "示範用小明", "phone": "0900000001", "id_number": "A100000001",

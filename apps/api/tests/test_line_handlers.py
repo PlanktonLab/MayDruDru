@@ -457,6 +457,21 @@ async def test_the_happy_path_binds_the_case_and_shows_the_timeline(db, tenant, 
     assert (await conversation.get(db, tenant.id, USER)).is_idle
 
 
+@pytest.mark.parametrize("phone", ["0912345678", "0912-345-678", "+886 912 345 678", "5678"])
+async def test_case_verification_accepts_the_phone_formats_shown_in_canned_messages(
+    db, tenant, scheme, fake_redis, phone
+):
+    app = await make_case(db, tenant, scheme)
+    await reply(db, tenant, postback_event("case_status"))
+    await reply(db, tenant, text_event(app.case_no))
+
+    messages = await reply(db, tenant, text_event(phone), redis=fake_redis)
+
+    assert messages[0]["type"] == "flex"
+    binding = (await db.execute(select(CaseVerification))).scalars().one()
+    assert binding.application_id == app.id and binding.line_user_id == USER
+
+
 async def test_verifying_twice_does_not_bind_twice(db, tenant, scheme, fake_redis):
     app = await make_case(db, tenant, scheme)
     for _ in range(2):
