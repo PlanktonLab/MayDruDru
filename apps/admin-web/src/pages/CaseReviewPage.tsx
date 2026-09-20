@@ -81,7 +81,7 @@ export default function CaseReviewPage() {
   const reviewers = useReviewers()
 
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null)
-  const [focus, setFocus] = useState<{ ruleCode: string; bbox: BoundingBox | null } | null>(null)
+  const [focus, setFocus] = useState<{ ruleCode: string; bbox: BoundingBox | null; key: number } | null>(null)
   const [recognising, setRecognising] = useState(false)
   const [recogniseProgress, setRecogniseProgress] = useState(0)
 
@@ -98,7 +98,11 @@ export default function CaseReviewPage() {
   const onLocate = useCallback(
     (finding: { rule_code: string; bbox: BoundingBox | null; document_id: string | null }) => {
       if (finding.document_id) setSelectedDocumentId(finding.document_id)
-      setFocus({ ruleCode: finding.rule_code, bbox: finding.bbox })
+      setFocus((current) => ({
+        ruleCode: finding.rule_code,
+        bbox: finding.bbox,
+        key: (current?.key ?? 0) + 1,
+      }))
     },
     [],
   )
@@ -253,6 +257,7 @@ export default function CaseReviewPage() {
             }}
             loadUrl={loadUrl}
             focusBbox={focus?.bbox ?? null}
+            focusKey={focus?.key ?? 0}
             findings={caseData.findings}
             onReRecognise={can('case_review') ? (doc) => void reRecognise(doc) : undefined}
             recognising={recognising}

@@ -71,14 +71,16 @@ export function createHandlers(options: MockOptions = {}): HttpHandler[] {
       return found ? HttpResponse.json(found) : HttpResponse.json({ code: 'CASE_NOT_FOUND' }, { status: 404 })
     }),
 
-    http.get('/api/admin/applications/:case_no/documents/:doc_id/url', () =>
-      HttpResponse.json({
-        // 1×1 透明 PNG：不打外部網路，也不放任何真實影像。
-        url:
-          'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+    http.get('/api/admin/applications/:case_no/documents/:doc_id/url', ({ params }) => {
+      const demoUrls: Record<string, string> = {
+        'doc-receipt': '/demo/receipt-demo.svg',
+        'doc-billing': '/demo/card-statement-demo.svg',
+      }
+      return HttpResponse.json({
+        url: demoUrls[String(params.doc_id)] ?? '/demo/receipt-demo.svg',
         expires_at: new Date(Date.now() + 5 * 60_000).toISOString(),
-      }),
-    ),
+      })
+    }),
 
     http.post('/api/admin/applications/:case_no/documents/:doc_id/ocr', async ({ params, request }) => {
       const found = cases[String(params.case_no)]

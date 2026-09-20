@@ -7,7 +7,7 @@ import CasesQueuePage from '../pages/CasesQueuePage'
 import CaseReviewPage, { mergePageOcr } from '../pages/CaseReviewPage'
 import { DecisionBar } from './DecisionBar'
 import { ComparePanel, compareAmounts } from './ComparePanel'
-import { clampZoom, toPercentBox } from './DocumentViewer'
+import { clampZoom, focusWorkspaceDocument, planDocumentWorkspace, toPercentBox } from './DocumentViewer'
 import { REVIEW_NOTE_FALLBACK, renderNote } from './reviewNotes'
 import { deadlineFromToday } from './labels'
 import { queueQueryString, DEFAULT_FILTERS } from './api'
@@ -66,8 +66,8 @@ describe('CasesQueuePage', () => {
 
   it('只顯示遮罩後的姓名', async () => {
     openQueue()
-    expect(await screen.findByText('王○明')).toBeTruthy()
-    expect(screen.queryByText('示範用王小明')).toBeNull()
+    expect(await screen.findByText('林○安')).toBeTruthy()
+    expect(screen.queryByText('示範用林小安')).toBeNull()
   })
 
   it('狀態篩選會縮小清單', async () => {
@@ -120,9 +120,18 @@ describe('CasesQueuePage', () => {
 })
 
 describe('CaseReviewPage', () => {
+  it('兩份目前版本文件可匯出成 3× 證據畫布', async () => {
+    openCase('HC-2026-900002')
+    const open = await screen.findByRole('button', { name: '檢視 官方收據' })
+    fireEvent.click(open)
+    expect(await screen.findByRole('tab', { name: /官方收據/ })).toBeTruthy()
+    expect(screen.getByRole('tab', { name: /信用卡帳單扣款紀錄/ })).toBeTruthy()
+    expect(screen.getByRole('button', { name: '匯出 3× 畫布' })).toBeTruthy()
+  })
+
   it('顯示完整申請資料與遮罩過的聯絡方式', async () => {
     openCase('HC-2026-900002')
-    expect(await screen.findByText('示範用王小明')).toBeTruthy()
+    expect(await screen.findByText('示範用林小安')).toBeTruthy()
     expect(screen.getByText('09**-***-678')).toBeTruthy()
   })
 
@@ -459,6 +468,37 @@ describe('文件檢視器的數學', () => {
   it('沒有尺寸時寧可不畫框', () => {
     expect(toPercentBox({ x0: 0, y0: 0, x1: 10, y1: 10 }, 0, 0)).toBeNull()
     expect(toPercentBox(null, 500, 500)).toBeNull()
+  })
+
+  it('目前版本文件會並排在同一張畫布', () => {
+    expect(planDocumentWorkspace([
+      { id: 'receipt', width: 1120, height: 1960 },
+      { id: 'billing', width: 900, height: 1760 },
+    ], 96)).toEqual({
+      width: 2116,
+      height: 2008,
+      placements: [
+        { id: 'receipt', width: 1120, height: 1960, x: 0, y: 0 },
+        { id: 'billing', width: 900, height: 1760, x: 1216, y: 100 },
+      ],
+    })
+  })
+
+  it('看文件會把 bbox 中央移到 viewport 中央並放大', () => {
+    const workspace = planDocumentWorkspace([
+      { id: 'receipt', width: 1120, height: 1960 },
+      { id: 'billing', width: 900, height: 1760 },
+    ])
+    const placement = workspace.placements[1]
+    const view = focusWorkspaceDocument(
+      workspace,
+      placement,
+      { width: 1000, height: 720 },
+      { x0: 54, y0: 870, x1: 846, y1: 1025 },
+    )
+    expect(view.zoom).toBeGreaterThan(0.4)
+    expect(view.pan.x).toBeLessThan(0)
+    expect(view.pan.y).toBeGreaterThan(-200)
   })
 
   it('多頁 PDF OCR 合併後會把第二頁座標往下移', () => {
