@@ -11,7 +11,9 @@ describe('Feature Demo 頁', () => {
 
     expect(screen.getByRole('heading', { name: /讓申請/ })).toBeTruthy()
     expect(screen.queryByLabelText('主要導覽')).toBeNull()
-    expect(screen.getByRole('heading', { name: '個資，留在你的手機。' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: '卡號，只留下需要的四碼。' })).toBeTruthy()
+    expect(screen.getByRole('img', { name: '無銀行 Logo 的示範信用卡' })).toBeTruthy()
+    expect(screen.getByRole('img', { name: 'MayDru LINE Bot 實際對話與圖文選單畫面' })).toBeTruthy()
     expect(screen.getByRole('heading', { name: '不是說明書。是下一步。' })).toBeTruthy()
     expect(screen.getByRole('heading', { name: '讓審核，只看真正重要的地方。' })).toBeTruthy()
     expect(screen.getByText(/讓審核人員更快掃描與核對/)).toBeTruthy()

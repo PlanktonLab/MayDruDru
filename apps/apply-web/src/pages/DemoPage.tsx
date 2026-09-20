@@ -27,9 +27,8 @@ import {
 const LINE_URL = 'https://line.me/R/ti/p/@811lqyrt'
 const FALLBACK_FLOW_ID = '__cathay-demo__'
 
-const ID_MASKS: MaskRect[] = [
-  { x: 0.105, y: 0.43, w: 0.43, h: 0.095, source: 'MANUAL' },
-  { x: 0.655, y: 0.79, w: 0.26, h: 0.1, source: 'MANUAL' },
+const CARD_MASKS: MaskRect[] = [
+  { x: 0.085, y: 0.465, w: 0.65, h: 0.135, source: 'MANUAL' },
 ]
 
 const FALLBACK_FLOW: SopFlow = {
@@ -133,15 +132,12 @@ function SectionHeading({ eyebrow, title, description }: {
   )
 }
 
-function MaskedIdPreview({ src }: { src: string | null }) {
+function MaskedCardPreview({ src }: { src: string | null }) {
   return (
-    <div className="demo-id-stage" aria-label="已遮蔽個資的示範身分證">
-      <img src={src ?? '/samples/id-front.jpg'} alt="示範用中華民國身分證" />
+    <div className="demo-card-stage" aria-label="卡號僅露出末四碼的示範信用卡">
+      <img src={src ?? '/demo/credit-card-generic.jpg'} alt="無銀行 Logo 的示範信用卡" />
       {!src && (
-        <>
-          <span className="demo-redaction demo-redaction-name" aria-hidden />
-          <span className="demo-redaction demo-redaction-number" aria-hidden />
-        </>
+        <span className="demo-redaction demo-redaction-card-number" aria-hidden />
       )}
       <span className="demo-local-badge"><LockKeyhole size={13} />只在手機處理</span>
     </div>
@@ -261,7 +257,7 @@ export default function DemoPage() {
   const openMaskEditor = async () => {
     setMaskError('')
     try {
-      setMaskSource(await loadCanvas('/samples/id-front.jpg'))
+      setMaskSource(await loadCanvas('/demo/credit-card-generic.jpg'))
     } catch (cause) {
       setMaskError(cause instanceof Error ? cause.message : '無法開啟遮罩編輯器')
     }
@@ -298,17 +294,17 @@ export default function DemoPage() {
 
         <div id="features">
           <section className="demo-feature demo-feature-privacy" id="privacy">
-            <SectionHeading eyebrow="01 — 資料去敏" title="個資，留在你的手機。"
-              description="上傳前先遮蔽敏感欄位；原圖不離開裝置，需要保留的資訊仍清楚可讀。" />
+            <SectionHeading eyebrow="01 — 資料去敏" title="卡號，只留下需要的四碼。"
+              description="上傳前先遮蔽信用卡號前 12 碼，只露出審核所需的末四碼；原圖不離開裝置。" />
             <div className="demo-privacy-grid">
               <div>
-                <MaskedIdPreview src={maskedPreview} />
-                <p className="demo-sample-note">示範證件與資料皆為虛構範例</p>
+                <MaskedCardPreview src={maskedPreview} />
+                <p className="demo-sample-note">無銀行 Logo 的測試卡；卡號與持卡人資料皆為示範資訊</p>
               </div>
               <div className="demo-feature-copy">
                 <span className="demo-icon-box"><ScanLine size={22} /></span>
-                <h3>遮罩位置，你可以決定。</h3>
-                <p>點一下進入手機版編輯器。拖曳遮罩、調整大小，再確認要送出的結果。</p>
+                <h3>前 12 碼遮蔽，末四碼可核對。</h3>
+                <p>點一下進入手機版編輯器。拖曳遮罩、調整大小，確認只有末四碼 5410 保持可見。</p>
                 <button className="demo-action-button" type="button" onClick={() => void openMaskEditor()}>
                   編輯遮罩位置 <ArrowRight size={17} />
                 </button>
@@ -366,16 +362,10 @@ export default function DemoPage() {
             <SectionHeading eyebrow="04 — LINE BOT" title="熟悉的聊天室，就是服務入口。"
               description="案件進度、補件提醒與 SOP 教學，都能在 LINE 裡接續，不必重新學一套介面。" />
             <div className="demo-line-grid">
-              <div className="demo-line-phone">
-                <header><span>‹</span><div><strong>MayDru 申請小幫手</strong><small>官方帳號</small></div><b>☰</b></header>
-                <div className="demo-line-chat">
-                  <p>今天</p>
-                  <div className="demo-line-row"><span className="demo-line-avatar">M</span><div>你的申請資料已收到！<br />目前進度：<strong>文件審查中</strong></div></div>
-                  <div className="demo-line-row"><span className="demo-line-avatar">M</span><div>如果需要信用卡消費紀錄，我可以一步一步帶你操作。</div></div>
-                  <div className="demo-line-card"><FileCheck2 size={28} /><p><strong>國泰世華消費明細教學</strong><span>完整 SOP · {Math.max(messages.length, 1)} 個步驟</span></p><ArrowRight size={18} /></div>
-                  <div className="demo-line-replies"><span>查看案件進度</span><span>取得文件教學</span></div>
-                </div>
-              </div>
+              <figure className="demo-line-proof">
+                <img src="/demo/line-bot-real.png" alt="MayDru LINE Bot 實際對話與圖文選單畫面" />
+                <figcaption><span>實際畫面</span>補件問答、快速選單與圖文選單</figcaption>
+              </figure>
               <div className="demo-feature-copy">
                 <span className="demo-line-logo">LINE</span>
                 <h3>現在就用真的帳號試試看。</h3>
@@ -412,8 +402,8 @@ export default function DemoPage() {
       )}
 
       {maskSource && (
-        <MaskEditor source={maskSource} mustMask={false} autoDetectCardNumber={false} initialMasks={ID_MASKS}
-          keepHint="保留證件類別；姓名與完整身分證字號請遮蔽"
+        <MaskEditor source={maskSource} mustMask autoDetectCardNumber={false} initialMasks={CARD_MASKS}
+          keepHint="信用卡號只保留末四碼 5410；其餘 12 碼請遮蔽"
           onCancel={() => setMaskSource(null)}
           onConfirm={(masked) => {
             setMaskedPreview(masked.toDataURL('image/jpeg', 0.9))
