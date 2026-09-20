@@ -115,6 +115,14 @@ export interface SopFlow {
   platform: SopPlatform | null
 }
 
+export interface SopCatalogFlow {
+  id: string
+  name: string
+  platform_id: string
+  goal_ids: string[]
+  status: string
+}
+
 export interface SopMessage {
   kind: 'image' | 'text'
   url?: string
@@ -143,6 +151,10 @@ export interface SopLocateResult {
 
 export const fetchSopPlatforms = () => getJson<SopPlatform[]>('/api/sop/catalog/platforms')
 export const fetchSopDocumentTypes = () => getJson<SopDocumentType[]>('/api/sop/catalog/document-types')
+export const fetchSopCatalogFlows = (platformId = '') => {
+  const suffix = platformId ? `?platform_id=${encodeURIComponent(platformId)}` : ''
+  return getJson<SopCatalogFlow[]>(`/api/sop/catalog/flows${suffix}`)
+}
 export const fetchSopFlows = (documentType: string, platformId = '', scheme = '', rejectionCode = '') => {
   const params = new URLSearchParams()
   if (platformId) params.set('platform_id', platformId)
