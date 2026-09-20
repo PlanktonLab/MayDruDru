@@ -173,7 +173,7 @@ const billingOcr = {
   engine: 'tesseract.js@6',
   confidence: 86,
   lines: [
-    { text: 'NIMBUS AI PRO 臺幣 6,000', confidence: 88, bbox: { x0: 54, y0: 540, x1: 846, y1: 735 }, words: [] },
+    { text: 'NIMBUS AI PRO 臺幣 6,000', confidence: 88, bbox: { x0: 54, y0: 870, x1: 846, y1: 1025 }, words: [] },
     { text: '卡號末四碼 7288', confidence: 84, bbox: { x0: 620, y0: 328, x1: 840, y1: 370 }, words: [] },
     { text: '入帳日 08/02', confidence: 87, bbox: { x0: 650, y0: 670, x1: 835, y1: 715 }, words: [] },
   ],
@@ -266,7 +266,7 @@ function baseCase(caseNo: string, overrides: Partial<CaseDetail>): CaseDetail {
       finding('BILLING_TWD_AMOUNT', 'MATCH', {
         extracted_value: '6000',
         confidence: 88,
-        bbox: { x0: 54, y0: 540, x1: 846, y1: 735 },
+        bbox: { x0: 54, y0: 870, x1: 846, y1: 1025 },
         document_type_code: 'BILLING_STATEMENT',
         document_id: 'doc-billing',
       }),

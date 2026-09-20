@@ -1,54 +1,72 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="1500" viewBox="0 0 1100 1500">
-  <rect width="1100" height="1500" fill="#f3f6fb"/>
-  <rect x="50" y="42" width="1000" height="1416" rx="28" fill="#ffffff" stroke="#d9e1ec" stroke-width="3"/>
-  <g font-family="-apple-system, BlinkMacSystemFont, 'Noto Sans TC', sans-serif" fill="#172033">
-    <text x="94" y="118" font-size="28" font-weight="700" fill="#2864dc">NIMBUS LABS</text>
-    <text x="94" y="154" font-size="17" fill="#748097">虛構示範商家 · DEMO DOCUMENT</text>
-    <text x="1006" y="122" font-size="30" font-weight="700" text-anchor="end">付款收據</text>
-    <text x="1006" y="158" font-size="16" fill="#748097" text-anchor="end">收據編號 DEMO-2026-0801-0001</text>
-
-    <line x1="94" y1="208" x2="1006" y2="208" stroke="#d9e1ec" stroke-width="2"/>
-    <text x="94" y="264" font-size="16" fill="#748097">收款方</text>
-    <text x="94" y="302" font-size="23" font-weight="650">範例雲端科技股份有限公司</text>
-    <text x="94" y="338" font-size="18">統一編號 00000000（示範）</text>
-    <text x="94" y="372" font-size="18">新竹市示範區資料路 100 號</text>
-    <text x="602" y="264" font-size="16" fill="#748097">付款人</text>
-    <text x="602" y="302" font-size="23" font-weight="650">示範用林小安</text>
-    <text x="602" y="338" font-size="18">demo.applicant@example.invalid</text>
-    <text x="602" y="372" font-size="18">案件 HC-2026-900002</text>
-
-    <rect x="94" y="432" width="912" height="122" rx="18" fill="#eef4ff"/>
-    <text x="126" y="478" font-size="17" fill="#587096">付款狀態</text>
-    <text x="126" y="526" font-size="27" font-weight="700" fill="#167a55">已付款</text>
-    <text x="972" y="478" font-size="17" fill="#587096" text-anchor="end">付款日期</text>
-    <text x="972" y="526" font-size="27" font-weight="650" text-anchor="end">2026 年 08 月 01 日</text>
-
-    <text x="94" y="632" font-size="18" fill="#748097">品項</text>
-    <text x="720" y="632" font-size="18" fill="#748097" text-anchor="end">數量</text>
-    <text x="1006" y="632" font-size="18" fill="#748097" text-anchor="end">金額</text>
-    <line x1="94" y1="654" x2="1006" y2="654" stroke="#d9e1ec" stroke-width="2"/>
-    <text x="94" y="710" font-size="23" font-weight="650">Nimbus AI Pro 年度訂閱（示範）</text>
-    <text x="94" y="746" font-size="17" fill="#748097">使用期間：2026/08/01 – 2027/07/31</text>
-    <text x="720" y="710" font-size="22" text-anchor="end">1</text>
-    <text x="1006" y="710" font-size="22" text-anchor="end">NT$5,714</text>
-    <line x1="94" y1="800" x2="1006" y2="800" stroke="#d9e1ec" stroke-width="2"/>
-
-    <text x="730" y="862" font-size="19" fill="#748097">小計</text>
-    <text x="1006" y="862" font-size="21" text-anchor="end">NT$5,714</text>
-    <text x="730" y="912" font-size="19" fill="#748097">營業稅（5%）</text>
-    <text x="1006" y="912" font-size="21" text-anchor="end">NT$286</text>
-    <line x1="730" y1="946" x2="1006" y2="946" stroke="#aab7c8" stroke-width="2"/>
-    <text x="730" y="1004" font-size="25" font-weight="700">付款總額</text>
-    <text x="1006" y="1004" font-size="30" font-weight="750" text-anchor="end" fill="#2864dc">NT$6,000</text>
-
-    <rect x="94" y="1082" width="912" height="144" rx="18" fill="#f7f9fc" stroke="#e1e6ef"/>
-    <text x="126" y="1132" font-size="17" fill="#748097">付款方式</text>
-    <text x="126" y="1178" font-size="22" font-weight="650">DEMO VISA ···· 7288</text>
-    <text x="972" y="1132" font-size="17" fill="#748097" text-anchor="end">交易識別碼</text>
-    <text x="972" y="1178" font-size="20" text-anchor="end">DEMO-TXN-6000</text>
-
-    <text x="550" y="1328" font-size="18" fill="#748097" text-anchor="middle">本文件僅供產品展示，不代表真實交易或付款證明。</text>
-    <text x="550" y="1370" font-size="16" fill="#9aa5b5" text-anchor="middle">所有姓名、公司、地址、編號與金額資料均為虛構。</text>
-    <text x="550" y="780" font-size="120" font-weight="800" fill="#2864dc" opacity="0.055" text-anchor="middle" transform="rotate(-24 550 780)">DEMO · 虛構資料</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="1960" viewBox="0 0 1120 1960">
+  <rect width="1120" height="1960" fill="#eef2f7"/>
+  <rect x="44" y="34" width="1032" height="1888" rx="20" fill="#ffffff" stroke="#d8e0ea" stroke-width="2"/>
+  <g font-family="-apple-system, BlinkMacSystemFont, 'Noto Sans TC', 'Segoe UI', sans-serif" fill="#172033">
+    <g transform="translate(92 88)">
+      <rect width="46" height="46" rx="13" fill="#2457c5"/>
+      <path d="M13 29c8-17 17-17 22 0M15 18h17" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+      <text x="64" y="31" font-size="29" font-weight="750" letter-spacing="1">NIMBUS</text>
+      <text x="64" y="55" font-size="13" font-weight="650" fill="#718096" letter-spacing="2.4">CLOUD SOFTWARE</text>
+    </g>
+    <text x="1028" y="117" font-size="42" font-weight="720" text-anchor="end">Receipt</text>
+    <text x="1028" y="157" font-size="16" fill="#718096" text-anchor="end">Receipt no. NMB-DEMO-260801-01</text>
+    <rect x="92" y="208" width="936" height="108" rx="14" fill="#f7f9fc" stroke="#e0e6ee"/>
+    <circle cx="130" cy="253" r="16" fill="#d9f5e9"/>
+    <path d="m121 253 6 6 12-14" fill="none" stroke="#16825f" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="160" y="249" font-size="17" fill="#65748a">AMOUNT PAID</text>
+    <text x="160" y="281" font-size="29" font-weight="720">NT$6,000</text>
+    <text x="993" y="249" font-size="17" fill="#65748a" text-anchor="end">PAID ON</text>
+    <text x="993" y="281" font-size="21" font-weight="650" text-anchor="end">August 01, 2026</text>
+    <rect x="92" y="354" width="244" height="38" rx="19" fill="#fff4da" stroke="#f0d38a"/>
+    <circle cx="116" cy="373" r="6" fill="#d98b00"/>
+    <text x="134" y="379" font-size="15" font-weight="750" fill="#925d00">DEMO · 虛構示範收據</text>
+    <text x="92" y="462" font-size="14" font-weight="750" fill="#77869a" letter-spacing="1.4">BILLED TO</text>
+    <text x="92" y="505" font-size="24" font-weight="680">示範用林小安</text>
+    <text x="92" y="540" font-size="17" fill="#5e6c80">demo.applicant@example.invalid</text>
+    <text x="92" y="572" font-size="17" fill="#5e6c80">Case HC-2026-900002</text>
+    <text x="618" y="462" font-size="14" font-weight="750" fill="#77869a" letter-spacing="1.4">ISSUED BY</text>
+    <text x="618" y="505" font-size="24" font-weight="680">Nimbus Labs Demo Co.</text>
+    <text x="618" y="540" font-size="17" fill="#5e6c80">100 Example Avenue, Demo City</text>
+    <text x="618" y="572" font-size="17" fill="#5e6c80">Tax ID 00000000 (DEMO)</text>
+    <line x1="92" y1="640" x2="1028" y2="640" stroke="#dfe5ed" stroke-width="2"/>
+    <text x="92" y="690" font-size="15" font-weight="750" fill="#77869a" letter-spacing="1.2">DESCRIPTION</text>
+    <text x="778" y="690" font-size="15" font-weight="750" fill="#77869a" text-anchor="end">QTY</text>
+    <text x="1028" y="690" font-size="15" font-weight="750" fill="#77869a" text-anchor="end">AMOUNT</text>
+    <line x1="92" y1="714" x2="1028" y2="714" stroke="#dfe5ed" stroke-width="2"/>
+    <text x="92" y="772" font-size="22" font-weight="670">Nimbus AI Pro — annual subscription</text>
+    <text x="92" y="809" font-size="16" fill="#6e7c90">Service period: Aug 01, 2026 – Jul 31, 2027</text>
+    <text x="92" y="841" font-size="16" fill="#6e7c90">Workspace plan · 1 licensed seat · demonstration only</text>
+    <text x="778" y="776" font-size="19" text-anchor="end">1</text>
+    <text x="1028" y="776" font-size="20" font-weight="650" text-anchor="end">NT$5,714</text>
+    <line x1="92" y1="900" x2="1028" y2="900" stroke="#dfe5ed"/>
+    <text x="716" y="956" font-size="18" fill="#65748a">Subtotal</text><text x="1028" y="956" font-size="19" text-anchor="end">NT$5,714</text>
+    <text x="716" y="1005" font-size="18" fill="#65748a">Tax (5%)</text><text x="1028" y="1005" font-size="19" text-anchor="end">NT$286</text>
+    <line x1="716" y1="1036" x2="1028" y2="1036" stroke="#b9c4d2"/>
+    <text x="716" y="1095" font-size="22" font-weight="720">Total paid</text><text x="1028" y="1095" font-size="28" font-weight="760" text-anchor="end" fill="#2457c5">NT$6,000</text>
+    <text x="92" y="1210" font-size="25" font-weight="700">Payment details</text>
+    <rect x="92" y="1245" width="936" height="180" rx="14" fill="#f8fafc" stroke="#dde4ed"/>
+    <text x="124" y="1295" font-size="15" font-weight="700" fill="#77869a">PAYMENT METHOD</text>
+    <rect x="124" y="1321" width="66" height="42" rx="8" fill="#173c7a"/>
+    <text x="157" y="1348" font-size="14" font-weight="800" fill="#ffffff" text-anchor="middle" font-style="italic">VISA</text>
+    <text x="207" y="1350" font-size="20" font-weight="650">•••• 7288</text>
+    <text x="990" y="1295" font-size="15" font-weight="700" fill="#77869a" text-anchor="end">TRANSACTION ID</text>
+    <text x="990" y="1349" font-size="18" font-family="ui-monospace, SFMono-Regular, monospace" text-anchor="end">demo_txn_6000_7288</text>
+    <text x="124" y="1395" font-size="15" fill="#718096">Payment status: succeeded · Captured in New Taiwan dollars</text>
+    <text x="92" y="1530" font-size="25" font-weight="700">Payment history</text>
+    <line x1="92" y1="1566" x2="1028" y2="1566" stroke="#dfe5ed"/>
+    <text x="92" y="1608" font-size="15" font-weight="700" fill="#77869a">DATE</text><text x="430" y="1608" font-size="15" font-weight="700" fill="#77869a">STATUS</text><text x="1028" y="1608" font-size="15" font-weight="700" fill="#77869a" text-anchor="end">AMOUNT</text>
+    <line x1="92" y1="1632" x2="1028" y2="1632" stroke="#dfe5ed"/>
+    <text x="92" y="1684" font-size="18">Aug 01, 2026</text>
+    <rect x="430" y="1651" width="98" height="40" rx="20" fill="#e4f7ef"/>
+    <text x="479" y="1678" font-size="15" font-weight="720" fill="#16825f" text-anchor="middle">Paid</text>
+    <text x="1028" y="1684" font-size="19" font-weight="650" text-anchor="end">NT$6,000</text>
+    <line x1="92" y1="1724" x2="1028" y2="1724" stroke="#dfe5ed"/>
+    <text x="560" y="1803" font-size="17" fill="#6e7c90" text-anchor="middle">Questions? Contact demo-support@example.invalid</text>
+    <text x="560" y="1841" font-size="15" fill="#8b96a7" text-anchor="middle">This receipt is fictional and created only for a product demonstration.</text>
+    <text x="560" y="1874" font-size="15" fill="#8b96a7" text-anchor="middle">本文件不可作為真實交易、報稅或付款證明。</text>
+    <g transform="rotate(-27 560 980)" opacity="0.055">
+      <text x="560" y="965" font-size="116" font-weight="850" fill="#2457c5" text-anchor="middle">DEMO DOCUMENT</text>
+      <text x="560" y="1070" font-size="76" font-weight="800" fill="#2457c5" text-anchor="middle">虛構資料</text>
+    </g>
   </g>
 </svg>

@@ -7,7 +7,7 @@ import CasesQueuePage from '../pages/CasesQueuePage'
 import CaseReviewPage, { mergePageOcr } from '../pages/CaseReviewPage'
 import { DecisionBar } from './DecisionBar'
 import { ComparePanel, compareAmounts } from './ComparePanel'
-import { clampZoom, toPercentBox } from './DocumentViewer'
+import { clampZoom, focusWorkspaceDocument, planDocumentWorkspace, toPercentBox } from './DocumentViewer'
 import { REVIEW_NOTE_FALLBACK, renderNote } from './reviewNotes'
 import { deadlineFromToday } from './labels'
 import { queueQueryString, DEFAULT_FILTERS } from './api'
@@ -466,6 +466,37 @@ describe('文件檢視器的數學', () => {
   it('沒有尺寸時寧可不畫框', () => {
     expect(toPercentBox({ x0: 0, y0: 0, x1: 10, y1: 10 }, 0, 0)).toBeNull()
     expect(toPercentBox(null, 500, 500)).toBeNull()
+  })
+
+  it('目前版本文件會並排在同一張畫布', () => {
+    expect(planDocumentWorkspace([
+      { id: 'receipt', width: 1120, height: 1960 },
+      { id: 'billing', width: 900, height: 1760 },
+    ], 96)).toEqual({
+      width: 2116,
+      height: 2008,
+      placements: [
+        { id: 'receipt', width: 1120, height: 1960, x: 0, y: 0 },
+        { id: 'billing', width: 900, height: 1760, x: 1216, y: 100 },
+      ],
+    })
+  })
+
+  it('看文件會把 bbox 中央移到 viewport 中央並放大', () => {
+    const workspace = planDocumentWorkspace([
+      { id: 'receipt', width: 1120, height: 1960 },
+      { id: 'billing', width: 900, height: 1760 },
+    ])
+    const placement = workspace.placements[1]
+    const view = focusWorkspaceDocument(
+      workspace,
+      placement,
+      { width: 1000, height: 720 },
+      { x0: 54, y0: 870, x1: 846, y1: 1025 },
+    )
+    expect(view.zoom).toBeGreaterThan(0.4)
+    expect(view.pan.x).toBeLessThan(0)
+    expect(view.pan.y).toBeGreaterThan(-200)
   })
 
   it('多頁 PDF OCR 合併後會把第二頁座標往下移', () => {

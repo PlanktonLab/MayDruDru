@@ -1,57 +1,55 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1600" viewBox="0 0 900 1600">
-  <rect width="900" height="1600" fill="#f4f6fa"/>
-  <g font-family="-apple-system, BlinkMacSystemFont, 'Noto Sans TC', sans-serif" fill="#182235">
-    <rect width="900" height="220" fill="#173c7a"/>
-    <text x="54" y="76" font-size="27" font-weight="700" fill="#ffffff">DEMO BANK</text>
-    <text x="54" y="114" font-size="18" fill="#c9d8f3">範例銀行 · 虛構帳單</text>
-    <text x="846" y="78" font-size="23" font-weight="650" fill="#ffffff" text-anchor="end">2026 年 08 月帳單</text>
-    <text x="846" y="116" font-size="17" fill="#c9d8f3" text-anchor="end">結帳日 08/31</text>
-
-    <rect x="38" y="158" width="824" height="198" rx="24" fill="#ffffff" stroke="#dce3ed"/>
-    <text x="70" y="210" font-size="17" fill="#758196">持卡人</text>
-    <text x="70" y="252" font-size="25" font-weight="650">示範用林小安</text>
-    <text x="70" y="306" font-size="17" fill="#758196">本期應繳金額</text>
-    <text x="70" y="338" font-size="32" font-weight="750" fill="#1d63d8">NT$6,574</text>
-    <text x="830" y="210" font-size="17" fill="#758196" text-anchor="end">卡號末四碼</text>
-    <text x="830" y="252" font-size="25" font-weight="700" text-anchor="end">···· 7288</text>
-    <text x="830" y="306" font-size="17" fill="#758196" text-anchor="end">繳款截止日</text>
-    <text x="830" y="338" font-size="22" font-weight="650" text-anchor="end">2026/09/20</text>
-
-    <text x="54" y="430" font-size="23" font-weight="700">本期交易明細</text>
-    <text x="846" y="430" font-size="16" fill="#758196" text-anchor="end">幣別：新臺幣</text>
-
-    <rect x="38" y="472" width="824" height="198" rx="22" fill="#ffffff" stroke="#cbd8ec" stroke-width="2"/>
-    <text x="66" y="522" font-size="17" fill="#758196">交易日 08/01</text>
-    <text x="834" y="522" font-size="17" fill="#758196" text-anchor="end">入帳日 08/02</text>
-    <text x="66" y="574" font-size="27" font-weight="720">NIMBUS AI PRO</text>
-    <rect x="66" y="602" width="132" height="34" rx="17" fill="#eaf2ff"/>
-    <text x="132" y="625" font-size="15" font-weight="650" fill="#2864dc" text-anchor="middle">數位服務</text>
-    <text x="834" y="590" font-size="32" font-weight="750" text-anchor="end">NT$6,000</text>
-    <text x="66" y="650" font-size="15" fill="#8a95a5">交易識別碼 DEMO-TXN-6000</text>
-
-    <rect x="38" y="694" width="824" height="150" rx="22" fill="#ffffff" stroke="#dce3ed"/>
-    <text x="66" y="744" font-size="17" fill="#758196">交易日 08/08</text>
-    <text x="66" y="795" font-size="24" font-weight="650">示範咖啡店</text>
-    <text x="834" y="785" font-size="27" font-weight="700" text-anchor="end">NT$180</text>
-
-    <rect x="38" y="868" width="824" height="150" rx="22" fill="#ffffff" stroke="#dce3ed"/>
-    <text x="66" y="918" font-size="17" fill="#758196">交易日 08/15</text>
-    <text x="66" y="969" font-size="24" font-weight="650">範例書店</text>
-    <text x="834" y="959" font-size="27" font-weight="700" text-anchor="end">NT$394</text>
-
-    <rect x="38" y="1066" width="824" height="250" rx="22" fill="#ffffff" stroke="#dce3ed"/>
-    <text x="66" y="1120" font-size="22" font-weight="700">帳單摘要</text>
-    <text x="66" y="1176" font-size="18" fill="#758196">數位服務</text>
-    <text x="834" y="1176" font-size="21" text-anchor="end">NT$6,000</text>
-    <text x="66" y="1226" font-size="18" fill="#758196">其他消費</text>
-    <text x="834" y="1226" font-size="21" text-anchor="end">NT$574</text>
-    <line x1="66" y1="1254" x2="834" y2="1254" stroke="#dce3ed"/>
-    <text x="66" y="1294" font-size="20" font-weight="700">本期合計</text>
-    <text x="834" y="1294" font-size="25" font-weight="750" text-anchor="end">NT$6,574</text>
-
-    <rect x="38" y="1360" width="824" height="124" rx="20" fill="#fff8e8" stroke="#f1d794"/>
-    <text x="66" y="1410" font-size="18" font-weight="650" fill="#875b00">DEMO 示範文件</text>
-    <text x="66" y="1448" font-size="16" fill="#875b00">所有姓名、商家、卡號、日期與交易均為虛構，不可作為付款證明。</text>
-    <text x="450" y="1518" font-size="15" fill="#9aa5b5" text-anchor="middle">demo.applicant@example.invalid · 客服 0800-000-000（示範）</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1760" viewBox="0 0 900 1760">
+  <rect width="900" height="1760" fill="#f6f7f9"/>
+  <g font-family="-apple-system, BlinkMacSystemFont, 'Noto Sans TC', 'Segoe UI', sans-serif" fill="#202735">
+    <rect width="900" height="54" fill="#ffffff"/>
+    <text x="48" y="37" font-size="18" font-weight="700">9:58</text>
+    <g transform="translate(742 18)" fill="#202735">
+      <rect width="5" height="17" rx="2"/><rect x="10" y="-4" width="5" height="21" rx="2"/><rect x="20" y="-8" width="5" height="25" rx="2"/>
+      <path d="M44 4c12-12 31-12 43 0M51 11c8-8 21-8 29 0M62 17a4 4 0 1 0 8 0" fill="none" stroke="#202735" stroke-width="4" stroke-linecap="round"/>
+      <rect x="102" y="-5" width="46" height="24" rx="7" fill="none" stroke="#202735" stroke-width="3"/><rect x="150" y="2" width="4" height="10" rx="2"/><rect x="106" y="-1" width="35" height="16" rx="4" fill="#53b76b"/>
+    </g>
+    <rect y="54" width="900" height="118" fill="#ffffff"/>
+    <path d="m70 112 18-18m-18 18 18 18" fill="none" stroke="#687386" stroke-width="4" stroke-linecap="round"/>
+    <text x="450" y="120" font-size="30" font-weight="720" text-anchor="middle">2026 年 08 月帳單</text>
+    <line x1="0" y1="171" x2="900" y2="171" stroke="#dfe3e8"/>
+    <rect x="40" y="198" width="820" height="46" rx="23" fill="#fff4da" stroke="#efd18a"/>
+    <circle cx="68" cy="221" r="7" fill="#d78a00"/>
+    <text x="88" y="228" font-size="17" font-weight="750" fill="#8b5900">DEMO BANK · 虛構資料 · 不可作為付款證明</text>
+    <text x="70" y="300" font-size="20" font-weight="700">信用卡 •••• 7288</text>
+    <rect x="54" y="326" width="792" height="214" rx="26" fill="#ffffff" stroke="#dde2e9"/>
+    <defs><linearGradient id="card" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1e4ca8"/><stop offset="1" stop-color="#122e68"/></linearGradient></defs>
+    <rect x="84" y="364" width="260" height="138" rx="18" fill="url(#card)"/>
+    <circle cx="118" cy="400" r="13" fill="#ffffff" opacity="0.8"/><circle cx="132" cy="400" r="13" fill="#a9c6ff" opacity="0.8"/>
+    <text x="108" y="463" font-size="16" font-weight="650" fill="#ffffff">DEMO SIGNATURE</text>
+    <text x="318" y="486" font-size="17" font-style="italic" font-weight="800" fill="#ffffff" text-anchor="end">VISA</text>
+    <text x="382" y="385" font-size="17" fill="#7b8594">本期應繳金額</text><text x="382" y="430" font-size="34" font-weight="760">NT$6,574</text>
+    <text x="382" y="471" font-size="16" fill="#7b8594">繳款截止日 2026/09/20</text><text x="382" y="506" font-size="16" fill="#7b8594">持卡人 示範用林小安</text>
+    <rect y="570" width="900" height="70" fill="#ffffff"/>
+    <text x="54" y="614" font-size="18" fill="#7b8594">入帳起息日 09/03</text><text x="846" y="614" font-size="18" fill="#7b8594" text-anchor="end">末四碼 7288</text>
+    <line x1="0" y1="639" x2="900" y2="639" stroke="#dfe3e8"/>
+    <text x="54" y="706" font-size="22" font-weight="750">2026/08/31</text><text x="758" y="706" font-size="23" font-weight="760" text-anchor="end">NT$48</text>
+    <path d="m800 692 12 12 12-12" fill="none" stroke="#7b8594" stroke-width="3"/>
+    <text x="54" y="752" font-size="22" font-weight="660">國外交易手續費 — NIMBUS</text>
+    <text x="54" y="796" font-size="17" fill="#7b8594">入帳起息日 09/17</text><text x="846" y="796" font-size="17" fill="#7b8594" text-anchor="end">末四碼 7288</text>
+    <line x1="0" y1="833" x2="900" y2="833" stroke="#dfe3e8"/>
+    <rect x="28" y="852" width="844" height="430" rx="22" fill="#ffffff" stroke="#ccd8eb" stroke-width="2"/>
+    <rect x="28" y="852" width="844" height="10" rx="5" fill="#2457c5"/>
+    <text x="54" y="915" font-size="22" font-weight="750">2026/08/01</text><text x="812" y="915" font-size="25" font-weight="780" text-anchor="end">NT$6,000</text>
+    <path d="m824 905 12-12 12 12" fill="none" stroke="#687386" stroke-width="3"/>
+    <text x="54" y="967" font-size="27" font-weight="720">NIMBUS AI PRO</text>
+    <rect x="54" y="991" width="146" height="36" rx="18" fill="#e9f0ff"/><text x="127" y="1015" font-size="15" font-weight="700" fill="#2457c5" text-anchor="middle">數位訂閱服務</text>
+    <text x="54" y="1068" font-size="17" fill="#7b8594">入帳起息日</text><text x="812" y="1068" font-size="17" fill="#4c5668" text-anchor="end">09/01</text>
+    <line x1="54" y1="1097" x2="818" y2="1097" stroke="#d9dee6" stroke-dasharray="8 8"/>
+    <text x="54" y="1140" font-size="17" fill="#7b8594">消費國家</text><text x="812" y="1140" font-size="17" fill="#4c5668" text-anchor="end">TW</text>
+    <text x="54" y="1183" font-size="17" fill="#7b8594">消費金額</text><text x="812" y="1183" font-size="17" fill="#4c5668" text-anchor="end">TWD 6,000.00</text>
+    <text x="54" y="1226" font-size="17" fill="#7b8594">交易識別碼</text><text x="812" y="1226" font-size="17" fill="#4c5668" text-anchor="end">DEMO-TXN-6000</text>
+    <text x="54" y="1264" font-size="14" font-weight="700" fill="#b26f00">虛構示範交易</text>
+    <line x1="0" y1="1324" x2="900" y2="1324" stroke="#dfe3e8"/>
+    <text x="54" y="1386" font-size="22" font-weight="750">2026/08/15</text><text x="812" y="1386" font-size="23" font-weight="760" text-anchor="end">NT$394</text>
+    <text x="54" y="1433" font-size="22" font-weight="650">DEMO BOOKS</text><text x="54" y="1476" font-size="17" fill="#7b8594">入帳起息日 09/02</text><text x="846" y="1476" font-size="17" fill="#7b8594" text-anchor="end">末四碼 7288</text>
+    <line x1="0" y1="1514" x2="900" y2="1514" stroke="#dfe3e8"/>
+    <text x="54" y="1576" font-size="22" font-weight="750">2026/08/08</text><text x="812" y="1576" font-size="23" font-weight="760" text-anchor="end">NT$132</text>
+    <text x="54" y="1623" font-size="22" font-weight="650">DEMO COFFEE</text><text x="54" y="1666" font-size="17" fill="#7b8594">入帳起息日 09/02</text><text x="846" y="1666" font-size="17" fill="#7b8594" text-anchor="end">末四碼 7288</text>
+    <rect y="1710" width="900" height="50" fill="#173c7a"/><text x="450" y="1742" font-size="15" font-weight="650" fill="#dbe7ff" text-anchor="middle">DEMO BANK · 所有資料均為虛構</text>
   </g>
 </svg>
