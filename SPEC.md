@@ -319,7 +319,7 @@ SUBMITTED | UNDER_REVIEW | NEEDS_REVISION ──T10(applicant)──▶ WITHDRAW
 |---|---|---|
 | **LINE 內容** | 罐頭訊息（分類樹、draft/publish/reset、變數提示、LINE 預覽渲染）、FAQ、知識文件、rich menu（版面、圖片、同步與同步日誌）、推播紀錄（含案件綁定用戶 Demo 缺件通知按鈕）、用戶 Feedback、未命中訊息（含內容助理建議） | youth-line-bot admin 重寫為 React |
 | **SOP** | Canvas（沿用）、審核佇列（sop_reviewer）、Playground、平台/目標管理、**文件類型對照**（document_type ↔ flow） | SOP_Tutor |
-| **案件審核** | 「審查作業」獨立導覽含案件總覽與資料重點設定；總覽依 first_submitted_at 排隊並可篩選狀態/方案/審核人，案件頁左側為文件 pan/zoom + OCR／finding 高亮，畫布固定顯示案件、申請人、方案、金額、審核人與缺件摘要，右側為規則 findings（自動判定 + 人工覆寫 + 備註）、比對、決策列與事件時間軸；資料重點設定依方案管理查核欄位、適用文件、關鍵字／格式、必要性並可試算；「重新辨識」在承辦人瀏覽器跑 tesseract.js，`source=reviewer` | submit-flow staff + proreview 互動 |
+| **案件審核** | 「審查作業」獨立導覽含案件總覽與資料重點設定；總覽依 first_submitted_at 排隊並可篩選狀態/方案/審核人，案件頁左側把所有目前版本文件並排在同一張 pan/zoom 畫布並提供 OCR／finding 高亮；右側「看文件」會將對應文件或 bbox 置中放大並重新閃爍螢光標記。畫布固定顯示案件、申請人、方案、金額、審核人與缺件摘要，並可把目前版本文件與 finding 螢光標記匯出成中央文件群組外圍 3 倍大的高畫質點狀 PNG；右側為規則 findings（自動判定 + 人工覆寫 + 備註）、比對、決策列與事件時間軸；資料重點設定依方案管理查核欄位、適用文件、關鍵字／格式、必要性並可試算；「重新辨識」與畫布匯出都只在承辦人瀏覽器處理，前者 `source=reviewer`，後者不回傳或保存檔案 | submit-flow staff + proreview 互動 |
 | **方案管理** | schemes CRUD、tiers、document_types、payment_channels、review_rules（規則編輯器：四種 rule_type 表單）、rejection_codes、eligible_tools（待審工具佇列）、內容助理 (c) 一鍵產生方案文案草稿 | 新 |
 | **系統** | Dashboard（案件統計、SOP 使用、LLM 用量）、成員、API keys、webhook 訂閱、稽核日誌 | SOP_Tutor + 新 |
 
@@ -625,6 +625,8 @@ Cloudflare proxied；origin cert 需涵蓋三個名稱（萬用或重簽）。DN
 | D42 | 黑客松 Demo 缺件通知不改案件狀態，只對 `case_verifications` 已綁定用戶建立 `notifications(kind=demo_missing_document)`；信用卡紀錄按鈕沿用 document type → published flow 對照開完整 SOP。Feedback 僅存 user id hash、情境與可選案件關聯。前端 OCR FAIL 是可忽略提示，伺服器規則與人工審核仍為最終判定 | Demo 能重複演示而不污染不可變狀態時間軸；沿用真實通知、SOP 與規則資料可避免做一條只在舞台上有效的假流程；回饋資料遵守最小化，OCR 不準時也不會把使用者鎖死 |
 | D43 | 申請端遮罩畫布沿用 SOP 標註器的直接拖曳框選模式：圖片空白處拖曳建立、整框拖動、四角縮放與 Delete 刪除；圖片一律適配並可放大到編輯區。Tailwind 入口須明列掃描 `packages/mask-editor/src` | 讓市民端與後台 SOP 使用同一套操作心智；避免小尺寸截圖縮在大畫布中央，也避免 workspace 元件的定位／雙欄 utility 未被正式版 CSS 產生而造成跑版 |
 | D44 | 保留舊制 Demo 案號 `20260001`（手機 `0912345678`）作為 LINE 綁定與主動通知展示資料；案件手機驗證同時接受完整臺灣手機、`+886`／分隔符格式與末四碼，最後一律正規化成末四碼比對 | 罐頭訊息本來就示範完整手機，狀態機卻只收四碼會讓 Demo 必然失敗；保留兩種輸入兼顧文案直覺與快速查詢，實際比對仍只使用加鹽 hash，不新增明文個資暴露 |
+| D45 | 審核頁的證據畫布匯出在瀏覽器記憶體完成：以目前版本文件的原始畫質組成中央文件群組，畫布寬高各為群組的 3 倍，保留 finding bbox 螢光標記後直接下載 PNG；僅在瀏覽器安全上限內等比縮小，不上傳、不新增物件儲存副本 | 承辦人能取得可放大、保留證據位置的工作圖，又不讓含個資的衍生圖片多一份伺服器生命週期與權限面 |
+| D46 | 審核頁將所有目前版本文件同時排列在單一無限畫布；文件籤只負責對焦、不隱藏其他文件。右側「看文件」依 finding 的文件與 bbox 計算縮放及平移，置中後以短促閃爍重播螢光標記 | 承辦人可同時比對收據與帳單，不必在分頁間記憶資訊；自動定位讓每條規則都能直接回到原始證據位置 |
 
 ---
 
