@@ -12,6 +12,7 @@ describe('Feature Demo 頁', () => {
     expect(screen.getByRole('heading', { name: /讓申請/ })).toBeTruthy()
     expect(document.title).toBe('卡好審｜功能體驗')
     expect(screen.getByRole('link', { name: '卡好審功能體驗' })).toBeTruthy()
+    expect(screen.queryByText('準備好了')).toBeNull()
     expect(screen.queryByLabelText('主要導覽')).toBeNull()
     expect(screen.getByRole('heading', { name: '卡號，只留下需要的四碼。' })).toBeTruthy()
     expect(screen.getByText(/遮蔽信用卡號前 12 碼與到期日期/)).toBeTruthy()

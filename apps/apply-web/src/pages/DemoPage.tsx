@@ -282,23 +282,12 @@ export default function DemoPage() {
 
       <main id="top">
         <section className="demo-hero" aria-labelledby="demo-title">
-          <div className="demo-hero-orb demo-orb-one" /><div className="demo-hero-orb demo-orb-two" />
           <p className="demo-eyebrow"><Sparkles size={14} />智慧申辦體驗</p>
           <h1 id="demo-title">讓申請，<br />簡單到每個人都會。</h1>
           <p>從個資保護、文件辨識到即時教學，卡好審把複雜的政府申辦流程，變成手機上清楚的每一步。</p>
           <div className="demo-hero-actions">
             <a href="#privacy" className="demo-primary-link">開始體驗 <ArrowDown size={16} /></a>
             <a href="/" className="demo-text-link">前往申請平台 <ArrowUpRight size={15} /></a>
-          </div>
-          <div className="demo-hero-phone" aria-hidden>
-            <div className="demo-phone-island" />
-            <div className="demo-phone-screen">
-              <span className="demo-phone-status">安全檢查完成 <Check size={12} /></span>
-              <ShieldCheck size={70} />
-              <strong>準備好了</strong>
-              <small>敏感資料已在這台手機完成遮蔽</small>
-              <i /><i /><i />
-            </div>
           </div>
         </section>
 
