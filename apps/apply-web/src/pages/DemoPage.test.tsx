@@ -1,6 +1,8 @@
 import { fireEvent, render, screen } from '@testing-library/react'
+import { HttpResponse, http } from 'msw'
 import { describe, expect, it } from 'vitest'
 import App from '../App'
+import { server } from '../mocks/server'
 import { Providers } from '../test/utils'
 
 describe('Feature Demo 頁', () => {
@@ -27,5 +29,30 @@ describe('Feature Demo 頁', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '關閉聊天客服' }))
     expect(screen.queryByRole('dialog', { name: 'SOP 聊天客服體驗' })).toBeNull()
+  })
+
+  it('直接列出國泰平台所有已發布流程，不受文件類型對照限制', async () => {
+    server.use(
+      http.get('/api/sop/catalog/platforms', () => HttpResponse.json([
+        { id: 'cathay', display_name: '國泰世華 CUBE App', brand: '國泰世華', channel: 'mobile_app' },
+      ])),
+      http.get('/api/sop/catalog/flows', ({ request }) => {
+        expect(new URL(request.url).searchParams.get('platform_id')).toBe('cathay')
+        return HttpResponse.json([
+          { id: 'cathay-spending', name: '消費紀錄截圖', platform_id: 'cathay', goal_ids: [], status: 'published' },
+        ])
+      }),
+      http.get('/api/sop/flows/cathay-spending/steps', () => HttpResponse.json({
+        flow: { id: 'cathay-spending', name: '消費紀錄截圖' },
+        steps: [{ index: 0, step_id: 'step-cathay', title: '查看消費紀錄', instruction: '點選消費明細。' }],
+        messages: [{ kind: 'image', url: '/media/cathay.png', number: 1, flow_id: 'cathay-spending',
+          step_id: 'step-cathay', title: '查看消費紀錄', instruction: '點選消費明細。', alt: '國泰流程' }],
+      })),
+    )
+
+    render(<Providers route="/demo"><App /></Providers>)
+    expect(await screen.findByText('資料庫即時內容')).toBeTruthy()
+    expect((screen.getByLabelText('目前流程') as HTMLSelectElement).value).toBe('cathay-spending')
+    expect(await screen.findByRole('button', { name: '放大查看：查看消費紀錄' })).toBeTruthy()
   })
 })

@@ -17,8 +17,7 @@ import {
 } from 'lucide-react'
 import { MaskEditor, disposeCanvas, type MaskRect } from '@maydru/mask-editor'
 import {
-  fetchSopDocumentTypes,
-  fetchSopFlows,
+  fetchSopCatalogFlows,
   fetchSopPlatforms,
   fetchSopSteps,
   type SopFlow,
@@ -69,19 +68,21 @@ function isCathay(value: string): boolean {
 
 async function fetchCathayCatalog(): Promise<CathayCatalog> {
   try {
-    const [platforms, documents] = await Promise.all([
-      fetchSopPlatforms(),
-      fetchSopDocumentTypes(),
-    ])
+    const platforms = await fetchSopPlatforms()
     const cathayPlatforms = platforms.filter((platform) =>
       isCathay(`${platform.display_name} ${platform.brand}`),
     )
     if (!cathayPlatforms.length) return { source: 'fallback', flows: [FALLBACK_FLOW] }
 
     const results = await Promise.allSettled(
-      cathayPlatforms.flatMap((platform) =>
-        documents.map((document) => fetchSopFlows(document.code, platform.id)),
-      ),
+      cathayPlatforms.map(async (platform) => {
+        const flows = await fetchSopCatalogFlows(platform.id)
+        return flows.map((flow): SopFlow => ({
+          flow_id: flow.id,
+          flow_name: flow.name,
+          platform,
+        }))
+      }),
     )
     const byId = new Map<string, SopFlow>()
     for (const result of results) {
