@@ -16,6 +16,8 @@ import { GuideStep } from '../apply/GuideStep'
 import { IdentityStep } from '../apply/IdentityStep'
 import { ToolStep } from '../apply/ToolStep'
 import { SummaryAside } from '../apply/SummaryAside'
+import { HelpChat } from '../apply/HelpChat'
+import { helpChatEnabled } from '../lib/helpChat'
 import { expandSlots } from '../apply/docGroups'
 import { documentTypesFor } from '../apply/GuideStep'
 import { runPrecheck, type PrecheckView } from '../apply/precheck'
@@ -359,6 +361,10 @@ export default function ApplyPage() {
           <SummaryAside scheme={scheme} state={state} requiredCodes={requiredCodes} />
         </div>
       </div>
+
+      {/* 申請文件準備助手只掛在準備與上傳這兩步——那是人真的去翻銀行 App 的時刻。
+          填欄位與送出的步驟它幫不上忙，掛著只會跟主要動作搶注意力。 */}
+      {helpChatEnabled && (stepKey === 'guide' || stepKey === 'docs') && <HelpChat />}
     </section>
   )
 }

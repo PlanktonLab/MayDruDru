@@ -175,7 +175,7 @@ describe('ApplyPage', () => {
     fillChannel()
     next()
     expect(await screen.findByRole('heading', { name: '準備申請文件' })).toBeTruthy()
-    await screen.findByText('電信繳費：要準備電信帳單')
+    await screen.findByText('電信繳費需附資訊')
     // 文件清單與 SOP 連結都移到下一步，這裡不重複列一次。
     expect(screen.queryByRole('link', { name: '教我怎麼取得' })).toBeNull()
   })
@@ -192,10 +192,10 @@ describe('ApplyPage', () => {
     next()
     await screen.findByRole('heading', { name: '準備申請文件' })
     // 電信的教學講電信帳單，不會出現信用卡那一套。
-    expect(await screen.findByText('電信繳費：要準備電信帳單')).toBeTruthy()
-    // 步驟裡講一次、「送出前確認」再列一次，所以會有兩處。
-    expect(screen.getAllByText(/電話末三碼/).length).toBeGreaterThan(0)
-    expect(screen.queryByText('信用卡繳費：要準備兩份憑證')).toBeNull()
+    expect(await screen.findByText('電信繳費需附資訊')).toBeTruthy()
+    // 講的是電信帳單，不是信用卡那一套。
+    expect(screen.getByText(/電信帳單上該筆代收的明細/)).toBeTruthy()
+    expect(screen.queryByText('信用卡繳費需附資訊')).toBeNull()
   })
 
   it('第五步缺件時不能進確認，補齊之後可以送出並拿到案件編號', async () => {
@@ -210,7 +210,7 @@ describe('ApplyPage', () => {
     next()
     await screen.findByRole('heading', { name: '準備申請文件' })
     // 等教學出現＝必備文件已經算好了，接著才進得了上傳步驟。
-    await screen.findByText('電信繳費：要準備電信帳單')
+    await screen.findByText('電信繳費需附資訊')
     next()
     await screen.findByRole('heading', { name: '上傳文件' })
 
