@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   ArrowDown,
@@ -244,6 +244,12 @@ export default function DemoPage() {
   const [maskError, setMaskError] = useState('')
   const [highlightKey, setHighlightKey] = useState(0)
 
+  useEffect(() => {
+    const previousTitle = document.title
+    document.title = '卡好審｜功能體驗'
+    return () => { document.title = previousTitle }
+  }, [])
+
   const flowId = flows.some((flow) => flow.flow_id === chosenFlowId)
     ? chosenFlowId
     : flows[0]?.flow_id ?? FALLBACK_FLOW_ID
@@ -270,7 +276,7 @@ export default function DemoPage() {
   return (
     <div className="demo-page">
       <nav className="demo-nav" aria-label="Demo 頁面導覽">
-        <a href="#top" className="demo-brand"><span>MayDru</span><small>功能體驗</small></a>
+        <a href="#top" className="demo-brand"><span>卡好審</span><small>功能體驗</small></a>
         <a href="#features">探索功能 <ArrowDown size={14} /></a>
       </nav>
 
@@ -279,7 +285,7 @@ export default function DemoPage() {
           <div className="demo-hero-orb demo-orb-one" /><div className="demo-hero-orb demo-orb-two" />
           <p className="demo-eyebrow"><Sparkles size={14} />智慧申辦體驗</p>
           <h1 id="demo-title">讓申請，<br />簡單到每個人都會。</h1>
-          <p>從個資保護、文件辨識到即時教學，MayDru 把複雜的政府申辦流程，變成手機上清楚的每一步。</p>
+          <p>從個資保護、文件辨識到即時教學，卡好審把複雜的政府申辦流程，變成手機上清楚的每一步。</p>
           <div className="demo-hero-actions">
             <a href="#privacy" className="demo-primary-link">開始體驗 <ArrowDown size={16} /></a>
             <a href="/" className="demo-text-link">前往申請平台 <ArrowUpRight size={15} /></a>
@@ -367,7 +373,7 @@ export default function DemoPage() {
               description="案件進度、補件提醒與 SOP 教學，都能在 LINE 裡接續，不必重新學一套介面。" />
             <div className="demo-line-grid">
               <figure className="demo-line-proof">
-                <img src="/demo/line-bot-real.png" alt="MayDru LINE Bot 實際對話與圖文選單畫面" />
+                <img src="/demo/line-bot-real.png" alt="卡好審 LINE Bot 實際對話與圖文選單畫面" />
                 <figcaption><span>實際畫面</span>補件問答、快速選單與圖文選單</figcaption>
               </figure>
               <div className="demo-feature-copy">
@@ -385,14 +391,14 @@ export default function DemoPage() {
 
         <section className="demo-closing">
           <span className="demo-icon-box"><ShieldCheck size={23} /></span>
-          <p className="demo-eyebrow">MAYDRU</p>
+          <p className="demo-eyebrow">卡好審</p>
           <h2>少一點挫折。<br />多一點完成。</h2>
           <p>把每一份難懂的申請，變成清楚、安心、做得到的流程。</p>
           <a href="/" className="demo-primary-link">開始線上申請 <ArrowUpRight size={16} /></a>
         </section>
       </main>
 
-      <footer className="demo-footer"><strong>MayDru</strong><span>政府申辦流程協助平台</span><a href="#top">回到頂端 ↑</a></footer>
+      <footer className="demo-footer"><strong>卡好審</strong><span>政府申辦流程協助平台</span><a href="#top">回到頂端 ↑</a></footer>
 
       {chatOpen && <ChatDemo flows={flows} activeFlowId={flowId} messages={messages} loading={steps.isLoading}
         onChoose={setChosenFlowId} onClose={() => setChatOpen(false)} />}
