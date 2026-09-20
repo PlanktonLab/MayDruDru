@@ -66,7 +66,7 @@ async def test_seed_inserts_the_whole_scheme(db, session_factory):
     assert report["payment_channel:inserted"] == 4
     assert report["tier:inserted"] == 2
     assert report["faq:inserted"] == 10
-    assert report["application:inserted"] == 5
+    assert report["application:inserted"] == 6
 
 
 async def test_seed_is_idempotent(db, session_factory):
@@ -75,7 +75,7 @@ async def test_seed_is_idempotent(db, session_factory):
     assert second["inserted"] == 0 and second["updated"] == 0
     assert second["skipped"] == first["inserted"]
     assert await count(db, Scheme) == 5
-    assert await count(db, Application) == 5
+    assert await count(db, Application) == 6
     assert await count(db, DocumentType) == 12
 
 
@@ -124,6 +124,10 @@ async def test_demo_cases_cover_one_status_each(db, session_factory):
         "SUBMITTED", "UNDER_REVIEW", "NEEDS_REVISION", "APPROVED", "DISBURSED"}
     disbursed = next(a for a in apps.values() if a.status == "DISBURSED")
     assert disbursed.documents_purge_at is not None and disbursed.payment_amount == 2700
+    line_demo = apps["20260001"]
+    assert line_demo.status == "UNDER_REVIEW"
+    assert decrypt_phone(line_demo.phone_encrypted) == "0912345678"
+    assert line_demo.phone_last4_hash == hash_last4("5678")
 
 
 async def test_demo_documents_point_at_nothing_real(db, session_factory):
