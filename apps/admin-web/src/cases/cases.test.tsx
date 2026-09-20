@@ -66,8 +66,8 @@ describe('CasesQueuePage', () => {
 
   it('只顯示遮罩後的姓名', async () => {
     openQueue()
-    expect(await screen.findByText('王○明')).toBeTruthy()
-    expect(screen.queryByText('示範用王小明')).toBeNull()
+    expect(await screen.findByText('林○安')).toBeTruthy()
+    expect(screen.queryByText('示範用林小安')).toBeNull()
   })
 
   it('狀態篩選會縮小清單', async () => {
@@ -122,14 +122,14 @@ describe('CasesQueuePage', () => {
 describe('CaseReviewPage', () => {
   it('兩份目前版本文件可匯出成 3× 證據畫布', async () => {
     openCase('HC-2026-900002')
-    expect(await screen.findByRole('tab', { name: '身分證正面' })).toBeTruthy()
+    expect(await screen.findByRole('tab', { name: '官方收據' })).toBeTruthy()
     expect(screen.getByRole('tab', { name: '信用卡帳單扣款紀錄' })).toBeTruthy()
     expect(screen.getByRole('button', { name: '匯出 3× 畫布' })).toBeTruthy()
   })
 
   it('顯示完整申請資料與遮罩過的聯絡方式', async () => {
     openCase('HC-2026-900002')
-    expect((await screen.findAllByText('示範用王小明')).length).toBeGreaterThanOrEqual(2)
+    expect((await screen.findAllByText('示範用林小安')).length).toBeGreaterThanOrEqual(2)
     expect(screen.getByText('09**-***-678')).toBeTruthy()
   })
 
@@ -211,7 +211,7 @@ describe('CaseReviewPage', () => {
   it('文件分頁列出目前版本，並標示 OCR 來源', async () => {
     openCase('HC-2026-900002')
     const tab = await screen.findByRole('tab', { name: /信用卡帳單扣款紀錄/ })
-    // 預設選第一份（身分證正面），它沒有 OCR 結果；切到帳單才看得到來源。
+    // 預設選第一份（官方收據），它沒有 OCR 結果；切到帳單才看得到來源。
     expect(screen.getByText('沒有 OCR 結果')).toBeTruthy()
     fireEvent.click(tab)
     expect(await screen.findByText('OCR 來源：申請人上傳')).toBeTruthy()

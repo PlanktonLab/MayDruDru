@@ -1,7 +1,7 @@
 /** MSW 用的假資料：新竹市方案的案件審核。
  *
- * 代碼與文案對齊 `apps/api/scripts/seed_data.py`；姓名、電話、金額全是編的，
- * 文件的 object key 指向不存在的位置（CLAUDE.md 規則 9）。
+ * 代碼與文案對齊 `apps/api/scripts/seed_data.py`；姓名、電話、金額與文件內容全是編的，
+ * 靜態示範單據只使用保留網域與虛構商家（CLAUDE.md 規則 9）。
  */
 
 import type {
@@ -173,9 +173,9 @@ const billingOcr = {
   engine: 'tesseract.js@6',
   confidence: 86,
   lines: [
-    { text: '臺幣 6,000', confidence: 88, bbox: { x0: 120, y0: 340, x1: 420, y1: 380 }, words: [] },
-    { text: '卡號 **** 4242', confidence: 84, bbox: { x0: 120, y0: 400, x1: 470, y1: 438 }, words: [] },
-    { text: '扣款日 2026/08/01', confidence: 87, bbox: { x0: 120, y0: 460, x1: 520, y1: 498 }, words: [] },
+    { text: 'NIMBUS AI PRO 臺幣 6,000', confidence: 88, bbox: { x0: 54, y0: 540, x1: 846, y1: 735 }, words: [] },
+    { text: '卡號末四碼 7288', confidence: 84, bbox: { x0: 620, y0: 328, x1: 840, y1: 370 }, words: [] },
+    { text: '入帳日 08/02', confidence: 87, bbox: { x0: 650, y0: 670, x1: 835, y1: 715 }, words: [] },
   ],
 }
 
@@ -218,8 +218,8 @@ const REQUIRED_DOCS = [
 function baseCase(caseNo: string, overrides: Partial<CaseDetail>): CaseDetail {
   return {
     case_no: caseNo,
-    applicant_name_masked: '王○明',
-    applicant_name: '示範用王小明',
+    applicant_name_masked: '林○安',
+    applicant_name: '示範用林小安',
     phone_masked: '09**-***-678',
     email: null,
     id_last4_masked: '****1234',
@@ -228,7 +228,7 @@ function baseCase(caseNo: string, overrides: Partial<CaseDetail>): CaseDetail {
     scheme_name: SCHEME_NAME,
     tier_code: 'GENERAL',
     payment_channel_code: 'CREDIT_CARD',
-    tool_name: 'ChatGPT Plus',
+    tool_name: 'Nimbus AI Pro（示範）',
     purchase_amount: 6000,
     purchase_date: '2026-08-01',
     paid_by_proxy: false,
@@ -251,8 +251,13 @@ function baseCase(caseNo: string, overrides: Partial<CaseDetail>): CaseDetail {
     scheme_settings: SCHEME_SETTINGS,
     documents_purge_at: null,
     documents: [
-      document('doc-id-front', 'ID_CARD_FRONT', '身分證正面'),
+      document('doc-receipt', 'OFFICIAL_RECEIPT', '官方收據', {
+        mime: 'image/svg+xml',
+        size: 8_192,
+      }),
       document('doc-billing', 'BILLING_STATEMENT', '信用卡帳單扣款紀錄', {
+        mime: 'image/svg+xml',
+        size: 12_288,
         masked: true,
         ocr: billingOcr,
       }),
@@ -261,7 +266,7 @@ function baseCase(caseNo: string, overrides: Partial<CaseDetail>): CaseDetail {
       finding('BILLING_TWD_AMOUNT', 'MATCH', {
         extracted_value: '6000',
         confidence: 88,
-        bbox: { x0: 120, y0: 340, x1: 420, y1: 380 },
+        bbox: { x0: 54, y0: 540, x1: 846, y1: 735 },
         document_type_code: 'BILLING_STATEMENT',
         document_id: 'doc-billing',
       }),

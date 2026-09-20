@@ -26,6 +26,7 @@ yarn-error.log*
 
 # data / uploads
 data/
+apps/admin-web/public/demo-private/
 *.db
 *.sqlite
 
