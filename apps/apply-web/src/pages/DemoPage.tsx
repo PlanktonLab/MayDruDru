@@ -339,22 +339,24 @@ export default function DemoPage() {
           </section>
 
           <section className="demo-feature demo-feature-highlight" id="highlight">
-            <SectionHeading eyebrow="03 — 文件重點標注" title="重點，自己浮現。"
-              description="系統把審查真正需要的欄位標出來，使用者不必在密密麻麻的文件裡猜答案。" />
+            <SectionHeading eyebrow="03 — 文件重點標注" title="讓審核，只看真正重要的地方。"
+              description="系統先在真實收據上標出審核所需欄位，讓承辦與審核人員快速核對日期、方案、期間、金額與付款紀錄。" />
             <div className="demo-document-wrap">
-              <article className="demo-document" key={highlightKey} aria-label="文件重點標注效果示範">
-                <header><span>INVOICE</span><small>AI Service Subscription</small></header>
-                <div className="demo-document-meta"><p>Billed to<br /><strong>CHEN, YU-LING</strong></p><p>Invoice no.<br /><strong>INV-2026-0918</strong></p></div>
-                <div className="demo-document-table">
-                  <div><span>Description</span><span>Period</span><span>Amount</span></div>
-                  <div><strong className="demo-mark mark-one">ChatGPT Plus</strong><strong className="demo-mark mark-two">Sep 18 – Oct 18, 2026</strong><strong className="demo-mark mark-three">US$20.00</strong></div>
+              <article className="demo-review-document" key={highlightKey} aria-label="真實收據的審核重點標注效果示範">
+                <div className="demo-review-badge"><FileCheck2 size={14} />審核人員視角</div>
+                <div className="demo-receipt-stage">
+                  <img src="/demo/receipt-review.png" alt="真實 Anthropic 收據的審核欄位裁切預覽" />
+                  <span className="demo-review-highlight review-date" aria-hidden="true" />
+                  <span className="demo-review-highlight review-plan" aria-hidden="true" />
+                  <span className="demo-review-highlight review-period" aria-hidden="true" />
+                  <span className="demo-review-highlight review-amount" aria-hidden="true" />
+                  <span className="demo-review-highlight review-payment" aria-hidden="true" />
                 </div>
-                <div className="demo-document-total"><span>Total</span><strong className="demo-mark mark-four">NT$ 642</strong></div>
-                <span className="demo-approved"><Check size={15} />資料完整</span>
+                <span className="demo-approved"><Check size={15} />關鍵欄位已定位</span>
               </article>
               <div className="demo-highlight-copy">
                 <span className="demo-icon-box demo-yellow"><Highlighter size={22} /></span>
-                <p>透明黃色螢光筆會依序標出<strong>工具名稱、訂閱期間、原始金額與臺幣金額</strong>，保留原始文件的可讀性。</p>
+                <p>透明黃色螢光筆會依序標出<strong>付款日期、方案、訂閱期間、金額與付款紀錄</strong>，讓審核人員更快掃描與核對，同時保留原始文件的可讀性。</p>
                 <button type="button" onClick={() => setHighlightKey((value) => value + 1)}>重新播放標注效果</button>
               </div>
             </div>
