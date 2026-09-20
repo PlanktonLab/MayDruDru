@@ -28,7 +28,8 @@ const LINE_URL = 'https://line.me/R/ti/p/@811lqyrt'
 const FALLBACK_FLOW_ID = '__cathay-demo__'
 
 const CARD_MASKS: MaskRect[] = [
-  { x: 0.085, y: 0.465, w: 0.65, h: 0.135, source: 'MANUAL' },
+  { x: 0.085, y: 0.465, w: 0.61, h: 0.135, source: 'MANUAL' },
+  { x: 0.3, y: 0.635, w: 0.2, h: 0.14, source: 'MANUAL' },
 ]
 
 const FALLBACK_FLOW: SopFlow = {
@@ -137,7 +138,10 @@ function MaskedCardPreview({ src }: { src: string | null }) {
     <div className="demo-card-stage" aria-label="卡號僅露出末四碼的示範信用卡">
       <img src={src ?? '/demo/credit-card-generic.jpg'} alt="無銀行 Logo 的示範信用卡" />
       {!src && (
-        <span className="demo-redaction demo-redaction-card-number" aria-hidden />
+        <>
+          <span className="demo-redaction demo-redaction-card-number" aria-hidden />
+          <span className="demo-redaction demo-redaction-expiry" aria-hidden />
+        </>
       )}
       <span className="demo-local-badge"><LockKeyhole size={13} />只在手機處理</span>
     </div>
@@ -295,7 +299,7 @@ export default function DemoPage() {
         <div id="features">
           <section className="demo-feature demo-feature-privacy" id="privacy">
             <SectionHeading eyebrow="01 — 資料去敏" title="卡號，只留下需要的四碼。"
-              description="上傳前先遮蔽信用卡號前 12 碼，只露出審核所需的末四碼；原圖不離開裝置。" />
+              description="上傳前先遮蔽信用卡號前 12 碼與到期日期，只露出審核所需的末四碼；原圖不離開裝置。" />
             <div className="demo-privacy-grid">
               <div>
                 <MaskedCardPreview src={maskedPreview} />
@@ -304,7 +308,7 @@ export default function DemoPage() {
               <div className="demo-feature-copy">
                 <span className="demo-icon-box"><ScanLine size={22} /></span>
                 <h3>前 12 碼遮蔽，末四碼可核對。</h3>
-                <p>點一下進入手機版編輯器。拖曳遮罩、調整大小，確認只有末四碼 5410 保持可見。</p>
+                <p>點一下進入手機版編輯器。拖曳遮罩、調整大小，確認末四碼 5410 完整可見，並遮住到期日期。</p>
                 <button className="demo-action-button" type="button" onClick={() => void openMaskEditor()}>
                   編輯遮罩位置 <ArrowRight size={17} />
                 </button>
@@ -403,7 +407,7 @@ export default function DemoPage() {
 
       {maskSource && (
         <MaskEditor source={maskSource} mustMask autoDetectCardNumber={false} initialMasks={CARD_MASKS}
-          keepHint="信用卡號只保留末四碼 5410；其餘 12 碼請遮蔽"
+          keepHint="完整保留末四碼 5410；其餘 12 碼與到期日期請遮蔽"
           onCancel={() => setMaskSource(null)}
           onConfirm={(masked) => {
             setMaskedPreview(masked.toDataURL('image/jpeg', 0.9))

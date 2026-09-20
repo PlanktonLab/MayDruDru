@@ -291,7 +291,8 @@
 .demo-card-stage { position: relative; overflow: hidden; border-radius: 18px; background: #e9e9e9; box-shadow: 0 25px 70px rgba(0, 0, 0, 0.13); }
 .demo-card-stage img { display: block; width: 100%; height: auto; }
 .demo-redaction { position: absolute; border-radius: 4px; background: #22252b; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08); animation: demo-mask-in 700ms var(--ease-out) both; }
-.demo-redaction-card-number { top: 46.5%; left: 8.5%; width: 65%; height: 13.5%; }
+.demo-redaction-card-number { top: 46.5%; left: 8.5%; width: 61%; height: 13.5%; }
+.demo-redaction-expiry { top: 63.5%; left: 30%; width: 20%; height: 14%; animation-delay: 180ms; }
 .demo-local-badge { position: absolute; right: 10px; bottom: 10px; display: inline-flex; align-items: center; gap: 5px; border-radius: 99px; padding: 7px 10px; background: rgba(255,255,255,0.88); color: #27272a; font-size: 10px; font-weight: 650; backdrop-filter: blur(12px); }
 .demo-sample-note { margin: 13px 0 0; color: var(--demo-muted); font-size: 11px; text-align: center; }
 .demo-feature-copy { max-width: 470px; }

@@ -12,6 +12,7 @@ describe('Feature Demo 頁', () => {
     expect(screen.getByRole('heading', { name: /讓申請/ })).toBeTruthy()
     expect(screen.queryByLabelText('主要導覽')).toBeNull()
     expect(screen.getByRole('heading', { name: '卡號，只留下需要的四碼。' })).toBeTruthy()
+    expect(screen.getByText(/遮蔽信用卡號前 12 碼與到期日期/)).toBeTruthy()
     expect(screen.getByRole('img', { name: '無銀行 Logo 的示範信用卡' })).toBeTruthy()
     expect(screen.getByRole('img', { name: 'MayDru LINE Bot 實際對話與圖文選單畫面' })).toBeTruthy()
     expect(screen.getByRole('heading', { name: '不是說明書。是下一步。' })).toBeTruthy()
