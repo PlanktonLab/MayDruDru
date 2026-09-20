@@ -8,11 +8,12 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { History, Highlighter, Maximize2, RotateCw, ScanLine, ZoomIn, ZoomOut } from 'lucide-react'
+import { Download, History, Highlighter, Maximize2, RotateCw, ScanLine, ZoomIn, ZoomOut } from 'lucide-react'
 import { Badge, Button, Spinner, cx } from '@maydru/ui'
 import { disposeCanvas, pdfToPageCanvases, toBlob } from '@maydru/ocr'
 import type { BoundingBox } from '@maydru/review-rules'
 import { dateTime } from './labels'
+import { exportReviewCanvas } from './reviewCanvasExport'
 import type { CaseDocument, CaseFinding } from './types'
 
 export const MIN_ZOOM = 0.2
@@ -100,6 +101,8 @@ export function DocumentViewer({
   const [rotation, setRotation] = useState(0)
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [showHighlights, setShowHighlights] = useState(true)
+  const [exporting, setExporting] = useState(false)
+  const [exportError, setExportError] = useState('')
   const [natural, setNatural] = useState({ width: 0, height: 0 })
   const dragRef = useRef<{ x: number; y: number } | null>(null)
   const stageRef = useRef<HTMLDivElement | null>(null)
@@ -267,6 +270,25 @@ export function DocumentViewer({
     dragRef.current = null
   }, [])
 
+  const reviewCaseNo = reviewContext?.caseNo
+  const downloadCanvas = useCallback(async () => {
+    setExporting(true)
+    setExportError('')
+    try {
+      const caseNo = reviewCaseNo?.replace(/[^a-zA-Z0-9_-]/g, '-') || 'case'
+      await exportReviewCanvas({
+        documents,
+        findings,
+        loadUrl,
+        fileName: `${caseNo}-review-canvas.png`,
+      })
+    } catch (cause) {
+      setExportError(cause instanceof Error ? cause.message : '證據畫布匯出失敗，請再試一次。')
+    } finally {
+      setExporting(false)
+    }
+  }, [documents, findings, loadUrl, reviewCaseNo])
+
   if (documents.length === 0)
     return <div className="p-6 text-sm text-muted">這件案子還沒有文件。</div>
 
@@ -356,6 +378,14 @@ export function DocumentViewer({
             >
               重點標記{evidenceCount ? `（${evidenceCount}）` : ''}
             </Button>
+            <Button
+              size="sm"
+              icon={<Download size={14} />}
+              loading={exporting}
+              onClick={() => void downloadCanvas()}
+            >
+              匯出 3× 畫布
+            </Button>
             {selected && onReRecognise && (
               <Button size="sm" loading={recognising} onClick={() => onReRecognise(selected)}>
                 重新辨識
@@ -380,6 +410,8 @@ export function DocumentViewer({
           <span>上傳於 {dateTime(selected.uploaded_at)}</span>
         </div>
       )}
+
+      {exportError && <p role="alert" className="px-3 py-2 text-[13px] text-danger">{exportError}</p>}
 
       {recognising && (
         <div className="px-3 pb-2">

@@ -120,6 +120,13 @@ describe('CasesQueuePage', () => {
 })
 
 describe('CaseReviewPage', () => {
+  it('兩份目前版本文件可匯出成 3× 證據畫布', async () => {
+    openCase('HC-2026-900002')
+    expect(await screen.findByRole('tab', { name: '身分證正面' })).toBeTruthy()
+    expect(screen.getByRole('tab', { name: '信用卡帳單扣款紀錄' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: '匯出 3× 畫布' })).toBeTruthy()
+  })
+
   it('顯示完整申請資料與遮罩過的聯絡方式', async () => {
     openCase('HC-2026-900002')
     expect((await screen.findAllByText('示範用王小明')).length).toBeGreaterThanOrEqual(2)
