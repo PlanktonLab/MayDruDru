@@ -53,7 +53,7 @@ from ...models import (
 )
 from ...pii import hash_user_id
 from .. import application as case_service
-from .. import contents
+from .. import contents, sop_links
 from .. import faq as faq_service
 from .. import scheme as scheme_service
 from . import conversation, flex, sender
@@ -365,14 +365,23 @@ async def _act_sop_prepare(ctx: _Context) -> list[dict[str, Any]]:
 
 
 async def _act_demo_sop(ctx: _Context) -> list[dict[str, Any]]:
-    """Demo 通知的教學入口；只有已綁定該案件的人可以打開。"""
+    """Demo 通知的教學入口；驗證案件後直接顯示國泰 SOP 圖卡。"""
     case_no = ctx.params.get("case_no", "")
     application = await _linked_application(ctx.db, ctx.tenant_id, ctx.user_id, case_no)
     if application is None:
         return await ctx.say("case.verify_failed")
-    doc = ctx.params.get("doc", "") or "BILLING_STATEMENT"
-    label = await _document_label(ctx.db, ctx.tenant_id, doc)
-    return await sop_service.open_for_document(ctx.sop, doc, document_label=label)
+    flow = await sop_links.find_demo_credit_record_flow(ctx.db, ctx.tenant_id)
+    if flow is None:
+        doc = ctx.params.get("doc", "") or "BILLING_STATEMENT"
+        label = await _document_label(ctx.db, ctx.tenant_id, doc)
+        return await sop_service.open_for_document(ctx.sop, doc, document_label=label)
+    return await sop_service.open_for_flow(
+        ctx.sop,
+        flow,
+        document_code="BILLING_STATEMENT",
+        document_label=flow.name,
+        include_intro=False,
+    )
 
 
 async def _act_feedback_start(ctx: _Context) -> list[dict[str, Any]]:

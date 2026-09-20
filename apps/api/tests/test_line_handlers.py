@@ -18,7 +18,7 @@ from app.services import contents
 from app.services.line import conversation, flex, handlers
 from sqlalchemy import select
 
-from tests.sop_helpers import make_published_flow
+from tests.sop_helpers import make_platform, make_published_flow
 from tests.test_state_machine import drive, make_case
 
 USER = "Uline0000000000000000000000000001"
@@ -244,6 +244,37 @@ async def test_demo_sop_refuses_a_case_the_user_did_not_link(db, tenant, scheme)
     app = await make_case(db, tenant, scheme)
     messages = await reply(db, tenant, postback_event("demo_sop", case_no=app.case_no, doc="BILLING_STATEMENT"))
     assert texts(messages) == await say(db, tenant, "case.verify_failed")
+
+
+async def test_demo_sop_directly_opens_cathay_cards_without_a_document_mapping(
+    db, tenant, scheme, fake_storage
+):
+    app = await verified_case(db, tenant, scheme)
+    platform = await make_platform(
+        db,
+        tenant.id,
+        display_name="國泰世華 CUBE App",
+        brand="國泰世華",
+    )
+    flow = await make_published_flow(
+        db,
+        tenant.id,
+        platform=platform,
+        name="消費紀錄截圖",
+        storage=fake_storage,
+    )
+
+    messages = await reply(
+        db,
+        tenant,
+        postback_event("demo_sop", case_no=app.case_no, doc="BILLING_STATEMENT"),
+    )
+
+    assert texts(messages) == ""
+    assert [message["type"] for message in messages] == ["flex"]
+    assert len(messages[0]["contents"]["contents"]) == 2
+    state = await conversation.get(db, tenant.id, USER)
+    assert state.flow == handlers.SESSION_FLOW and state.value("flow") == flow.id
 
 
 async def test_feedback_flow_prompts_then_saves_anonymous_text(db, tenant, scheme):
