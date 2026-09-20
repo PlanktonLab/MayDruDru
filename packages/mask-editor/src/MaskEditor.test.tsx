@@ -125,6 +125,23 @@ describe('MaskEditor 的確認邏輯', () => {
     )
   })
 
+  it('可帶入既有遮罩，進入畫面後直接調整', () => {
+    render(
+      <MaskEditor
+        source={source()}
+        mustMask={false}
+        autoDetectCardNumber={false}
+        initialMasks={[{ x: 0.1, y: 0.2, w: 0.4, h: 0.15, source: 'MANUAL' }]}
+        onConfirm={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    )
+    const mask = screen.getByTestId('mask-rect')
+    expect(mask.style.left).toBe('10%')
+    expect(mask.style.top).toBe('20%')
+    expect(screen.getByText('目前有 1 塊遮罩。')).toBeTruthy()
+  })
+
   it('onConfirm 拿得到遮罩後的 canvas 與遮罩清單', async () => {
     const onConfirm = vi.fn()
     const original = source()

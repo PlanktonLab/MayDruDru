@@ -14,6 +14,11 @@ SPEC §8.1 的市民端：方案列表、六步送件、案件查詢、補件、
 | `/status/:case_no` | 進度時間軸、下一步、補件面板、撤回 |
 | `/sop`、`/sop/:flow` | 取得文件的教學（P4 才有內容，路由與 `?document_type=` 先立起來） |
 | `/help` | 常見問題（伺服器搜尋 + 前端即時過濾） |
+| `/demo` | 手機優先的一頁式 Feature Demo：資料去敏、國泰 SOP、文件標注與 LINE Bot |
+
+`/demo` 會從公開 SOP API 找出國泰世華平台的已發布流程，流程選單、橫向教學圖與聊天
+客服共用同一份資料。後端離線或沒有國泰流程時，改顯示 `public/demo/cathay-home.png` 的
+離線展示內容；畫面會清楚標示來源，不把備援圖冒充成資料庫結果。
 
 ## 上傳管線（`src/apply/pipeline.ts`）
 

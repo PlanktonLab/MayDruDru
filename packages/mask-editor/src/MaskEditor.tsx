@@ -21,6 +21,8 @@ export interface MaskEditorProps {
   source: HTMLCanvasElement
   mustMask: boolean
   autoDetectCardNumber: boolean
+  /** Demo／既有文件可帶入已存在的遮罩，進入編輯器後仍可拖曳與縮放。 */
+  initialMasks?: MaskRect[]
   keepHint?: string
   onConfirm: (masked: HTMLCanvasElement, meta: MaskEditorMeta) => void
   onCancel: () => void
@@ -33,12 +35,13 @@ export function MaskEditor({
   source,
   mustMask,
   autoDetectCardNumber,
+  initialMasks = [],
   keepHint,
   onConfirm,
   onCancel,
   ocrWorker,
 }: MaskEditorProps) {
-  const [masks, setMasks] = useState<MaskRect[]>([])
+  const [masks, setMasks] = useState<MaskRect[]>(initialMasks)
   const [ocrState, setOcrState] = useState<OcrState>('idle')
   const [ocrProgress, setOcrProgress] = useState(0)
   const [ocrResult, setOcrResult] = useState<CardOcrResult | null>(null)

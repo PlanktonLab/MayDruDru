@@ -13,6 +13,7 @@ import StatusPage from './pages/StatusPage'
 import CasePage from './pages/CasePage'
 import SopPage from './pages/SopPage'
 import HelpPage from './pages/HelpPage'
+import DemoPage from './pages/DemoPage'
 
 const TABS = [
   { to: '/', label: '申辦', Icon: FileText },
@@ -97,7 +98,7 @@ function MobileTabs() {
   )
 }
 
-export default function App() {
+function ApplicationShell() {
   return (
     <div className="apply-shell">
       <DesktopHeader />
@@ -128,5 +129,14 @@ export default function App() {
 
       <MobileTabs />
     </div>
+  )
+}
+
+export default function App() {
+  return (
+    <Routes>
+      <Route path="/demo" element={<DemoPage />} />
+      <Route path="*" element={<ApplicationShell />} />
+    </Routes>
   )
 }
