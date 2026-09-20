@@ -36,7 +36,8 @@ export function SummaryAside({ scheme, state, requiredCodes }: SummaryAsideProps
   const tier = scheme.tiers.find((item) => item.code === state.identity.tier_code)
   const channel = scheme.payment_channels.find((item) => item.code === state.channel.payment_channel_code)
   const amount = Number(state.channel.purchase_amount)
-  // 預估金額只在金額與身分都齊了才算得出來；缺一個就先留白，不要秀一個會變的數字。
+  // 這是**上限**不是預測值：補助率乘上金額，再與級距上限取小的那個。
+  // 金額與身分都齊了才算得出來；缺一個就先留白，不要秀一個會變的數字。
   const estimate =
     tier && Number.isFinite(amount) && amount > 0
       ? Math.min(Math.round(amount * tier.subsidy_rate), tier.cap_amount)
@@ -64,8 +65,14 @@ export function SummaryAside({ scheme, state, requiredCodes }: SummaryAsideProps
         <Row label="申請身分" value={tier?.label ?? PENDING} />
         <Row
           label="繳費制度"
+          // `billing_cycle` 的預設值是月費，但那是欄位的初始值、不是市民選的。
+          // 還沒走到購買明細那一步就先秀「月費（1 期）」，等於幫他做了決定。
           value={
-            state.channel.billing_cycle === 'ANNUAL' ? '年費' : `月費（${state.channel.billing_periods} 期）`
+            state.channel.payment_channel_code
+              ? state.channel.billing_cycle === 'ANNUAL'
+                ? '年費'
+                : `月費（${state.channel.billing_periods} 期）`
+              : PENDING
           }
         />
         <Row label="繳費方式" value={channel?.label ?? PENDING} />
@@ -78,7 +85,7 @@ export function SummaryAside({ scheme, state, requiredCodes }: SummaryAsideProps
       </dl>
 
       <div className="mt-6 rounded-[14px] bg-background-lite p-5">
-        <p className="text-[12px] text-muted">預估補助金額</p>
+        <p className="text-[12px] text-muted">最高補助金額</p>
         <p className="mt-2 text-[26px] font-semibold tracking-tight tabular-nums text-primary">
           {estimate != null ? money(estimate) : '—'}
         </p>

@@ -110,3 +110,18 @@
   --pg-good-bg: color-mix(in oklab, #34d399 16%, transparent);
   --pg-warn: #e0b65f;
 }
+
+/* 從右邊滑出的抽屜（遮罩編輯器在桌面用它）。手機是整頁蓋上來，
+   滑動方向沒有意義，所以只在有側向空間時才位移。 */
+@keyframes md-drawer-in {
+  from { transform: translateX(2rem); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.md-drawer {
+  animation: md-drawer-in 0.24s var(--ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .md-drawer { animation: none; }
+}

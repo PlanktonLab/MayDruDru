@@ -121,6 +121,7 @@ export interface SchemePublic extends SchemeSummary {
 }
 
 export interface CaseSupplementItem {
+  period_index?: number
   document_type_code: string
   rejection_code: string
   note: string
@@ -190,6 +191,7 @@ export interface SubmitResponse {
 
 /** multipart 的 `documents` 欄位，一份文件一筆，順序對應 `file_0…`。 */
 export interface DocumentPayload {
+  period_index?: number
   document_type_code: string
   masked: boolean
   mime: string

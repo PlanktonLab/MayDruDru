@@ -4,8 +4,8 @@
 # 與開發檔的差別：
 #   - 不在 VM 上 build，改拉 GHCR 的多架構映像（linux/arm64 + linux/amd64）
 #   - ENV=production：啟動時拒絕不安全的預設值（見 app/config.py::insecure_defaults）
-#   - `!override` 取代（而非合併）ports，讓資料面服務完全不對外開；只留下主機 nginx
-#     會反向代理的 api / admin-web / apply-web 三個 127.0.0.1 連接埠
+#   - `!override` 取代（而非合併）ports，讓資料面服務不對外開；MinIO 只綁
+#     127.0.0.1:9002，供主機 nginx 代理具時效簽章的 private-media URL
 #   - restart: unless-stopped
 #
 # GHCR_OWNER 由 .env 提供（例如 GHCR_OWNER=xamjiang）。
@@ -24,7 +24,7 @@ services:
 
   minio:
     <<: *prod
-    ports: !override []
+    ports: !override ["127.0.0.1:9002:9000"]
 
   renderer:
     <<: *prod

@@ -108,6 +108,18 @@ describe('DocField', () => {
     expect(screen.queryByText(/原圖不會離開這支手機/)).toBeNull()
   })
 
+  it('逐期文件使用期數標題，仍須確認遮罩後才交回結果', async () => {
+    const onChange = vi.fn()
+    render(<DocField docType={billing} label="信用卡帳單（第 2 期）" onChange={onChange} onClear={vi.fn()} />)
+    pick('選擇信用卡帳單（第 2 期）的檔案', file())
+    expect(await screen.findByText('遮罩編輯器')).toBeTruthy()
+    expect(onChange).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByText('確認遮罩'))
+    await waitFor(() => expect(onChange).toHaveBeenCalled())
+    expect(onChange.mock.calls[0][0].document_type_code).toBe('BILLING_STATEMENT')
+    expect(onChange.mock.calls[0][0].masked).toBe(true)
+  })
+
   it('HEIC 會被標記成已轉 JPEG', async () => {
     const onChange = vi.fn()
     render(<DocField docType={affidavit} onChange={onChange} onClear={vi.fn()} />)

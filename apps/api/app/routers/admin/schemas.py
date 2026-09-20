@@ -242,6 +242,7 @@ class StaffOut(BaseModel):
 
 
 class SupplementItemIn(BaseModel):
+    period_index: int = Field(default=1, ge=1, le=12)
     document_type_code: str | None = None
     rejection_code: str = "OTHER"
     note: str = ""
@@ -271,6 +272,7 @@ class OcrOut(BaseModel):
 
 
 class DocumentOut(BaseModel):
+    period_index: int = 1
     id: str
     document_type_code: str
     document_type_label: str = ""
@@ -422,6 +424,12 @@ class ApplicationOut(BaseModel):
 
 class ApplicationDetailOut(ApplicationOut):
     """案件頁（契約 §CaseDetail）。"""
+
+    tool_id: str | None = None
+    billing_cycle: str = "MONTHLY"
+    billing_periods: int = 1
+    original_currency: str = "TWD"
+    original_amount: float | None = None
 
     applicant_name: str
     email: str

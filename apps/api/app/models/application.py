@@ -90,6 +90,10 @@ class Application(TsMixin, VersionMixin, Base):
 
     tool_name: Mapped[str] = mapped_column(String(200), default="")
     tool_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    billing_cycle: Mapped[str] = mapped_column(String(10), default="MONTHLY")
+    billing_periods: Mapped[int] = mapped_column(Integer, default=1)
+    original_currency: Mapped[str] = mapped_column(String(3), default="TWD")
+    original_amount: Mapped[float | None] = mapped_column(Float, nullable=True)
     purchase_amount: Mapped[int | None] = mapped_column(Integer, nullable=True)
     purchase_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     paid_by_proxy: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -134,6 +138,7 @@ class ApplicationDocument(TsMixin, Base):
     tenant_id: Mapped[str] = mapped_column(String(32), index=True)
     application_id: Mapped[str] = mapped_column(ForeignKey("applications.id", ondelete="CASCADE"), index=True)
     document_type_code: Mapped[str] = mapped_column(String(40), index=True)
+    period_index: Mapped[int] = mapped_column(Integer, default=1)
     revision: Mapped[int] = mapped_column(Integer, default=0)
     supersedes_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
     is_current: Mapped[bool] = mapped_column(Boolean, default=True)

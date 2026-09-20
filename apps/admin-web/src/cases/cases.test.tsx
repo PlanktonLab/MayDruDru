@@ -122,14 +122,16 @@ describe('CasesQueuePage', () => {
 describe('CaseReviewPage', () => {
   it('兩份目前版本文件可匯出成 3× 證據畫布', async () => {
     openCase('HC-2026-900002')
-    expect(await screen.findByRole('tab', { name: '官方收據' })).toBeTruthy()
-    expect(screen.getByRole('tab', { name: '信用卡帳單扣款紀錄' })).toBeTruthy()
+    const open = await screen.findByRole('button', { name: '檢視 官方收據' })
+    fireEvent.click(open)
+    expect(await screen.findByRole('tab', { name: /官方收據/ })).toBeTruthy()
+    expect(screen.getByRole('tab', { name: /信用卡帳單扣款紀錄/ })).toBeTruthy()
     expect(screen.getByRole('button', { name: '匯出 3× 畫布' })).toBeTruthy()
   })
 
   it('顯示完整申請資料與遮罩過的聯絡方式', async () => {
     openCase('HC-2026-900002')
-    expect((await screen.findAllByText('示範用林小安')).length).toBeGreaterThanOrEqual(2)
+    expect(await screen.findByText('示範用林小安')).toBeTruthy()
     expect(screen.getByText('09**-***-678')).toBeTruthy()
   })
 
@@ -208,13 +210,13 @@ describe('CaseReviewPage', () => {
     expect(panel.textContent).toContain('超出容差')
   })
 
-  it('文件分頁列出目前版本，並標示 OCR 來源', async () => {
+  it('文件總覽可展開單份文件並檢視 OCR 來源', async () => {
     openCase('HC-2026-900002')
-    const tab = await screen.findByRole('tab', { name: /信用卡帳單扣款紀錄/ })
-    // 預設選第一份（官方收據），它沒有 OCR 結果；切到帳單才看得到來源。
-    expect(screen.getByText('沒有 OCR 結果')).toBeTruthy()
-    fireEvent.click(tab)
+    const open = await screen.findByRole('button', { name: '檢視 信用卡帳單扣款紀錄' })
+    expect(screen.getByText('文件總覽')).toBeTruthy()
+    fireEvent.click(open)
     expect(await screen.findByText('OCR 來源：申請人上傳')).toBeTruthy()
+    expect(screen.getByRole('tab', { name: /信用卡帳單扣款紀錄/ })).toBeTruthy()
   })
 
   it('指派選單列出可指派的審核人與他們的角色', async () => {
@@ -275,7 +277,7 @@ describe('CaseReviewPage', () => {
 
   it('時間軸寫出是誰做的：承辦有名字，系統沒有', async () => {
     openCase('HC-2026-900002')
-    const timeline = (await screen.findByText('事件時間軸')).closest('section')!
+    const timeline = (await screen.findByText('事件時間軸')).closest('details')!
     expect(timeline.textContent).toContain('由系統自動執行')
     fireEvent.click(screen.getByRole('button', { name: '核定' }))
     await waitFor(() => expect(timeline.textContent).toContain('由 示範承辦'))

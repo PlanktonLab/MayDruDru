@@ -2647,6 +2647,12 @@ _REVIEW: tuple[ContentDefinition, ...] = (
 )
 
 CONTENT_REGISTRY: tuple[ContentDefinition, ...] = (
+    _def("help_chat.fallback", "faq", "文件助手：fallback", "文件助手回覆", "目前找不到符合的常見問題，請換個關鍵字，或透過說明頁洽詢承辦單位。"),
+    _def("help_chat.disabled", "faq", "文件助手：disabled", "文件助手回覆", "文件助手暫停服務，請查看說明頁或洽詢承辦單位。"),
+    _def("help_chat.limited", "faq", "文件助手：limited", "文件助手回覆", "詢問次數已達上限，請稍後再試，或查看常見問題。"),
+    _def("help_chat.unavailable", "faq", "文件助手：unavailable", "文件助手回覆", "目前無法查詢，請稍後再試。"),
+    _def("help_chat.too_long", "faq", "文件助手：too_long", "文件助手回覆", "問題太長，請縮短後再試。"),
+
     *_HOME,
     *_CASE,
     *_MYCASE,

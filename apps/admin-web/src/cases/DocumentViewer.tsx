@@ -416,8 +416,8 @@ export function DocumentViewer({
                   : 'border-border bg-background-lite text-muted hover:text-primary',
               )}
             >
-              {doc.document_type_label}
-              {doc.revision > 1 && <span className="ml-1 tabular-nums">v{doc.revision}</span>}
+              {doc.document_type_label}{(doc.period_index ?? 1) > 1 ? `（第 ${doc.period_index} 期）` : ''}
+              {doc.revision > 0 && <span className="ml-1 tabular-nums">v{doc.revision + 1}</span>}
             </button>
           ))}
         </div>
@@ -442,8 +442,10 @@ export function DocumentViewer({
                 onClick={() => onSelect(doc.id)}
                 className="flex min-h-8 w-full items-center gap-2 rounded-lg px-2 text-left hover:bg-canvas"
               >
-                <span className="flex-1 truncate">{doc.document_type_label}</span>
-                <span className="tabular-nums text-muted">第 {doc.revision} 版</span>
+                <span className="flex-1 truncate">
+                  {doc.document_type_label}{(doc.period_index ?? 1) > 1 ? `（第 ${doc.period_index} 期）` : ''}
+                </span>
+                <span className="tabular-nums text-muted">第 {doc.revision + 1} 版</span>
                 <span className="text-muted">{dateTime(doc.uploaded_at)}</span>
               </button>
             </li>
@@ -625,7 +627,7 @@ export function DocumentViewer({
                       <div className="relative" style={{ width: placement.width, height: placement.height }}>
                         <img
                           src={item.url}
-                          alt={`${item.document.document_type_label}（第 ${item.document.revision} 版）`}
+                          alt={`${item.document.document_type_label}（第 ${item.document.revision + 1} 版）`}
                           draggable={false}
                           className="block max-w-none select-none"
                           style={{ width: placement.width, height: placement.height }}

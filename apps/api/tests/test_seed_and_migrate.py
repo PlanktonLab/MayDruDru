@@ -65,7 +65,7 @@ async def test_seed_inserts_the_whole_scheme(db, session_factory):
     assert report["rejection_code:inserted"] == 12
     assert report["payment_channel:inserted"] == 4
     assert report["tier:inserted"] == 2
-    assert report["faq:inserted"] == 10
+    assert report["faq:inserted"] == len(seed_data.FAQS)
     assert report["application:inserted"] == 6
 
 

@@ -37,6 +37,7 @@ export function createHandlers(options: MockOptions = {}): HttpHandler[] {
   let nextCaseSerial = 900_100
 
   return [
+    http.post('/api/apply/schemes/:code/tool-inquiries', () => HttpResponse.json({ tool_id: null })),
     http.get('/api/apply/schemes', () => HttpResponse.json([SCHEME_SUMMARY, ...OTHER_SCHEMES])),
 
     http.get('/api/apply/schemes/:code', ({ params }) =>

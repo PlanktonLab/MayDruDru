@@ -46,6 +46,8 @@ from .apply_schemas import (
     RequiredDocumentsOut,
     SchemeSummaryOut,
     SubmitResultOut,
+    ToolInquiryIn,
+    ToolInquiryOut,
     VerifyIn,
     VerifyOut,
     WithdrawOut,
@@ -194,6 +196,7 @@ async def _store_all(
     files: list[FormFile],
 ) -> list[dict[str, Any]]:
     """驗證並把每個檔案放進 private bucket，回傳文件列的 spec。"""
+    documents_service.validate_periods(app, [spec.model_dump() for spec in specs])
     stored: list[dict[str, Any]] = []
     for spec, upload in zip(specs, files):
         data = await upload.read()
@@ -206,6 +209,7 @@ async def _store_all(
             page_count=spec.page_count,
             masked=spec.masked,
             document_type_code=spec.document_type_code,
+            period_index=spec.period_index,
         )
         stored.append(result.as_spec())
     return stored
@@ -219,11 +223,11 @@ async def _attach_ocr(
     source: str = "applicant",
 ) -> None:
     rows = {
-        d.document_type_code: d
+        (d.document_type_code, d.period_index): d
         for d in await review.current_documents(db, app)
     }
     for spec in specs:
-        row = rows.get(spec.document_type_code)
+        row = rows.get((spec.document_type_code, spec.period_index))
         if row is not None:
             await documents_service.write_ocr(db, row, spec.ocr, source=source)
 
@@ -275,6 +279,10 @@ async def create_application(
         intake_channel="WEB",
         tool_name=payload.tool_name,
         tool_id=payload.tool_id,
+        billing_cycle=payload.billing_cycle,
+        billing_periods=payload.billing_periods,
+        original_currency=payload.original_currency,
+        original_amount=payload.original_amount,
         purchase_amount=payload.purchase_amount,
         purchase_date=payload.purchase_date,
         paid_by_proxy=payload.paid_by_proxy,
@@ -398,6 +406,7 @@ async def get_case(
         "documents": [
             {
                 "document_type_code": d.document_type_code,
+                "period_index": d.period_index,
                 "revision": d.revision,
                 "is_current": d.is_current,
                 "uploaded_at": d.uploaded_at,
@@ -445,12 +454,12 @@ async def add_supplement(
     files = await _files(request, len(specs))
 
     wanted = {
-        item.get("document_type_code")
+        (item.get("document_type_code"), item.get("period_index", 1))
         for item in (app.supplement_items or [])
         if isinstance(item, dict)
     }
     for spec in specs:
-        if spec.document_type_code not in wanted:
+        if (spec.document_type_code, spec.period_index) not in wanted:
             return coded(400, UNEXPECTED_DOCUMENT_TYPE, document_type_code=spec.document_type_code)
 
     scheme = await db.get(Scheme, app.scheme_id)
@@ -502,3 +511,12 @@ async def list_faqs(
         {"id": f.id, "category": f.category, "question": f.question, "answer": f.answer, "priority": f.priority}
         for f in rows
     ]
+
+
+@router.post("/schemes/{code}/tool-inquiries", response_model=ToolInquiryOut,
+             dependencies=[Depends(rate_limit("tool-inquiry", SUBMIT_LIMIT_PER_MINUTE))])
+async def inquire_tool(code: str, body: ToolInquiryIn, db: AsyncSession = Depends(get_db)) -> ToolInquiryOut:
+    configured = await scheme_service.get_scheme(db, await _tenant(db), code)
+    tool_id = await scheme_service.record_application_tool(db, configured, body.name, None, inquiry=True)
+    await db.commit()
+    return ToolInquiryOut(tool_id=tool_id)
