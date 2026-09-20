@@ -122,7 +122,7 @@ describe('CasesQueuePage', () => {
 describe('CaseReviewPage', () => {
   it('顯示完整申請資料與遮罩過的聯絡方式', async () => {
     openCase('HC-2026-900002')
-    expect((await screen.findAllByText('示範用王小明')).length).toBeGreaterThanOrEqual(2)
+    expect(await screen.findByText('示範用王小明')).toBeTruthy()
     expect(screen.getByText('09**-***-678')).toBeTruthy()
   })
 

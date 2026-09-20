@@ -240,7 +240,8 @@ describe('ApplyPage', () => {
       if (!/下一步：/.test(toNext.textContent ?? '')) break
       fireEvent.click(toNext)
     }
-    expect(filled).toBe(6)
+    // 基本文件至少 6 份；多期方案會再依期數展開收據與付款憑證。
+    expect(filled).toBeGreaterThanOrEqual(6)
 
     next()
     await screen.findByRole('heading', { name: '確認並送出' })
