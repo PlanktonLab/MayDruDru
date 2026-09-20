@@ -16,6 +16,8 @@ import { GuideStep } from '../apply/GuideStep'
 import { IdentityStep } from '../apply/IdentityStep'
 import { ToolStep } from '../apply/ToolStep'
 import { SummaryAside } from '../apply/SummaryAside'
+import { HelpChat } from '../apply/HelpChat'
+import { helpChatEnabled } from '../lib/helpChat'
 import { expandSlots } from '../apply/docGroups'
 import { documentTypesFor } from '../apply/GuideStep'
 import { runPrecheck, type PrecheckView } from '../apply/precheck'
@@ -130,6 +132,7 @@ export default function ApplyPage() {
         .filter((entry) => Boolean(entry.doc))
         .map(({ key, doc }) => ({
           document_type_code: doc.document_type_code,
+          period_index: key === doc.document_type_code ? 1 : Number(key.slice(doc.document_type_code.length + 1)),
           masked: doc.masked,
           mime: doc.mime,
           page_count: doc.page_count,
@@ -151,6 +154,10 @@ export default function ApplyPage() {
           tool_id: state.tool.tool_id,
           // 後端的 purchase_amount 是整數，小數點會被 422 擋下來。
           purchase_amount: Math.round(Number(state.channel.purchase_amount)),
+          billing_cycle: state.channel.billing_cycle,
+          billing_periods: periods,
+          original_currency: state.channel.original_currency,
+          original_amount: Number(state.channel.original_currency === 'TWD' ? state.channel.purchase_amount : state.channel.original_amount) || null,
           purchase_date: state.channel.purchase_date,
           paid_by_proxy: state.channel.paid_by_proxy,
           note: state.manualAssist ? '申請人勾選「請人工協助審核」。' : undefined,
@@ -168,7 +175,7 @@ export default function ApplyPage() {
     } finally {
       setSubmitting(false)
     }
-  }, [navigate, slotKeys, scheme, schemeCode, state, view])
+  }, [navigate, slotKeys, scheme, schemeCode, state, view, periods])
 
   // 首頁要先問到方案代碼才問得到方案本身，兩段載入都算「載入中」。
   if (schemeQuery.isLoading || (!routeCode && schemesQuery.isLoading)) return <Spinner label="載入方案資料…" />
@@ -359,6 +366,10 @@ export default function ApplyPage() {
           <SummaryAside scheme={scheme} state={state} requiredCodes={requiredCodes} />
         </div>
       </div>
+
+      {/* 申請文件準備助手只掛在準備與上傳這兩步——那是人真的去翻銀行 App 的時刻。
+          填欄位與送出的步驟它幫不上忙，掛著只會跟主要動作搶注意力。 */}
+      {helpChatEnabled && (stepKey === 'guide' || stepKey === 'docs') && <HelpChat schemeCode={schemeCode} />}
     </section>
   )
 }

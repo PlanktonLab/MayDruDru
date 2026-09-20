@@ -27,7 +27,7 @@
 
 - CI 在 main 分支把五個映像（api、worker、renderer、admin-web、apply-web）以 `linux/arm64` + `linux/amd64` 推到 GHCR。
 - 在 VM 上先 `docker login ghcr.io`，然後用 `docker-compose.yml` + `docker-compose.prod.yml` 兩個檔一起 `pull` 再 `up -d`。
-- prod 覆寫會把資料面服務（postgres、redis、minio、renderer）的 ports 清空，只留 `127.0.0.1` 的 8200 / 8201 / 8202。
+- prod 覆寫不會把資料面服務對外公開；MinIO 僅綁 `127.0.0.1:9002` 供主機 nginx 代理 private-media，另保留 `127.0.0.1` 的 8200 / 8201 / 8202。
 - migration 由 api 容器啟動時自動跑（`alembic upgrade head`）。
 
 ## 3. 主機 nginx

@@ -47,6 +47,9 @@ function codeOf(body: unknown): string | null {
  * 草稿與已經處理過的照片都還在記憶體裡，不必從頭再來一遍。
  */
 export const CODE_MESSAGE: Record<string, string> = {
+  TOOL_REJECTED: '這個工具不適用於此補助，請選擇其他工具。',
+  UNKNOWN_TOOL: '工具列表已更新，請重新選擇工具。',
+  INVALID_DOCUMENT_PERIOD: '文件期數不符或重複，請確認每一期各有一份文件。',
   SCHEME_NOT_FOUND: '找不到這個補助方案，連結可能過期了。請回首頁重新選一個開放中的方案。',
   SCHEME_CLOSED: '這個方案的申請期間已經結束，無法再送件。',
   CASE_NOT_FOUND: '查不到這件案子。請對照送件後的截圖確認案件編號。',

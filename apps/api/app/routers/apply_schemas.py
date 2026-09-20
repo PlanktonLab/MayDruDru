@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -85,6 +85,7 @@ class DocumentIn(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     document_type_code: str = Field(min_length=1, max_length=40)
+    period_index: int = Field(default=1, ge=1, le=12)
     masked: bool = False
     mime: str = ""
     page_count: int = Field(default=1, ge=1, le=50)
@@ -117,6 +118,10 @@ class ApplicationIn(BaseModel):
     email: str = Field(default="", max_length=320)
     tool_name: str = Field(default="", max_length=200)
     tool_id: str | None = None
+    billing_cycle: Literal["MONTHLY", "ANNUAL"] = "MONTHLY"
+    billing_periods: int = Field(default=1, ge=1, le=12)
+    original_currency: str = Field(default="TWD", pattern="^[A-Z]{3}$")
+    original_amount: float | None = Field(default=None, gt=0, le=10_000_000, allow_inf_nan=False)
     purchase_amount: int | None = Field(default=None, ge=0, le=10_000_000)
     purchase_date: date | None = None
     paid_by_proxy: bool = False
@@ -149,12 +154,14 @@ class VerifyOut(BaseModel):
 
 
 class SupplementItemOut(BaseModel):
+    period_index: int = 1
     document_type_code: str | None = None
     rejection_code: str = ""
     note: str = ""
 
 
 class CaseDocumentOut(BaseModel):
+    period_index: int = 1
     document_type_code: str
     revision: int
     is_current: bool
@@ -205,6 +212,14 @@ class CasePublicOut(BaseModel):
 
 class WithdrawOut(BaseModel):
     status: str
+
+
+class ToolInquiryIn(BaseModel):
+    name: str = Field(min_length=1, max_length=200, pattern=r"\S")
+
+
+class ToolInquiryOut(BaseModel):
+    tool_id: str | None
 
 
 class FaqOut(BaseModel):

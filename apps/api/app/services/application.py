@@ -152,6 +152,10 @@ async def create_application(
     intake_channel: str = "WEB",
     tool_name: str = "",
     tool_id: str | None = None,
+    billing_cycle: str = "MONTHLY",
+    billing_periods: int = 1,
+    original_currency: str = "TWD",
+    original_amount: float | None = None,
     purchase_amount: int | None = None,
     purchase_date: Any = None,
     paid_by_proxy: bool = False,
@@ -161,6 +165,7 @@ async def create_application(
     now: datetime | None = None,
     actor: Actor | None = None,
     auto_start_review: bool = True,
+    track_tool_input: bool = True,
 ) -> Application:
     """建一件新案：配號、雜湊個資、寫文件列，然後 SUBMITTED → T1 → UNDER_REVIEW。
 
@@ -170,6 +175,10 @@ async def create_application(
     `auto_start_review=False` 讓案件停在 SUBMITTED——只給 seed 與搬遷用，真正的
     送件路徑永遠收件即進審查。
     """
+    from .scheme import record_application_tool
+
+    if track_tool_input:
+        tool_id = await record_application_tool(db, scheme, tool_name, tool_id)
     stamp = now or datetime.now(UTC)
     app = Application(
         tenant_id=tenant_id,
@@ -188,6 +197,10 @@ async def create_application(
         email=email,
         tool_name=tool_name,
         tool_id=tool_id,
+        billing_cycle=billing_cycle,
+        billing_periods=1 if billing_cycle == "ANNUAL" else billing_periods,
+        original_currency=original_currency,
+        original_amount=original_amount,
         purchase_amount=purchase_amount,
         purchase_date=purchase_date,
         paid_by_proxy=paid_by_proxy,
@@ -226,6 +239,7 @@ def _document_row(app: Application, spec: dict[str, Any], *, revision: int, uplo
         tenant_id=app.tenant_id,
         application_id=app.id,
         document_type_code=spec["document_type_code"],
+        period_index=spec.get("period_index", 1),
         revision=spec.get("revision", revision),
         supersedes_id=spec.get("supersedes_id"),
         is_current=spec.get("is_current", True),
@@ -252,7 +266,7 @@ async def add_documents(
     """
     stamp = now or datetime.now(UTC)
     current = {
-        d.document_type_code: d
+        (d.document_type_code, d.period_index): d
         for d in (
             await db.execute(
                 select(ApplicationDocument).where(
@@ -264,7 +278,7 @@ async def add_documents(
     }
     rows: list[ApplicationDocument] = []
     for spec in documents:
-        previous = current.get(spec["document_type_code"])
+        previous = current.get((spec["document_type_code"], spec.get("period_index", 1)))
         if previous is not None:
             previous.is_current = False
         row = _document_row(

@@ -14,7 +14,7 @@ import { Badge, Card, Select, Spinner, Timeline, type TimelineEvent } from '@may
 import { createOcrWorker, disposeCanvas, pdfToPageCanvases, recognize, type OcrLine, type OcrResult } from '@maydru/ocr'
 import { ComparePanel } from '../cases/ComparePanel'
 import { DecisionBar } from '../cases/DecisionBar'
-import { DocumentViewer } from '../cases/DocumentViewer'
+import { DocumentOverview } from '../cases/DocumentOverview'
 import { FindingsPanel } from '../cases/FindingsPanel'
 import { renderNote } from '../cases/reviewNotes'
 import {
@@ -66,7 +66,7 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex items-baseline justify-between gap-3 py-1">
       <dt className="shrink-0 text-[12.5px] text-muted">{label}</dt>
-      <dd className="min-w-0 text-right text-[13.5px] text-primary">{value}</dd>
+      <dd className="min-w-0 break-words text-right text-[13.5px] text-primary">{value}</dd>
     </div>
   )
 }
@@ -180,13 +180,22 @@ export default function CaseReviewPage() {
   const settings = caseData.scheme_settings
   const documentTypes: DocumentTypeOption[] = settings.document_types.filter((type) =>
     caseData.required_document_types.includes(type.code),
-  )
+  ).flatMap((type) => {
+    const perPeriod = ['OFFICIAL_RECEIPT', 'BILLING_STATEMENT', 'TELECOM_BILL', 'TRANSACTION_DETAIL'].includes(type.code)
+    return Array.from({ length: perPeriod ? (caseData.billing_periods ?? 1) : 1 }, (_, index) => ({
+      ...type,
+      code: `${type.code}:${index + 1}`,
+      label: perPeriod && (caseData.billing_periods ?? 1) > 1 ? `${type.label}（第 ${index + 1} 期）` : type.label,
+    }))
+  })
   const currentDocumentTypes = new Set(
-    caseData.documents.filter((document) => document.is_current).map((document) => document.document_type_code),
+    caseData.documents
+      .filter((document) => document.is_current)
+      .map((document) => `${document.document_type_code}:${document.period_index ?? 1}`),
   )
-  const missingDocuments = caseData.required_document_types
-    .filter((code) => !currentDocumentTypes.has(code))
-    .map((code) => settings.document_types.find((type) => type.code === code)?.label || code)
+  const missingDocuments = documentTypes
+    .filter((type) => !currentDocumentTypes.has(type.code))
+    .map((type) => type.label)
   const findingsPanel = (
     <FindingsPanel
       findings={caseData.findings.map((finding) => ({
@@ -229,12 +238,13 @@ export default function CaseReviewPage() {
         />
       </div>
 
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 p-6 pt-4 xl:grid-cols-[minmax(0,1fr)_420px]">
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 p-6 pt-4 xl:grid-cols-[minmax(0,1fr)_360px]">
         <section
           aria-label="文件檢視器"
-          className="min-h-[60vh] overflow-hidden rounded-2xl border border-border bg-canvas"
+          className="min-h-[60vh] xl:min-h-0 overflow-hidden rounded-2xl border border-border bg-canvas"
         >
-          <DocumentViewer
+          <DocumentOverview
+            supplementSince={caseData.events.filter((e) => e.transition_code === 'T4').length ? [...caseData.events].reverse().find((e) => e.transition_code === 'T2')?.created_at : undefined}
             documents={caseData.documents}
             selectedId={selectedDocumentId}
             onSelect={(documentId) => {
@@ -260,6 +270,11 @@ export default function CaseReviewPage() {
         </section>
 
         <aside aria-label="審核面板" className="min-h-0 space-y-4 overflow-auto">
+          {(caseData.billing_periods ?? 1) > 1 && (
+            <div className="rounded-xl bg-accent-bg p-4 text-sm text-accent">
+              本案申請 {caseData.billing_periods} 期。請逐期核對收據與扣款憑證，再確認合計金額與人工判定。
+            </div>
+          )}
           {findingsPanel}
 
           <Card title="申請概況">
@@ -269,7 +284,11 @@ export default function CaseReviewPage() {
               <Row label="身分證末四碼" value={caseData.id_last4_masked} />
               {caseData.email && <Row label="Email" value={caseData.email} />}
               <Row label="工具" value={caseData.tool_name} />
-              <Row label="級距／管道" value={`${caseData.tier_code} · ${caseData.payment_channel_code}`} />
+              <Row label="工具判定" value={<Link className="text-accent underline" to={`/tool-knowledge?scheme=${encodeURIComponent(caseData.scheme_code)}`}>查看知識庫與自填統計</Link>} />
+              <Row label="申請身分" value={settings.tiers.find((t) => t.code === caseData.tier_code)?.label || caseData.tier_code} />
+              <Row label="付款方式" value={settings.payment_channels.find((c) => c.code === caseData.payment_channel_code)?.label || caseData.payment_channel_code} />
+              <Row label="訂閱／期數" value={`${caseData.billing_cycle === 'ANNUAL' ? '年費' : '月費'} · ${caseData.billing_periods ?? 1} 期`} />
+              {caseData.original_amount != null && <Row label="原幣金額" value={`${caseData.original_currency} ${caseData.original_amount.toLocaleString()}`} />}
               <Row label="購買日期" value={date(caseData.purchase_date)} />
               <Row label="申報金額" value={money(caseData.purchase_amount)} />
               {caseData.paid_by_proxy && <Row label="付款人" value="由他人代為支付" />}
@@ -287,6 +306,21 @@ export default function CaseReviewPage() {
               </p>
             )}
           </Card>
+
+          <DecisionBar
+            transitions={caseData.allowed_transitions}
+            blockers={caseData.approval_blockers}
+            rejectionCodes={settings.rejection_codes}
+            documentTypes={documentTypes}
+            supplementDays={settings.supplement_days}
+            onSubmit={async (input) => {
+              await runTransition(caseNo, { ...input, supplement_items: input.supplement_items?.map((item) => ({
+                ...item, document_type_code: item.document_type_code.split(':')[0], period_index: Number(item.document_type_code.split(':')[1] || 1),
+              })) })
+              await refresh()
+              toast('已更新案件狀態')
+            }}
+          />
 
           <Card title="指派審核人">
             <Select
@@ -325,22 +359,10 @@ export default function CaseReviewPage() {
             rules={caseData.rules}
           />
 
-          <DecisionBar
-            transitions={caseData.allowed_transitions}
-            blockers={caseData.approval_blockers}
-            rejectionCodes={settings.rejection_codes}
-            documentTypes={documentTypes}
-            supplementDays={settings.supplement_days}
-            onSubmit={async (input) => {
-              await runTransition(caseNo, input)
-              await refresh()
-              toast('已更新案件狀態')
-            }}
-          />
-
-          <Card title="事件時間軸" subtitle="每一次轉移都是不可變的紀錄。">
+          <details className="rounded-xl border border-border bg-canvas p-4"><summary className="cursor-pointer text-sm font-medium">事件時間軸</summary>
+          <Card subtitle="每一次轉移都是不可變的紀錄。">
             <Timeline events={events} currentKey={events[0]?.key} />
-          </Card>
+          </Card></details>
         </aside>
       </div>
     </div>

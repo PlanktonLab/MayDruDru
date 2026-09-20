@@ -89,6 +89,7 @@ class StoredUpload:
     page_count: int
     masked: bool
     revision: int
+    period_index: int = 1
 
     def as_spec(self) -> dict[str, Any]:
         return {
@@ -100,6 +101,7 @@ class StoredUpload:
             "page_count": self.page_count,
             "masked": self.masked,
             "revision": self.revision,
+            "period_index": self.period_index,
         }
 
 
@@ -178,13 +180,28 @@ def make_preview(data: bytes, mime: str) -> bytes | None:
 
 # ------------------------------------------------------------------- 寫入
 
-async def next_revision(db: AsyncSession, application: Application, document_type_code: str) -> int:
+PER_PERIOD_TYPES = frozenset({"OFFICIAL_RECEIPT", "BILLING_STATEMENT", "TELECOM_BILL", "TRANSACTION_DETAIL"})
+
+
+def validate_periods(application: Application, specs: list[dict[str, Any]]) -> None:
+    seen: set[tuple[str, int]] = set()
+    for spec in specs:
+        code = str(spec["document_type_code"])
+        period = int(spec.get("period_index", 1))
+        limit = application.billing_periods if code in PER_PERIOD_TYPES else 1
+        if period < 1 or period > limit or (code, period) in seen:
+            raise DocumentRejected("INVALID_DOCUMENT_PERIOD", document_type_code=code)
+        seen.add((code, period))
+
+
+async def next_revision(db: AsyncSession, application: Application, document_type_code: str, period_index: int = 1) -> int:
     """同一個文件類型的下一個版本號。第一次上傳是 0（與 P1 的建案一致）。"""
     highest = (
         await db.execute(
             select(func.max(ApplicationDocument.revision)).where(
                 ApplicationDocument.application_id == application.id,
                 ApplicationDocument.document_type_code == document_type_code,
+                ApplicationDocument.period_index == period_index,
             )
         )
     ).scalar_one_or_none()
@@ -202,6 +219,7 @@ async def store_upload(
     masked: bool = False,
     document_type_code: str = "",
     revision: int | None = None,
+    period_index: int = 1,
 ) -> StoredUpload:
     """驗證、上傳原件與預覽圖，回傳文件列的 spec（還沒寫資料庫）。
 
@@ -211,16 +229,17 @@ async def store_upload(
     code = document_type.code if document_type is not None else document_type_code
     ext = validate_upload(document_type, mime=mime, size=len(data), page_count=page_count,
                           document_type_code=code)
-    rev = revision if revision is not None else await next_revision(db, application, code)
+    rev = revision if revision is not None else await next_revision(db, application, code, period_index)
 
-    key = object_key(application.tenant_id, application.case_no, code, rev, ext)
+    storage_code = code if period_index == 1 else f"{code}/period-{period_index}"
+    key = object_key(application.tenant_id, application.case_no, storage_code, rev, ext)
     normalized = (mime or "").split(";")[0].strip().lower()
     await asyncio.to_thread(storage.put_private, key, data, normalized)
 
     thumb = make_preview(data, normalized)
     thumb_key: str | None = None
     if thumb is not None:
-        thumb_key = preview_key(application.tenant_id, application.case_no, code, rev)
+        thumb_key = preview_key(application.tenant_id, application.case_no, storage_code, rev)
         await asyncio.to_thread(storage.put_private, thumb_key, thumb, "image/jpeg")
 
     return StoredUpload(
@@ -232,6 +251,7 @@ async def store_upload(
         page_count=max(1, int(page_count or 1)),
         masked=bool(masked),
         revision=rev,
+        period_index=period_index,
     )
 
 
