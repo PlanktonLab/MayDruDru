@@ -19,13 +19,14 @@ from __future__ import annotations
 
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models import DocumentType, DocumentTypeSopFlow, Flow, Platform, RejectionCode, Scheme
 
 __all__ = [
     "document_type_ids",
+    "find_demo_credit_record_flow",
     "flow_view",
     "flows_for_rejection",
     "links_for_document_type",
@@ -33,8 +34,39 @@ __all__ = [
     "resolve_flows",
 ]
 
+DEMO_CREDIT_PLATFORM_MARKERS = ("國泰世華", "CUBE")
+DEMO_CREDIT_FLOW_MARKERS = ("消費紀錄", "信用卡")
+
 
 # ------------------------------------------------------------------ 讀取
+
+async def find_demo_credit_record_flow(db: AsyncSession, tenant_id: str) -> Flow | None:
+    """Demo 通知固定使用的已發布國泰信用卡消費紀錄流程。
+
+    這條 Demo 路徑刻意不依賴 DocumentTypeSopFlow，避免評審操作時因方案對照尚未設定
+    而看不到已經存在的教學圖。一般 SOP 入口仍維持資料驅動的文件對照行為。
+    """
+    platform_match = or_(
+        *(Platform.display_name.ilike(f"%{marker}%") for marker in DEMO_CREDIT_PLATFORM_MARKERS),
+        *(Platform.brand.ilike(f"%{marker}%") for marker in DEMO_CREDIT_PLATFORM_MARKERS),
+    )
+    flow_match = or_(*(Flow.name.ilike(f"%{marker}%") for marker in DEMO_CREDIT_FLOW_MARKERS))
+    return (
+        await db.execute(
+            select(Flow)
+            .join(Platform, Platform.id == Flow.platform_id)
+            .where(
+                Flow.tenant_id == tenant_id,
+                Platform.tenant_id == tenant_id,
+                Flow.status == "published",
+                platform_match,
+                flow_match,
+            )
+            .order_by(Flow.name, Flow.id)
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+
 
 async def document_type_ids(db: AsyncSession, tenant_id: str, code: str) -> list[str]:
     """這個 tenant 裡所有叫這個 code 的文件類型。跨方案，因為民眾問的是文件不是方案。"""

@@ -65,7 +65,6 @@ PLATFORM_CHOICE_LIMIT = 10
 FLOW_CHOICE_LIMIT = 12
 THEME = "light"
 
-
 class SopTurn:
     """一回合需要的東西。跟 handlers 的 `_Context` 同一個形狀，只是少了 params。"""
 
@@ -246,7 +245,12 @@ async def _platform_choice(
 
 
 async def open_for_flow(
-    ctx: SopTurn, flow: Flow, *, document_code: str = "", document_label: str = ""
+    ctx: SopTurn,
+    flow: Flow,
+    *,
+    document_code: str = "",
+    document_label: str = "",
+    include_intro: bool = True,
 ) -> list[dict[str, Any]]:
     """開一個 session 並回第一張步驟卡。
 
@@ -273,7 +277,7 @@ async def open_for_flow(
     )
     header = flex.text_message("\n\n".join(part for part in (lead, notice) if part.strip()))
     # LINE 一次最多回五則；四個 carousel 以下保留說明，五個時把名額全留給步驟圖。
-    messages = [header, *carousels] if len(carousels) < 5 else carousels
+    messages = [header, *carousels] if include_intro and len(carousels) < 5 else carousels
     if not carousels:
         messages.extend(await render(ctx, response))
     return messages[:5]
